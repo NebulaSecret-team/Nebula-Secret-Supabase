@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# 輔助文件（不需要部署）
+*.sql
+migrate.html
+DEPLOYMENT_GUIDE.md
+README.md
+
+# 臨時文件
+*.tmp
+*.log
