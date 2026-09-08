@@ -2891,13 +2891,21 @@ function openCatForm(cs){
   $("#amBody").innerHTML =
     '<div class="form-grid">' +
       '<div class="field full"><label>Category name *</label><input id="cfName" value="' + (c ? esc(c.c) : "") + '" placeholder="e.g. Body Lotion"></div>' +
-      '<div class="field full"><label>Cover image URL</label><input id="cfImg" value="' + (c ? esc(c.i) : "") + '" placeholder="https://… (leave empty for placeholder)"></div>' +
+      '<div class="field full"><label>Cover image URL</label><input id="cfImg" value="' + (c ? esc(c.i) : "") + '" placeholder="https://… (leave empty for placeholder)" oninput="cfPreview(this.value)"></div>' +
+      '<div class="field full"><label>Image preview</label><div class="pf-prev"><img id="cfImgPrev" src="' + (c ? imgUrl(c.i, 200) : PLACEHOLDER) + '" alt="" onerror="this.onerror=null;this.src=PLACEHOLDER"></div></div>' +
+      '<div class="field full"><label>Or upload from your computer</label><label class="upload-btn" for="cfUpload">' + IC.up + ' Choose image file</label><input type="file" id="cfUpload" accept="image/*" style="display:none" onchange="uploadImageTo(\'cfUpload\',\'cfImg\',800)"><div class="form-hint">The image is compressed and stored with this category — no hosting needed. Tip: you can also paste any image URL directly.</div></div>' +
     '</div>' +
     '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">' +
       '<button class="btn ghost" onclick="closeAdminModal()">Cancel</button>' +
       '<button class="btn" onclick="saveCatForm(\'' + (c ? c.cs : "") + '\')">' + (c ? "Save changes" : "Add category") + '</button>' +
     '</div>';
   $("#adminModal").classList.add("open");
+}
+function cfPreview(v){
+  const el = $("#cfImgPrev"); if(!el) return;
+  el.onerror = null;
+  el.src = v && v.trim() ? v.trim() : PLACEHOLDER;
+  el.onerror = () => { el.onerror = null; el.src = PLACEHOLDER; };
 }
 
 function saveCatForm(cs){
