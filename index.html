@@ -662,6 +662,8 @@ details.ct-block > .form-grid{padding:14px 16px}
   .ov-grid{grid-template-columns:1fr}
   .admin-table{font-size:12.5px}
   .admin-table th,.admin-table td{padding:9px 8px}
+  .admin-table .td-img{width:40px;height:40px;display:block}
+  .admin-table td:first-child{min-width:56px;text-align:center}
   .panel-body{padding:14px}
 }
 </style>
@@ -2848,13 +2850,16 @@ function deleteProduct(id){
 function adminCategories(){
   const cats = getCats(); const products = getProducts();
   const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Categories</h3><div class="ph-sub">' + cats.length + ' categories · products are grouped automatically</div></div><button class="btn sm" onclick="openCatForm()">' + IC.plus + ' Add Category</button></div>' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Categories</h3><div class="ph-sub">' + cats.length + ' categories · use ↑↓ to reorder · products are grouped automatically</div></div><button class="btn sm" onclick="openCatForm()">' + IC.plus + ' Add Category</button></div>' +
     '<div class="panel-body" style="padding:0">' +
-      cats.map(c => {
+      cats.map((c, idx) => {
         const count = products.filter(p => p.cs === c.cs).length;
+        const upBtn = idx > 0 ? '<button onclick="moveCategory(\'' + c.cs + '\',-1)" title="Move up">↑</button>' : '<button disabled style="opacity:0.3;cursor:not-allowed" title="Already first">↑</button>';
+        const downBtn = idx < cats.length - 1 ? '<button onclick="moveCategory(\'' + c.cs + '\',1)" title="Move down">↓</button>' : '<button disabled style="opacity:0.3;cursor:not-allowed" title="Already last">↓</button>';
         return '<div class="cat-row">' +
           '<div class="c-info"><img src="' + imgUrl(c.i, 80) + '" alt="" onerror="this.onerror=null;this.src=PLACEHOLDER"><div><div style="font-weight:600">' + esc(c.c) + '</div><div class="c-count">' + count + ' products · slug: ' + esc(c.cs) + '</div></div></div>' +
           '<div class="table-actions">' +
+            upBtn + downBtn +
             '<button onclick="openCatForm(\'' + c.cs + '\')" title="Edit">' + IC.edit + '</button>' +
             '<button class="del" onclick="deleteCategory(\'' + c.cs + '\')" title="Delete">' + IC.del + '</button>' +
           '</div></div>';
@@ -2863,6 +2868,18 @@ function adminCategories(){
     '<div class="admin-panel"><div class="panel-body"><div style="font-size:13px;color:var(--ink-soft)">Deleting a category does not delete its products — products move to the category you choose (or stay listed under their current slug).</div></div></div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Categories";
+}
+function moveCategory(cs, dir){
+  const cats = getCats();
+  const idx = cats.findIndex(c => c.cs === cs);
+  if(idx < 0) return;
+  const newIdx = idx + dir;
+  if(newIdx < 0 || newIdx >= cats.length) return;
+  const [item] = cats.splice(idx, 1);
+  cats.splice(newIdx, 0, item);
+  saveCats(cats);
+  showToast("Category reordered");
+  adminCategories();
 }
 
 function openCatForm(cs){
@@ -3087,36 +3104,49 @@ function adminContent(){
   const tb = c.topbar || {};
   const fo = c.footer || {};
   const ab = c.about || {};
+  // Default content (shown in editor when no custom override exists)
+  const DEF = {
+    topbarWelcome: "Welcome to Nebula Secret",
+    footerDesc: "We supply everyday products you find in department stores — skincare, body care, home wellness and much more — tailored to your requirements through wholesale and OEM/ODM.",
+    footerCopy: "© 2026 Nebula Secret. All rights reserved.",
+    storyT: "Our Story",
+    storyB: '<p>Founded in the United Kingdom, <strong>Nebula Secret</strong> is the wholesale and OEM/ODM home of <strong>Nebula Corporate Limited</strong>. With offices in London, Hong Kong and mainland China, and a trusted network of manufacturers across China and the Asia-Pacific region, we bring together global expertise, craftsmanship and a genuine passion for quality.</p><p>What began as a sourcing house with a passion for quality has grown into a brand dedicated to making everyday products a little more special. Every product in our collection is carefully curated to combine on-trend design, superior quality and honest pricing — so your customers can enjoy a little everyday luxury without compromise.</p><p>From body scrubs and facial masks to essential oils, incense and other everyday essentials found in department stores, each item is chosen with care, tested with attention, and delivered with the promise that it deserves a place in your home.</p>',
+    missionT: "Our Mission",
+    missionLead: "We believe self-care should be simple, joyful and accessible to everyone.",
+    missionB: '<p>From the first concept to the final product, we oversee every step — sourcing, formulation, packaging and quality control — to deliver products that feel good and do good. We bridge global markets so that the finest ingredients, trends and craftsmanship can reach your doorstep, wherever you are.</p><p>We build everything on <strong>trust, integrity and transparency</strong>. We work closely with our manufacturing partners to ensure every batch meets our strict standards, and we are always honest about what goes into our products — because you deserve to know exactly what you are bringing into your home.</p>',
+    promiseT: "Our Promise to You",
+    promiseLead: "Five principles that guide everything we make and do."
+  };
   const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Site Content</h3><div class="ph-sub">Edit the text of the top bar, footer and About page. Leave a field empty to keep the default text.</div></div><button class="btn sm ghost" onclick="if(confirm(\'Reset all site content to defaults?\')){ resetContent(); applyFooterContent(); showToast(\'Site content reset to defaults\'); adminContent(); }">Reset all</button></div>' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Site Content</h3><div class="ph-sub">Edit the text of the top bar, footer and About page. Fields show the current live text (default or custom).</div></div><button class="btn sm ghost" onclick="if(confirm(\'Reset all site content to defaults?\')){ resetContent(); applyFooterContent(); showToast(\'Site content reset to defaults\'); adminContent(); }">Reset all</button></div>' +
     '<div class="panel-body">' +
       '<details class="ct-block" open><summary><b>Top bar (black bar at the very top)</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field full"><label>Welcome text</label><input id="ctTopbarWelcome" value="' + esc(tb.welcome || "") + '" placeholder="Welcome to Nebula Secret"></div>' +
+          '<div class="field full"><label>Welcome text</label><input id="ctTopbarWelcome" value="' + esc(tb.welcome || DEF.topbarWelcome) + '"></div>' +
         '</div></details>' +
       '<details class="ct-block" open><summary><b>Footer</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field full"><label>Brand description</label><textarea id="ctFooterDesc" rows="3">' + esc(fo.desc || "") + '</textarea></div>' +
-          '<div class="field full"><label>Copyright line</label><input id="ctFooterCopy" value="' + esc(fo.copyright || "") + '"></div>' +
+          '<div class="field full"><label>Brand description</label><textarea id="ctFooterDesc" rows="3">' + esc(fo.desc || DEF.footerDesc) + '</textarea></div>' +
+          '<div class="field full"><label>Copyright line</label><input id="ctFooterCopy" value="' + esc(fo.copyright || DEF.footerCopy) + '"></div>' +
         '</div></details>' +
       '<details class="ct-block" open><summary><b>About — Our Story</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field"><label>Section title</label><input id="ctStoryT" value="' + esc((ab.story||{}).t || "") + '"></div>' +
-          '<div class="field full"><label>Body (HTML)</label><textarea id="ctStoryB" rows="6" placeholder="Leave empty to keep the default paragraphs">' + esc((ab.story||{}).b || "") + '</textarea></div>' +
+          '<div class="field"><label>Section title</label><input id="ctStoryT" value="' + esc((ab.story||{}).t || DEF.storyT) + '"></div>' +
+          '<div class="field full"><label>Body (HTML)</label><textarea id="ctStoryB" rows="6">' + esc((ab.story||{}).b || DEF.storyB) + '</textarea></div>' +
         '</div></details>' +
       '<details class="ct-block"><summary><b>About — Our Mission</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field"><label>Section title</label><input id="ctMissionT" value="' + esc((ab.mission||{}).t || "") + '"></div>' +
-          '<div class="field"><label>Lead line</label><input id="ctMissionLead" value="' + esc((ab.mission||{}).lead || "") + '"></div>' +
-          '<div class="field full"><label>Body (HTML)</label><textarea id="ctMissionB" rows="6" placeholder="Leave empty to keep the default paragraphs">' + esc((ab.mission||{}).b || "") + '</textarea></div>' +
+          '<div class="field"><label>Section title</label><input id="ctMissionT" value="' + esc((ab.mission||{}).t || DEF.missionT) + '"></div>' +
+          '<div class="field"><label>Lead line</label><input id="ctMissionLead" value="' + esc((ab.mission||{}).lead || DEF.missionLead) + '"></div>' +
+          '<div class="field full"><label>Body (HTML)</label><textarea id="ctMissionB" rows="6">' + esc((ab.mission||{}).b || DEF.missionB) + '</textarea></div>' +
         '</div></details>' +
       '<details class="ct-block"><summary><b>About — Our Promise</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field"><label>Section title</label><input id="ctPromiseT" value="' + esc((ab.promise||{}).t || "") + '"></div>' +
-          '<div class="field full"><label>Lead line</label><input id="ctPromiseLead" value="' + esc((ab.promise||{}).lead || "") + '"></div>' +
+          '<div class="field"><label>Section title</label><input id="ctPromiseT" value="' + esc((ab.promise||{}).t || DEF.promiseT) + '"></div>' +
+          '<div class="field full"><label>Lead line</label><input id="ctPromiseLead" value="' + esc((ab.promise||{}).lead || DEF.promiseLead) + '"></div>' +
         '</div></details>' +
     '</div></div>' +
-    '<div class="save-bar"><span class="sb-note">Empty fields keep the current default content. Saved content also syncs to the cloud (data/content.json).</span><button class="btn" onclick="saveContentForm()">Save Content</button></div>';
+    '<div class="save-bar"><span class="sb-note">Edit any field above and click Save. Empty fields are not saved (keeps current content).</span><button class="btn" onclick="saveContentForm()">Save Content</button></div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Site Content";
 }
@@ -3465,7 +3495,7 @@ function adminRoute(){
 
 /* ============ Router ============ */
 function route(){
-  closeCart(); closeCheckout(); closeAdminModal();
+  closeCart(); closeCheckout(); closeAdminModal(); closeMegaMenu();
   window.scrollTo(0, 0);
   const h = location.hash || "#/";
   if(h === "#/admin" || h.startsWith("#/admin/")){
