@@ -696,6 +696,8 @@ details.ct-block > .form-grid{padding:14px 16px}
       <span class="hide-m" id="rateNoteWrap" style="opacity:.75"><span id="rateNote"></span></span>
     </div>
     <div class="topbar-right">
+      <a href="#/" onclick="setTimeout(function(){var el=document.getElementById('contact-section');if(el)el.scrollIntoView({behavior:'smooth'});},200);">Contact Us</a>
+      <span class="sep hide-m">|</span>
       <a href="#/about">About Us</a>
       <span class="sep hide-m">|</span>
       <a href="#/admin" class="hide-m">Admin Center</a>
@@ -2244,17 +2246,17 @@ function viewHome(){
   '</div></section>' +
 
   '<section class="block" style="padding-top:0"><div class="page">' +
-    '<div class="contact-form-wrap">' +
+    '<div class="contact-form-wrap" id="contact-section">' +
       '<h2>Contact Nebula Secret</h2>' +
-      '<p class="cf-sub">Have a question about wholesale, OEM/ODM private label, or custom formulation? Send us a message and our team will get back to you within 24 hours.</p>' +
+      '<p class="cf-sub">Thank you for considering Nebula Secret. Whether you are interested in wholesale pricing, OEM/ODM private label solutions, custom formulation, or simply have a question, we would be delighted to hear from you. Please fill out the form below and our dedicated team will respond to your inquiry within 24 hours.</p>' +
       '<form class="contact-form" onsubmit="submitContactForm(event)">' +
         '<div class="cf-grid">' +
           '<div class="field"><label>Your name *</label><input id="cfName" type="text" placeholder="e.g. John Smith" required></div>' +
           '<div class="field"><label>Email address *</label><input id="cfEmail" type="email" placeholder="you@company.com" required></div>' +
           '<div class="field"><label>Company / Brand</label><input id="cfCompany" type="text" placeholder="e.g. Your Brand Ltd"></div>' +
-          '<div class="field"><label>Inquiry type</label><select id="cfType"><option value="Wholesale">Wholesale / Bulk Order</option><option value="OEM/ODM">OEM / ODM Private Label</option><option value="Custom Formulation">Custom Formulation</option><option value="Sample Request">Sample Request</option><option value="Other">Other</option></select></div>' +
+          '<div class="field"><label>Inquiry type</label><select id="cfType"><option value="Wholesale">Wholesale / Bulk Order</option><option value="OEM/ODM">OEM / ODM Private Label</option><option value="Custom Formulation">Custom Formulation</option><option value="Sample Request">Sample Request</option><option value="Product Catalog">Product Catalog Request</option><option value="Pricing & MOQ">Pricing & MOQ Inquiry</option><option value="Shipping & Logistics">Shipping & Logistics</option><option value="Partnership">Partnership / Collaboration</option><option value="Press & Media">Press & Media</option><option value="General Inquiry">General Inquiry</option><option value="Other">Other</option></select></div>' +
         '</div>' +
-        '<div class="field full"><label>Your message *</label><textarea id="cfMessage" rows="5" placeholder="Tell us about your project, product interests, quantities, timeline, or any questions..." required></textarea></div>' +
+        '<div class="field full"><label>Your message *</label><textarea id="cfMessage" rows="5" placeholder="Please tell us about your project, product interests, required quantities, timeline, or any questions you may have..." required></textarea></div>' +
         '<div class="cf-actions">' +
           '<button type="submit" class="btn" id="cfSubmitBtn">Send Message</button>' +
           '<div id="cfMsg" style="display:none;margin-top:10px;font-size:14px;font-weight:600"></div>' +
