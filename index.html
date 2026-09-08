@@ -1165,10 +1165,18 @@ function applyRateNote(live){
 }
 async function loadRates(){
   try{
-    const codes = CURRENCIES.filter(c => c.code !== "EUR").map(c => c.code).join(",");
-    const r = await fetch("https://api.frankfurter.app/latest?from=EUR&to=" + codes);
+    // 使用 @fawazahmed0/currency-api (通過 jsDelivr CDN，支援 CORS，免費無需 API key)
+    const r = await fetch("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/eur.json");
     const j = await r.json();
-    if(j && j.rates){ curRates = j.rates; applyRateNote(true); }
+    if(j && j.eur){
+      // 轉換為大寫代碼格式，與原系統相容
+      const rates = {};
+      for(const [code, rate] of Object.entries(j.eur)){
+        rates[code.toUpperCase()] = rate;
+      }
+      curRates = rates;
+      applyRateNote(true);
+    }
     else applyRateNote(false);
   }catch(e){ applyRateNote(false); }
 }
