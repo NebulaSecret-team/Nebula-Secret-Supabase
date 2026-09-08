@@ -1239,7 +1239,7 @@ function getAdminSession(){ return lsGet(LS.asession, null); }
 function setAdminSession(user, name){ lsSet(LS.asession, { user: user, name: name || user }); }
 
 /* ============ Email delivery (EmailJS or FormSubmit) ============ */
-function getMailCfg(){ return lsGet(LS.mail, { email: "", enabled: false, provider: "emailjs", serviceId: "", templateId: "", publicKey: "", mailTo: "" }); }
+function getMailCfg(){ return lsGet(LS.mail, { email: "", enabled: false, provider: "emailjs", serviceId: "", templateId: "", contactTemplateId: "", publicKey: "", mailTo: "" }); }
 function saveMailCfg(m){ lsSet(LS.mail, m); }
 
 /* ============ Cloud Sync (GitHub repo as shared store) ============ */
@@ -2323,9 +2323,10 @@ async function submitContactForm(ev){
   if(!email || !/.+@.+\..+/.test(email)){ showCfMsg(msgEl, "#c0392b", "Please enter a valid email address."); return; }
   if(!message){ showCfMsg(msgEl, "#c0392b", "Please enter your message."); return; }
 
-  // Check EmailJS config
+  // Check EmailJS config (need at least one template ID: order or contact)
   const cfg = getMailCfg();
-  if(!cfg || !cfg.enabled || cfg.provider !== "emailjs" || !cfg.serviceId || !cfg.templateId || !cfg.publicKey){
+  const hasTpl = (cfg.templateId || cfg.contactTemplateId);
+  if(!cfg || !cfg.enabled || cfg.provider !== "emailjs" || !cfg.serviceId || !hasTpl || !cfg.publicKey){
     showCfMsg(msgEl, "#c0392b", "Email service not configured. Please contact us directly at " + (cfg.mailTo || "sales@nebulasecret.com") + ".");
     return;
   }
@@ -2359,7 +2360,9 @@ async function submitContactForm(ev){
       date: new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" })
     };
 
-    await emailjs.send(cfg.serviceId, cfg.templateId, params, { publicKey: cfg.publicKey });
+    // Use contact form template if configured, otherwise fall back to order template
+    const contactTpl = cfg.contactTemplateId || cfg.templateId;
+    await emailjs.send(cfg.serviceId, contactTpl, params, { publicKey: cfg.publicKey });
 
     // Success
     showCfMsg(msgEl, "#2e7d32", "Thank you, " + name + "! Your message has been sent. Our team will get back to you within 24 hours.");
@@ -3193,7 +3196,8 @@ function adminEmails(){
           '<div class="form-hint" style="margin-bottom:8px"><b>EmailJS setup (5 min, free):</b> 1) Sign up at <b>emailjs.com</b> → 2) Add your email service → 3) Create an Email Template with To Email <code>{{to_email}}</code> → 4) Paste the three keys below.</div>' +
           '<div class="form-grid">' +
             '<div class="field"><label>Service ID</label><input id="mailSvc" type="text" value="' + esc(mc.serviceId || "") + '" placeholder="service_xxxxxxx"></div>' +
-            '<div class="field"><label>Template ID</label><input id="mailTpl" type="text" value="' + esc(mc.templateId || "") + '" placeholder="template_xxxxxxx"></div>' +
+            '<div class="field"><label>Order Template ID</label><input id="mailTpl" type="text" value="' + esc(mc.templateId || "") + '" placeholder="template_xxxxxxx"></div>' +
+            '<div class="field"><label>Contact Form Template ID</label><input id="mailContactTpl" type="text" value="' + esc(mc.contactTemplateId || "") + '" placeholder="template_xxxxxxx (leave empty to use order template)"></div>' +
             '<div class="field full"><label>Public Key</label><input id="mailKey" type="text" value="' + esc(mc.publicKey || "") + '" placeholder="xxxxxxx"></div>' +
           '</div>' +
         '</div>' +
@@ -3446,6 +3450,7 @@ function saveMailForm(){
   cfg.mailTo = ($("#mailTo") ? $("#mailTo").value : "").trim();
   cfg.serviceId = ($("#mailSvc") ? $("#mailSvc").value : "").trim();
   cfg.templateId = ($("#mailTpl") ? $("#mailTpl").value : "").trim();
+  cfg.contactTemplateId = ($("#mailContactTpl") ? $("#mailContactTpl").value : "").trim();
   cfg.publicKey = ($("#mailKey") ? $("#mailKey").value : "").trim();
   const email = ($("#mailEmail") ? $("#mailEmail").value : "").trim();
   if(email && !/.+@.+\..+/.test(email)){ showToast("Please enter a valid email address"); return; }
