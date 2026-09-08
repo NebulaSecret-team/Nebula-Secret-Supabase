@@ -455,6 +455,23 @@ section.block{padding:40px 0}
 .news-form button{background:var(--brand);color:#fff;border-radius:8px;padding:13px 26px;font-weight:600;font-size:14px}
 .news-form button:hover{background:var(--brand-dark)}
 
+/* ================= Contact Form ================= */
+.contact-form-wrap{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:46px 40px;max-width:720px;margin:0 auto}
+.contact-form-wrap h2{font-size:26px;font-weight:700;margin-bottom:8px;text-align:center}
+.cf-sub{color:var(--ink-soft);font-size:14px;line-height:1.7;text-align:center;margin:0 auto 28px;max-width:560px}
+.contact-form .field{margin-bottom:16px}
+.contact-form label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--ink)}
+.contact-form input,.contact-form select,.contact-form textarea{width:100%;border:1px solid var(--line-dark);border-radius:10px;padding:12px 16px;font-size:14px;outline:none;transition:border-color .2s;box-sizing:border-box;font-family:inherit}
+.contact-form input:focus,.contact-form select:focus,.contact-form textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(233,30,99,.1)}
+.contact-form textarea{resize:vertical;min-height:120px}
+.cf-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.cf-actions{text-align:center;margin-top:8px}
+.cf-actions .btn{min-width:200px;padding:14px 36px;font-size:15px}
+@media(max-width:640px){
+  .contact-form-wrap{padding:32px 20px}
+  .cf-grid{grid-template-columns:1fr}
+}
+
 /* ================= Footer ================= */
 .site-footer{background:var(--nav-bg);color:#b9b6bf;margin-top:56px}
 .footer-inner{max-width:1400px;margin:0 auto;padding:52px 24px 30px;display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr;gap:36px}
@@ -2227,14 +2244,22 @@ function viewHome(){
   '</div></section>' +
 
   '<section class="block" style="padding-top:0"><div class="page">' +
-    '<div class="newsletter">' +
-      '<h2>Partner with Nebula Secret</h2>' +
-      '<p>Subscribe for product updates, industry insights and exclusive wholesale offers.</p>' +
-      '<form class="news-form" onsubmit="subscribeNewsletter(event)">' +
-        '<input type="email" id="nlEmail" placeholder="Your email address" required>' +
-        '<button type="submit">Subscribe</button>' +
+    '<div class="contact-form-wrap">' +
+      '<h2>Contact Nebula Secret</h2>' +
+      '<p class="cf-sub">Have a question about wholesale, OEM/ODM private label, or custom formulation? Send us a message and our team will get back to you within 24 hours.</p>' +
+      '<form class="contact-form" onsubmit="submitContactForm(event)">' +
+        '<div class="cf-grid">' +
+          '<div class="field"><label>Your name *</label><input id="cfName" type="text" placeholder="e.g. John Smith" required></div>' +
+          '<div class="field"><label>Email address *</label><input id="cfEmail" type="email" placeholder="you@company.com" required></div>' +
+          '<div class="field"><label>Company / Brand</label><input id="cfCompany" type="text" placeholder="e.g. Your Brand Ltd"></div>' +
+          '<div class="field"><label>Inquiry type</label><select id="cfType"><option value="Wholesale">Wholesale / Bulk Order</option><option value="OEM/ODM">OEM / ODM Private Label</option><option value="Custom Formulation">Custom Formulation</option><option value="Sample Request">Sample Request</option><option value="Other">Other</option></select></div>' +
+        '</div>' +
+        '<div class="field full"><label>Your message *</label><textarea id="cfMessage" rows="5" placeholder="Tell us about your project, product interests, quantities, timeline, or any questions..." required></textarea></div>' +
+        '<div class="cf-actions">' +
+          '<button type="submit" class="btn" id="cfSubmitBtn">Send Message</button>' +
+          '<div id="cfMsg" style="display:none;margin-top:10px;font-size:14px;font-weight:600"></div>' +
+        '</div>' +
       '</form>' +
-      '<div id="nlMsg" style="display:none;margin-top:10px;font-size:13px;font-weight:600"></div>' +
     '</div>' +
   '</div></section>';
   setTimeout(showPopupIfNeeded, 700);
@@ -2279,6 +2304,84 @@ function subscribeNewsletter(ev){
     msg.style.color = "#2e7d32"; msg.textContent = "Thank you for subscribing! Our team will keep you updated on new products and wholesale offers.";
     msg.style.display = "block";
   }
+}
+
+/* ============ Contact Form (EmailJS) ============ */
+async function submitContactForm(ev){
+  ev.preventDefault();
+  const val = id => { const el = document.getElementById(id); return el ? (el.value || "").trim() : ""; };
+  const name = val("cfName");
+  const email = val("cfEmail");
+  const company = val("cfCompany");
+  const type = val("cfType");
+  const message = val("cfMessage");
+  const msgEl = document.getElementById("cfMsg");
+  const btn = document.getElementById("cfSubmitBtn");
+
+  // Validation
+  if(!name){ showCfMsg(msgEl, "#c0392b", "Please enter your name."); return; }
+  if(!email || !/.+@.+\..+/.test(email)){ showCfMsg(msgEl, "#c0392b", "Please enter a valid email address."); return; }
+  if(!message){ showCfMsg(msgEl, "#c0392b", "Please enter your message."); return; }
+
+  // Check EmailJS config
+  const cfg = getMailCfg();
+  if(!cfg || !cfg.enabled || cfg.provider !== "emailjs" || !cfg.serviceId || !cfg.templateId || !cfg.publicKey){
+    showCfMsg(msgEl, "#c0392b", "Email service not configured. Please contact us directly at " + (cfg.mailTo || "sales@nebulasecret.com") + ".");
+    return;
+  }
+
+  // Get recipients
+  const recipients = (cfg.mailTo || "").split(",").map(s => s.trim()).filter(Boolean);
+  if(!recipients.length){
+    showCfMsg(msgEl, "#c0392b", "No recipient email configured. Please contact the site administrator.");
+    return;
+  }
+
+  // Disable button and show loading
+  btn.disabled = true;
+  btn.textContent = "Sending...";
+  showCfMsg(msgEl, "#666", "Sending your message...");
+
+  try{
+    if(!window.emailjs) throw new Error("EmailJS library not loaded");
+
+    // Build email params — these map to your EmailJS template variables
+    const params = {
+      from_name: name,
+      from_email: email,
+      to_email: recipients.join(", "),
+      company: company || "Not provided",
+      inquiry_type: type,
+      subject: "New " + type + " Inquiry from " + name + " — Nebula Secret",
+      message: message,
+      reply_to: email,
+      store_name: (getTheme() || {}).storeName || "Nebula Secret",
+      date: new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" })
+    };
+
+    await emailjs.send(cfg.serviceId, cfg.templateId, params, { publicKey: cfg.publicKey });
+
+    // Success
+    showCfMsg(msgEl, "#2e7d32", "Thank you, " + name + "! Your message has been sent. Our team will get back to you within 24 hours.");
+    // Reset form
+    document.getElementById("cfName").value = "";
+    document.getElementById("cfEmail").value = "";
+    document.getElementById("cfCompany").value = "";
+    document.getElementById("cfType").value = "Wholesale";
+    document.getElementById("cfMessage").value = "";
+  }catch(e){
+    const errMsg = e && e.text ? e.text : (e && e.message ? e.message : String(e));
+    showCfMsg(msgEl, "#c0392b", "Sorry, we couldn't send your message. Please try again or email us directly at " + recipients[0] + ". Error: " + errMsg);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "Send Message";
+  }
+}
+function showCfMsg(el, color, text){
+  if(!el) return;
+  el.style.color = color;
+  el.textContent = text;
+  el.style.display = "block";
 }
 
 function viewShop(){
