@@ -10,3 +10,20 @@ README.md
 # 臨時文件
 *.tmp
 *.log
+
+# 機密環境變數檔案（包含密鑰，絕對不能上傳！）
+.env
+.env*.local
+.env.*.local
+
+# 依賴與構建（如果以後使用 Node.js）
+node_modules/
+dist/
+build/
+.next/
+
+# 編輯器配置
+.vscode/
+.idea/
+*.swp
+*.swo
