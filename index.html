@@ -1145,7 +1145,9 @@ const CURRENCIES = [
   {code:"TWD", symbol:"NT$", dec:0, rate:34.8, country:"Taiwan"},
   {code:"THB", symbol:"฿", dec:2, rate:39.5, country:"Thailand"},
   {code:"MYR", symbol:"RM", dec:2, rate:5.1, country:"Malaysia"},
-  {code:"NZD", symbol:"NZ$", dec:2, rate:1.76, country:"New Zealand"}
+  {code:"NZD", symbol:"NZ$", dec:2, rate:1.76, country:"New Zealand"},
+  {code:"AED", symbol:"AED ", dec:2, rate:3.97, country:"United Arab Emirates"},
+  {code:"SAR", symbol:"SAR ", dec:2, rate:4.05, country:"Saudi Arabia"}
 ];
 let curRates = {}; // live overrides (per 1 EUR), falls back to static table
 let curCode = lsGet(LS.currency, "EUR");
