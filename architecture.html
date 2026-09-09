@@ -342,6 +342,114 @@
     .arch-connector { width: 16px; }
     .cards-grid { grid-template-columns: 1fr; }
     .card { padding: 18px; }
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Detail Section */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 18px;
+  }
+  .detail-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .detail-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-color, var(--brand));
+  }
+  .detail-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .detail-card-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    background: var(--card-color, var(--brand));
+  }
+  .detail-card-title { font-size: 15px; font-weight: 700; }
+  .detail-card-sub { font-size: 11px; color: var(--ink-soft); }
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--line);
+    gap: 12px;
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label {
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-weight: 500;
+    min-width: 100px;
+    flex-shrink: 0;
+  }
+  .detail-value {
+    font-size: 12.5px;
+    color: var(--ink);
+    font-weight: 600;
+    text-align: right;
+    word-break: break-all;
+    flex: 1;
+  }
+  .detail-value a {
+    color: var(--card-color, var(--brand));
+    text-decoration: none;
+  }
+  .detail-value a:hover { text-decoration: underline; }
+  .detail-code {
+    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+    font-size: 11px;
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--brand-dark);
+  }
+  .detail-mask {
+    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 1px;
+  }
+  .warning-box {
+    background: #fff8e6;
+    border: 1px solid #ffd54f;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 16px;
+    font-size: 12px;
+    color: #8d6e00;
+    line-height: 1.6;
+  }
+  .warning-box strong { color: #f57f17; }
+  .currency-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .currency-tag {
+    font-size: 11px;
+    padding: 3px 8px;
+    background: var(--brand-soft);
+    color: var(--brand-dark);
+    border-radius: 6px;
+    font-weight: 600;
   }
 </style>
 </head>
@@ -963,6 +1071,362 @@
         <div class="flow-step"><div class="step-num">4</div><div>Vercel 自動檢測並重新部署</div></div>
         <div class="flow-step"><div class="step-num">5</div><div>1-2 分鐘後網站更新完成</div></div>
       </div>
+    </div>
+  </div>
+
+  <!-- Section 5: Detailed Configuration -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon">🔧</div>
+      詳細配置信息
+      <div class="count">8 個模組</div>
+    </div>
+    <div class="detail-grid">
+
+      <!-- Website Access -->
+      <div class="detail-card color-brand">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">🌐</div>
+          <div>
+            <div class="detail-card-title">網站訪問信息</div>
+            <div class="detail-card-sub">Website Access</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">生產環境 URL</div>
+          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app" target="_blank">nebula-secret-supabase.vercel.app</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Admin Panel</div>
+          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank">/#/admin</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">本地開發地址</div>
+          <div class="detail-value"><span class="detail-code">http://localhost:8080</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">本地啟動命令</div>
+          <div class="detail-value"><span class="detail-code">python3 -m http.server 8080</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">項目目錄</div>
+          <div class="detail-value" style="font-size:11px">nebula-secret-supabase/</div>
+        </div>
+      </div>
+
+      <!-- Supabase Database -->
+      <div class="detail-card color-green">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">🗄️</div>
+          <div>
+            <div class="detail-card-title">Supabase 數據庫</div>
+            <div class="detail-card-sub">Database Configuration</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Project URL</div>
+          <div class="detail-value"><a href="https://xwhhsoppcpkijxxychjm.supabase.co" target="_blank" style="font-size:11px">xwhhsoppcpkijxxychjm.supabase.co</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Project Ref ID</div>
+          <div class="detail-value"><span class="detail-code">xwhhsoppcpkijxxychjm</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">數據庫名稱</div>
+          <div class="detail-value">nebula-db</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">項目名稱</div>
+          <div class="detail-value">Nebula Secret</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">區域 (Region)</div>
+          <div class="detail-value">Singapore (SG)</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">計劃 (Plan)</div>
+          <div class="detail-value">Free Tier</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">主要數據表</div>
+          <div class="detail-value"><span class="detail-code">site_settings</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">存儲的 Keys</div>
+          <div class="detail-value" style="font-size:11px;text-align:left">products, cats, theme, content, orders, accounts, admins</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Publishable Key</div>
+          <div class="detail-value"><span class="detail-mask">sb_publishable_2Gnj...HEk</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">後台登錄</div>
+          <div class="detail-value"><a href="https://supabase.com/dashboard/project/xwhhsoppcpkijxxychjm" target="_blank">Supabase Dashboard</a></div>
+        </div>
+      </div>
+
+      <!-- Vercel -->
+      <div class="detail-card color-dark">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">▲</div>
+          <div>
+            <div class="detail-card-title">Vercel 托管</div>
+            <div class="detail-card-sub">Hosting Platform</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">項目名稱</div>
+          <div class="detail-value">Nebula Secret Wholesale</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Vercel 賬號</div>
+          <div class="detail-value">cyruschow-1317</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">計劃 (Plan)</div>
+          <div class="detail-value">Hobby (Free)</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">框架預設</div>
+          <div class="detail-value">Other (純靜態)</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">生產域名</div>
+          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app" target="_blank">nebula-secret-supabase.vercel.app</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">部署方式</div>
+          <div class="detail-value">GitHub 自動部署</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">部署時間</div>
+          <div class="detail-value">1-2 分鐘</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">後台登錄</div>
+          <div class="detail-value"><a href="https://vercel.com" target="_blank">vercel.com</a></div>
+        </div>
+      </div>
+
+      <!-- GitHub -->
+      <div class="detail-card color-blue">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">🐙</div>
+          <div>
+            <div class="detail-card-title">GitHub 代碼倉庫</div>
+            <div class="detail-card-sub">Source Code Repository</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">倉庫所有者</div>
+          <div class="detail-value">nebulaspider</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">倉庫名稱</div>
+          <div class="detail-value">Nebula-Secret-Supabase</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">倉庫類型</div>
+          <div class="detail-value">Public (公開)</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">默認分支</div>
+          <div class="detail-value"><span class="detail-code">main</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">倉庫 URL</div>
+          <div class="detail-value"><a href="https://github.com/nebulaspider/Nebula-Secret-Supabase" target="_blank" style="font-size:11px">github.com/nebulaspider/...</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">主要文件</div>
+          <div class="detail-value" style="font-size:11px;text-align:left">index.html, architecture.html, images/ (82 files)</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">推送工具</div>
+          <div class="detail-value">GitHub Desktop</div>
+        </div>
+      </div>
+
+      <!-- EmailJS -->
+      <div class="detail-card color-orange">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">📧</div>
+          <div>
+            <div class="detail-card-title">EmailJS 郵件服務</div>
+            <div class="detail-card-sub">Email Service</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">服務平台</div>
+          <div class="detail-value">EmailJS</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">計劃 (Plan)</div>
+          <div class="detail-value">Free Tier (200 封/月)</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">訂單模板 ID</div>
+          <div class="detail-value"><span class="detail-mask">template_xxxxxxxx</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">聯繫表單模板 ID</div>
+          <div class="detail-value"><span class="detail-code">template_o5u18d6</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">收件人郵箱 1</div>
+          <div class="detail-value" style="font-size:11px">sales@nebulasecret.com</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">收件人郵箱 2</div>
+          <div class="detail-value" style="font-size:11px">bong8686@gmail.com</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">配置位置</div>
+          <div class="detail-value">Admin Panel → Order Emails</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">後台登錄</div>
+          <div class="detail-value"><a href="https://dashboard.emailjs.com" target="_blank">dashboard.emailjs.com</a></div>
+        </div>
+        <div class="warning-box">
+          <strong>⚠️ 注意：</strong>EmailJS 配置存儲在管理員瀏覽器的 localStorage 中，更換瀏覽器或清除數據後需要重新配置。
+        </div>
+      </div>
+
+      <!-- cron-job.org -->
+      <div class="detail-card color-red">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">⏰</div>
+          <div>
+            <div class="detail-card-title">cron-job.org 定時任務</div>
+            <div class="detail-card-sub">Scheduled Task</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">任務名稱</div>
+          <div class="detail-value">Supabase Keep Alive</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">服務平台</div>
+          <div class="detail-value">cron-job.org</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">執行時間</div>
+          <div class="detail-value">每天 20:00 (HKT)</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">時區</div>
+          <div class="detail-value">Asia/Hong_Kong</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">調用方法</div>
+          <div class="detail-value">HTTP GET</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">調用 URL</div>
+          <div class="detail-value" style="font-size:10px;text-align:left">/rest/v1/site_settings?select=id&amp;limit=1</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">目的</div>
+          <div class="detail-value">防止 Supabase 冬眠</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">後台登錄</div>
+          <div class="detail-value"><a href="https://cron-job.org" target="_blank">cron-job.org</a></div>
+        </div>
+      </div>
+
+      <!-- Admin Login -->
+      <div class="detail-card color-accent">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">🔐</div>
+          <div>
+            <div class="detail-card-title">管理員登錄信息</div>
+            <div class="detail-card-sub">Admin Credentials</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Admin Panel URL</div>
+          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank">/#/admin</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">默認用戶名</div>
+          <div class="detail-value"><span class="detail-code">admin</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">默認密碼</div>
+          <div class="detail-value"><span class="detail-code">abcd1234</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">管理員角色</div>
+          <div class="detail-value">superadmin</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">修改密碼位置</div>
+          <div class="detail-value">Admin Users → Change Password</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">可新增管理員</div>
+          <div class="detail-value">是 (Admin Users → Add Admin)</div>
+        </div>
+        <div class="warning-box">
+          <strong>⚠️ 安全提醒：</strong>首次登錄後請立即修改默認密碼。不要將密碼分享給無關人員。
+        </div>
+      </div>
+
+      <!-- Currency & API -->
+      <div class="detail-card color-purple">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">💱</div>
+          <div>
+            <div class="detail-card-title">貨幣與 API</div>
+            <div class="detail-card-sub">Currency & APIs</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">支援貨幣數量</div>
+          <div class="detail-value">18 種</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">默認貨幣</div>
+          <div class="detail-value">EUR (€)</div>
+        </div>
+        <div class="detail-row" style="flex-direction:column;align-items:flex-start">
+          <div class="detail-label" style="margin-bottom:6px">貨幣列表</div>
+          <div class="currency-list">
+            <span class="currency-tag">EUR</span>
+            <span class="currency-tag">USD</span>
+            <span class="currency-tag">HKD</span>
+            <span class="currency-tag">CNY</span>
+            <span class="currency-tag">GBP</span>
+            <span class="currency-tag">JPY</span>
+            <span class="currency-tag">SGD</span>
+            <span class="currency-tag">AUD</span>
+            <span class="currency-tag">CAD</span>
+            <span class="currency-tag">CHF</span>
+            <span class="currency-tag">KRW</span>
+            <span class="currency-tag">AED</span>
+            <span class="currency-tag">SAR</span>
+            <span class="currency-tag">TWD</span>
+            <span class="currency-tag">THB</span>
+            <span class="currency-tag">MYR</span>
+            <span class="currency-tag">NZD</span>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">匯率 API</div>
+          <div class="detail-value" style="font-size:11px">@fawazahmed0/currency-api</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">CDN</div>
+          <div class="detail-value">jsDelivr</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Supabase JS 版本</div>
+          <div class="detail-value"><span class="detail-code">@supabase/supabase-js@2.49.1</span></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
