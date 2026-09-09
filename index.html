@@ -319,6 +319,27 @@ section.block{padding:40px 0}
 .p-price .old{color:var(--ink-soft);text-decoration:line-through;font-weight:500;font-size:13px;margin-left:7px}
 .p-price .unit{font-size:11px;color:var(--ink-soft);font-weight:500}
 
+/* 確保產品圖片不會超出介面 */
+.product-card{contain:layout paint;max-width:100%}
+.product-card .ph{max-width:100%;max-height:100%}
+.product-card .ph img{max-width:100%;max-height:100%;display:block}
+.product-grid{width:100%;max-width:100%;overflow:hidden}
+.product-grid .product-card{min-width:0}
+
+/* 確保分類卡片圖片不會超出介面 */
+.cat-strip{width:100%;max-width:100%;overflow:hidden}
+.cat-card{contain:layout paint;max-width:100%;min-width:0}
+.cat-card .thumb{max-width:100%;max-height:100%}
+.cat-card .thumb img{max-width:100%;max-height:100%;display:block}
+
+/* 確保產品詳情頁圖片不會超出介面 */
+.detail-gallery{max-width:100%;min-width:0}
+.detail-main-img{max-width:100%;max-height:100%}
+.detail-main-img img{max-width:100%;max-height:100%;display:block}
+
+/* 全局圖片保護 */
+img{max-width:100%;height:auto;display:block}
+
 /* ================= Shop page ================= */
 .crumbs{font-size:12.5px;color:var(--ink-soft);display:flex;align-items:center;gap:7px;margin:16px 0;flex-wrap:wrap}
 .crumbs a:hover{color:var(--brand-dark)}
@@ -733,9 +754,9 @@ details.ct-block > .form-grid{padding:14px 16px}
       <span class="sep hide-m">|</span>
       <a href="#/about">About Us</a>
       <span class="sep hide-m">|</span>
-      <a href="#/why-us" class="hide-m">Why Us</a>
-      <span class="sep hide-m">|</span>
-      <a href="#/blog" class="hide-m">Blog</a>
+      <a href="#/why-us">Why Us</a>
+      <span class="sep">|</span>
+      <a href="#/blog">Blog</a>
       <span class="sep hide-m">|</span>
       <a href="#/admin" class="hide-m">Admin Center</a>
       <span class="sep hide-m">|</span>
