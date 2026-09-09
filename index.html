@@ -700,6 +700,10 @@ details.ct-block > .form-grid{padding:14px 16px}
       <span class="sep hide-m">|</span>
       <a href="#/about">About Us</a>
       <span class="sep hide-m">|</span>
+      <a href="#/why-us">Why Us</a>
+      <span class="sep hide-m">|</span>
+      <a href="#/blog">Blog</a>
+      <span class="sep hide-m">|</span>
       <a href="#/admin" class="hide-m">Admin Center</a>
       <span class="sep hide-m">|</span>
       <a href="#/info/track">Track Order</a>
@@ -1877,7 +1881,9 @@ function renderCatNav(){
         cats.map(c => '<a href="#/shop?cat=' + c.cs + '" onclick="closeMegaMenu()"><span>' + esc(c.c) + '</span><span class="n">' + getProducts().filter(p => p.cs === c.cs).length + '</span></a>').join("") +
       '</div>' +
     '</div>' +
-    cats.map(c => '<a href="#/shop?cat=' + c.cs + '" onclick="closeMegaMenu()">' + esc(c.c) + '</a>').join("");
+    cats.map(c => '<a href="#/shop?cat=' + c.cs + '" onclick="closeMegaMenu()">' + esc(c.c) + '</a>').join("") +
+    '<a href="#/why-us" onclick="closeMegaMenu()">Why Us</a>' +
+    '<a href="#/blog" onclick="closeMegaMenu()">Blog</a>';
 }
 function toggleAllCats(e){
   if(window.innerWidth <= 960){
@@ -1995,6 +2001,245 @@ function viewAbout(){
   const q = (location.hash.split("?")[1] || "");
   const sm = q.match(/scroll=([a-z]+)/);
   if(sm){ setTimeout(() => { const el = document.getElementById("ab-" + sm[1]); if(el) el.scrollIntoView({behavior:"smooth", block:"start"}); }, 120); }
+}
+
+/* ============ WHY US PAGE ============ */
+function viewWhyUs(){
+  const ic = (p) => '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
+  const html =
+  '<div class="page-hero" style="background:linear-gradient(135deg,var(--brand-dark),var(--brand));color:#fff;padding:60px 24px;text-align:center">' +
+    '<div style="max-width:800px;margin:0 auto">' +
+      '<h1 style="font-size:36px;margin:0 0 12px 0;color:#fff">Why Choose Nebula Secret</h1>' +
+      '<p style="font-size:16px;opacity:.9;margin:0">Your trusted partner for wholesale, OEM & ODM beauty and wellness products</p>' +
+    '</div>' +
+  '</div>' +
+  '<div class="container" style="max-width:1200px;margin:0 auto;padding:48px 24px">' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-bottom:48px">' +
+      '<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:28px;transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform=\'translateY(-4px)\';this.style.boxShadow=\'0 8px 24px rgba(0,0,0,.1)\'" onmouseout="this.style.transform=\'\';this.style.box-shadow=\'\'">' +
+        '<div style="width:48px;height:48px;background:var(--brand-light);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--brand)">' + ic('<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>') + '</div>' +
+        '<h3 style="font-size:18px;margin:0 0 10px 0">OEM / ODM Expertise</h3>' +
+        '<p style="color:var(--ink-soft);font-size:14px;line-height:1.6;margin:0">Full-service private label manufacturing from formulation to packaging. We handle every step so you can focus on building your brand.</p>' +
+      '</div>' +
+      '<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:28px;transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform=\'translateY(-4px)\';this.style.boxShadow=\'0 8px 24px rgba(0,0,0,.1)\'" onmouseout="this.style.transform=\'\';this.style.box-shadow=\'\'">' +
+        '<div style="width:48px;height:48px;background:var(--brand-light);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--brand)">' + ic('<path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>') + '</div>' +
+        '<h3 style="font-size:18px;margin:0 0 10px 0">Flexible MOQ</h3>' +
+        '<p style="color:var(--ink-soft);font-size:14px;line-height:1.6;margin:0">Low minimum order quantities perfect for startups and established brands alike. Scale your orders as your business grows.</p>' +
+      '</div>' +
+      '<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:28px;transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform=\'translateY(-4px)\';this.style.boxShadow=\'0 8px 24px rgba(0,0,0,.1)\'" onmouseout="this.style.transform=\'\';this.style.box-shadow=\'\'">' +
+        '<div style="width:48px;height:48px;background:var(--brand-light);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--brand)">' + ic('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>') + '</div>' +
+        '<h3 style="font-size:18px;margin:0 0 10px 0">Quality Assured</h3>' +
+        '<p style="color:var(--ink-soft);font-size:14px;line-height:1.6;margin:0">All products manufactured under strict quality control standards. We use premium ingredients and follow international cosmetic regulations.</p>' +
+      '</div>' +
+      '<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:28px;transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform=\'translateY(-4px)\';this.style.boxShadow=\'0 8px 24px rgba(0,0,0,.1)\'" onmouseout="this.style.transform=\'\';this.style.box-shadow=\'\'">' +
+        '<div style="width:48px;height:48px;background:var(--brand-light);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--brand)">' + ic('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>') + '</div>' +
+        '<h3 style="font-size:18px;margin:0 0 10px 0">Fast Turnaround</h3>' +
+        '<p style="color:var(--ink-soft);font-size:14px;line-height:1.6;margin:0">Efficient production timelines with clear communication at every stage. Most orders ship within 2-4 weeks of confirmation.</p>' +
+      '</div>' +
+      '<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:28px;transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform=\'translateY(-4px)\';this.style.boxShadow=\'0 8px 24px rgba(0,0,0,.1)\'" onmouseout="this.style.transform=\'\';this.style.box-shadow=\'\'">' +
+        '<div style="width:48px;height:48px;background:var(--brand-light);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--brand)">' + ic('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>') + '</div>' +
+        '<h3 style="font-size:18px;margin:0 0 10px 0">Dedicated Support</h3>' +
+        '<p style="color:var(--ink-soft);font-size:14px;line-height:1.6;margin:0">Personal account manager for every client. We provide expert guidance on formulation, packaging, and market strategy.</p>' +
+      '</div>' +
+      '<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:28px;transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform=\'translateY(-4px)\';this.style.boxShadow=\'0 8px 24px rgba(0,0,0,.1)\'" onmouseout="this.style.transform=\'\';this.style.box-shadow=\'\'">' +
+        '<div style="width:48px;height:48px;background:var(--brand-light);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--brand)">' + ic('<path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>') + '</div>' +
+        '<h3 style="font-size:18px;margin:0 0 10px 0">Competitive Pricing</h3>' +
+        '<p style="color:var(--ink-soft);font-size:14px;line-height:1.6;margin:0">Direct factory pricing with no middlemen. Volume discounts available for larger orders. Transparent pricing with no hidden fees.</p>' +
+      '</div>' +
+    '</div>' +
+    '<div style="background:linear-gradient(135deg,var(--brand-light),var(--card));border:1px solid var(--line);border-radius:16px;padding:40px;text-align:center">' +
+      '<h2 style="font-size:24px;margin:0 0 12px 0">Ready to Start Your Project?</h2>' +
+      '<p style="color:var(--ink-soft);font-size:15px;margin:0 0 24px 0;max-width:600px;margin-left:auto;margin-right:auto">Contact us today for a free consultation and custom quote. Our team will help you find the perfect solution for your brand.</p>' +
+      '<a href="#/about?scroll=contact" style="display:inline-block;background:var(--brand);color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;transition:background .2s" onmouseover="this.style.background=\'var(--brand-dark)\'" onmouseout="this.style.background=\'var(--brand)\'">Get a Free Quote</a>' +
+    '</div>' +
+  '</div>';
+  $("#app").innerHTML = html;
+}
+
+/* ============ BLOG DATA ============ */
+const BLOG_POSTS = [
+  {
+    slug: "choose-oem-skincare-manufacturer",
+    title: "How to Choose the Right OEM Skincare Manufacturer: A Complete Guide",
+    category: "OEM/ODM",
+    date: "2024-01-15",
+    readTime: "8 min",
+    excerpt: "Finding the right OEM skincare manufacturer is crucial for your brand's success. Learn what to look for, questions to ask, and red flags to avoid.",
+    content: [
+      "Choosing the right OEM skincare manufacturer is one of the most important decisions you'll make for your beauty brand. The manufacturer you partner with will directly impact product quality, cost, timeline, and ultimately your brand reputation.",
+      "With so many manufacturers to choose from, it can be overwhelming to know where to start. This comprehensive guide will walk you through everything you need to know to make an informed decision.",
+      "Key factors to consider include manufacturing capabilities, quality certifications, minimum order quantities (MOQ), pricing transparency, communication responsiveness, and ability to meet regulatory requirements in your target markets.",
+      "Always request samples before committing to a large order. This allows you to evaluate texture, scent, performance, and packaging quality firsthand. Don't be afraid to ask for modifications — a good manufacturer will work with you to perfect the formula.",
+      "At Nebula Secret, we pride ourselves on being a transparent, reliable partner for brands of all sizes. Our team brings decades of combined experience in cosmetic formulation and manufacturing."
+    ]
+  },
+  {
+    slug: "oem-vs-odm-difference",
+    title: "OEM vs ODM: What's the Difference for Your Beauty Brand?",
+    category: "OEM/ODM",
+    date: "2024-01-22",
+    readTime: "6 min",
+    excerpt: "Understanding the difference between OEM and ODM is essential when launching a private label beauty brand. Here's what you need to know.",
+    content: [
+      "If you're new to the beauty industry, the terms OEM and ODM can be confusing. Both refer to manufacturing partnerships, but they represent very different approaches to product development.",
+      "OEM (Original Equipment Manufacturer) means you provide the complete formula and specifications, and the manufacturer produces it exactly as specified. This gives you full control over the product but requires you to have the formulation expertise.",
+      "ODM (Original Design Manufacturer) means the manufacturer provides pre-developed formulas that you can customize and brand as your own. This is faster and requires less technical expertise, but you have less control over the exact formula.",
+      "For most startups and small brands, ODM is the recommended starting point. It allows you to launch quickly with proven formulas while you build your brand. As you grow, you can transition to more customized OEM formulations.",
+      "Nebula Secret offers both OEM and ODM services, giving you the flexibility to choose the approach that best fits your brand's stage and goals."
+    ]
+  },
+  {
+    slug: "starting-private-label-skincare-brand",
+    title: "10 Tips for Starting a Private Label Skincare Brand",
+    category: "Business",
+    date: "2024-02-05",
+    readTime: "7 min",
+    excerpt: "Thinking about launching your own skincare brand? These 10 essential tips will help you avoid common mistakes and set your brand up for success.",
+    content: [
+      "Launching a private label skincare brand is an exciting venture, but it requires careful planning and execution. The beauty industry is competitive, but with the right strategy, there's plenty of room for new brands to succeed.",
+      "First, define your niche. What makes your brand unique? Whether it's clean ingredients, sustainable packaging, a specific skin concern, or a target demographic, having a clear identity will help you stand out.",
+      "Second, research your target market thoroughly. Understand their pain points, preferences, and purchasing habits. This information will guide everything from product selection to marketing messaging.",
+      "Third, start small. Don't try to launch with 20 products. Begin with 3-5 hero products that represent your brand well, then expand based on customer feedback and sales data.",
+      "Other important tips include investing in professional branding, choosing the right sales channels, building an email list from day one, gathering customer reviews, and staying consistent with your marketing efforts."
+    ]
+  },
+  {
+    slug: "understanding-moq-cosmetic-manufacturing",
+    title: "Understanding MOQ in Cosmetic Manufacturing: A Beginner's Guide",
+    category: "OEM/ODM",
+    date: "2024-02-19",
+    readTime: "5 min",
+    excerpt: "Minimum Order Quantity (MOQ) is a critical factor when choosing a manufacturer. Learn how MOQs work and how to negotiate the best terms for your brand.",
+    content: [
+      "MOQ (Minimum Order Quantity) is one of the most important terms to understand when working with cosmetic manufacturers. It refers to the minimum number of units you must order for a particular product.",
+      "MOQs exist because manufacturers have fixed costs for setting up production lines, sourcing raw materials, and quality testing. These costs are spread across the entire order, so smaller orders have a higher per-unit cost.",
+      "MOQs vary widely depending on the product type, packaging complexity, and manufacturer. Standard products with stock packaging may have MOQs as low as 100-500 units, while custom formulations with specialized packaging may require 5,000+ units.",
+      "When negotiating MOQs, consider starting with a smaller test order to validate the product before committing to a large quantity. Many manufacturers are willing to negotiate lower MOQs for first-time clients or for brands that show long-term potential.",
+      "At Nebula Secret, we offer flexible MOQs designed to accommodate brands at every stage, from startups testing the market to established brands scaling production."
+    ]
+  },
+  {
+    slug: "create-custom-perfume-scent",
+    title: "How to Create a Custom Perfume Scent for Your Brand",
+    category: "Product Development",
+    date: "2024-03-04",
+    readTime: "8 min",
+    excerpt: "A signature scent can set your brand apart. Learn the process of creating a custom perfume fragrance, from concept to finished product.",
+    content: [
+      "A signature perfume can be one of the most powerful brand differentiators in the beauty industry. Think of the most iconic luxury brands — many are instantly recognizable by their signature scents alone.",
+      "The process of creating a custom perfume begins with a concept. What emotion or memory do you want the scent to evoke? What are your brand's core values? This conceptual foundation guides every decision in the fragrance development process.",
+      "Next, work with a perfumer to develop scent notes. Perfumes are composed of top notes (first impression), heart notes (the core of the fragrance), and base notes (the lasting impression). A skilled perfumer will balance these layers to create a harmonious, long-lasting scent.",
+      "Once you've approved the fragrance, the next step is choosing packaging. The bottle, box, and labeling all contribute to the overall brand experience. Consider how the packaging reflects your brand identity and appeals to your target customer.",
+      "Nebula Secret offers custom perfume development services, working with experienced perfumers to create unique scents that capture your brand's essence."
+    ]
+  },
+  {
+    slug: "wholesale-body-care-products-guide",
+    title: "The Complete Guide to Wholesale Body Care Products",
+    category: "Wholesale",
+    date: "2024-03-18",
+    readTime: "6 min",
+    excerpt: "Body care products are a staple in the beauty industry. This guide covers the most popular categories, trends, and tips for selecting the right products for your business.",
+    content: [
+      "Body care is one of the largest and fastest-growing segments in the beauty industry. From body washes and lotions to scrubs and serums, consumers are increasingly investing in comprehensive body care routines.",
+      "The most popular body care categories include body washes and cleansers, body lotions and creams, body scrubs and exfoliants, body oils and serums, and hand care products. Each category serves a specific purpose and appeals to different customer needs.",
+      "Current trends in body care include clean and natural ingredients, sustainable packaging, multi-functional products, and inclusive formulations for all skin types. Brands that align with these trends are well-positioned for growth.",
+      "When selecting wholesale body care products, consider your target customer's preferences and price points. It's also important to evaluate product quality, ingredient sourcing, and manufacturer certifications.",
+      "Nebula Secret offers a comprehensive range of wholesale body care products, from luxurious body scrubs to nourishing body oils, all available with private label options."
+    ]
+  },
+  {
+    slug: "packaging-options-private-label-cosmetics",
+    title: "Packaging Options for Private Label Cosmetics: A Complete Overview",
+    category: "Packaging",
+    date: "2024-04-01",
+    readTime: "7 min",
+    excerpt: "Packaging is often the first thing customers notice about your product. Explore the different packaging options available for private label cosmetics.",
+    content: [
+      "They say you shouldn't judge a book by its cover, but in the cosmetics industry, packaging can make or break a product. Your packaging is the customer's first physical interaction with your brand, and it plays a crucial role in purchasing decisions.",
+      "When choosing packaging for your private label cosmetics, consider both aesthetics and functionality. The packaging should reflect your brand identity while also protecting the product, being easy to use, and meeting any regulatory requirements.",
+      "Common packaging materials include glass, plastic (PET, PP, HDPE), aluminum, and bamboo. Each material has its own advantages in terms of cost, weight, durability, sustainability, and perceived quality.",
+      "For skincare products, popular packaging options include pumps, droppers, jars, tubes, and airless containers. The choice depends on the product's viscosity, ingredient sensitivity, and intended use. For example, products with active ingredients may require airless packaging to prevent oxidation.",
+      "Nebula Secret offers a wide range of packaging options, from stock packaging for quick launches to fully custom packaging for brands looking to make a statement."
+    ]
+  },
+  {
+    slug: "quality-control-skincare-manufacturing",
+    title: "Quality Control in Skincare Manufacturing: What to Look For",
+    category: "Quality",
+    date: "2024-04-15",
+    readTime: "6 min",
+    excerpt: "Quality control is non-negotiable in skincare manufacturing. Learn what quality measures to look for in a manufacturer and how to ensure your products meet the highest standards.",
+    content: [
+      "In the skincare industry, quality control is not just a nice-to-have — it's essential for protecting your customers and your brand reputation. A single quality issue can lead to product recalls, negative reviews, and lasting damage to your brand.",
+      "When evaluating a manufacturer's quality control processes, look for certifications such as GMP (Good Manufacturing Practices), ISO 22716 (cosmetics-specific quality management), and any relevant regulatory certifications for your target markets.",
+      "Quality control should be implemented at every stage of production: incoming raw material inspection, in-process monitoring during manufacturing, finished product testing, and ongoing stability testing. Each batch should be documented and traceable.",
+      "Key tests for skincare products include microbial testing, pH testing, viscosity measurement, stability testing, and compatibility testing with packaging. These tests ensure the product is safe, effective, and stable throughout its shelf life.",
+      "At Nebula Secret, quality is our top priority. Every product undergoes rigorous testing at multiple stages of production, and we maintain full documentation for complete traceability and transparency."
+    ]
+  }
+];
+
+/* ============ BLOG LIST PAGE ============ */
+function viewBlog(){
+  const ic = (p) => '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
+  const html =
+  '<div class="page-hero" style="background:linear-gradient(135deg,var(--brand-dark),var(--brand));color:#fff;padding:60px 24px;text-align:center">' +
+    '<div style="max-width:800px;margin:0 auto">' +
+      '<h1 style="font-size:36px;margin:0 0 12px 0;color:#fff">Blog & Resources</h1>' +
+      '<p style="font-size:16px;opacity:.9;margin:0">Expert insights on OEM/ODM, private label, and growing your beauty brand</p>' +
+    '</div>' +
+  '</div>' +
+  '<div class="container" style="max-width:1200px;margin:0 auto;padding:48px 24px">' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:28px">' +
+      BLOG_POSTS.map(post =>
+        '<a href="#/blog/' + post.slug + '" style="background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:block;transition:transform .2s,box-shadow .2s;text-decoration:none;color:inherit" onmouseover="this.style.transform=\'translateY(-4px)\';this.style.boxShadow=\'0 8px 24px rgba(0,0,0,.1)\'" onmouseout="this.style.transform=\'\';this.style.box-shadow=\'\'">' +
+          '<div style="height:180px;background:linear-gradient(135deg,var(--brand-light),var(--card));display:flex;align-items:center;justify-content:center;color:var(--brand)">' +
+            ic('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>') +
+          '</div>' +
+          '<div style="padding:24px">' +
+            '<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">' +
+              '<span style="background:var(--brand-light);color:var(--brand);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600">' + post.category + '</span>' +
+              '<span style="color:var(--ink-soft);font-size:12px">' + post.readTime + ' read</span>' +
+            '</div>' +
+            '<h3 style="font-size:17px;margin:0 0 10px 0;line-height:1.4">' + post.title + '</h3>' +
+            '<p style="color:var(--ink-soft);font-size:14px;line-height:1.6;margin:0 0 16px 0">' + post.excerpt + '</p>' +
+            '<span style="color:var(--brand);font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px">Read More ' + ic('<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>') + '</span>' +
+          '</div>' +
+        '</a>'
+      ).join("") +
+    '</div>' +
+  '</div>';
+  $("#app").innerHTML = html;
+}
+
+/* ============ BLOG POST PAGE ============ */
+function viewBlogPost(slug){
+  const ic = (p) => '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
+  const post = BLOG_POSTS.find(p => p.slug === slug);
+  if(!post){ location.hash = "#/blog"; return; }
+  const html =
+  '<div class="container" style="max-width:800px;margin:0 auto;padding:48px 24px">' +
+    '<div class="crumbs" style="margin-bottom:24px"><a href="#/" style="color:var(--ink-soft);text-decoration:none">Home</a> ' + ic('<path d="m9 18 6-6-6-6"/>') + ' <a href="#/blog" style="color:var(--ink-soft);text-decoration:none">Blog</a> ' + ic('<path d="m9 18 6-6-6-6"/>') + ' <span style="color:var(--ink)">' + post.category + '</span></div>' +
+    '<div style="margin-bottom:32px">' +
+      '<div style="display:flex;gap:12px;align-items:center;margin-bottom:16px">' +
+        '<span style="background:var(--brand-light);color:var(--brand);padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600">' + post.category + '</span>' +
+        '<span style="color:var(--ink-soft);font-size:13px">' + post.date + ' · ' + post.readTime + ' read</span>' +
+      '</div>' +
+      '<h1 style="font-size:32px;line-height:1.3;margin:0 0 16px 0">' + post.title + '</h1>' +
+      '<p style="color:var(--ink-soft);font-size:17px;line-height:1.7;margin:0">' + post.excerpt + '</p>' +
+    '</div>' +
+    '<div style="height:200px;background:linear-gradient(135deg,var(--brand-light),var(--card));border-radius:12px;margin-bottom:32px;display:flex;align-items:center;justify-content:center;color:var(--brand)">' +
+      ic('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>') +
+    '</div>' +
+    '<div style="font-size:16px;line-height:1.8;color:var(--ink)">' +
+      post.content.map(para => '<p style="margin:0 0 20px 0">' + para + '</p>').join("") +
+    '</div>' +
+    '<div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">' +
+      '<a href="#/blog" style="display:inline-flex;align-items:center;gap:8px;color:var(--brand);text-decoration:none;font-weight:600;font-size:15px">' + ic('<path d="m15 18-6-6 6-6"/>') + ' Back to All Articles</a>' +
+      '<a href="#/about?scroll=contact" style="display:inline-block;background:var(--brand);color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Contact Us</a>' +
+    '</div>' +
+  '</div>';
+  $("#app").innerHTML = html;
 }
 
 function viewInfo(page){
@@ -2669,6 +2914,12 @@ function storeRoute(){
     viewAccount();
   } else if(h.startsWith("#/about")){
     viewAbout();
+  } else if(h.startsWith("#/why-us")){
+    viewWhyUs();
+  } else if(h.startsWith("#/blog/")){
+    viewBlogPost(h.split("/")[2] || "");
+  } else if(h.startsWith("#/blog")){
+    viewBlog();
   } else if(h.startsWith("#/info/")){
     viewInfo(h.split("/")[2] || "");
   } else {
