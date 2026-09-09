@@ -2800,6 +2800,12 @@ function storeRoute(){
     viewAccount();
   } else if(h.startsWith("#/about")){
     viewAbout();
+  } else if(h.startsWith("#/why-us")){
+    viewWhyUs();
+  } else if(h.startsWith("#/blog/")){
+    viewBlogPost(h.split("/")[2] || "");
+  } else if(h.startsWith("#/blog")){
+    viewBlog();
   } else if(h.startsWith("#/info/")){
     viewInfo(h.split("/")[2] || "");
   } else {
