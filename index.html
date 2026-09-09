@@ -3,8 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nebula Secret — Wholesale Supplier &amp; OEM/ODM Manufacturer</title>
-<meta name="description" content="Nebula Secret is a wholesale supplier and OEM/ODM manufacturer of skincare, body care, home wellness and more — everyday products found in department stores, sourced globally and tailored to your requirements.">
+
+<!-- Primary SEO Meta Tags -->
+<title>Nebula Secret | Wholesale Skincare & OEM/ODM Manufacturer</title>
+<meta name="description" content="Nebula Secret is a leading wholesale skincare & OEM/ODM manufacturer. Private label body care, perfumes & bath products with custom formulation. Low MOQ, global shipping.">
+<meta name="keywords" content="wholesale skincare, OEM skincare manufacturer, ODM private label, wholesale body care, private label cosmetics, custom formulation, wholesale perfume, bath salt supplier, hand cream manufacturer, essential oil wholesale">
+<meta name="author" content="Nebula Secret">
+<meta name="robots" content="index, follow">
+<meta name="language" content="English">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://nebula-secret-supabase.vercel.app/">
+<meta property="og:title" content="Nebula Secret | Wholesale Skincare & OEM/ODM Manufacturer">
+<meta property="og:description" content="Leading wholesale skincare & OEM/ODM manufacturer. Private label body care, perfumes & bath products with custom formulation. Low MOQ.">
+<meta property="og:image" content="https://nebula-secret-supabase.vercel.app/images/Neubla_logo_black_1729172124.png">
+<meta property="og:site_name" content="Nebula Secret">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:url" content="https://nebula-secret-supabase.vercel.app/">
+<meta name="twitter:title" content="Nebula Secret | Wholesale Skincare & OEM/ODM Manufacturer">
+<meta name="twitter:description" content="Leading wholesale skincare & OEM/ODM manufacturer. Private label body care, perfumes & bath products with custom formulation. Low MOQ.">
+<meta name="twitter:image" content="https://nebula-secret-supabase.vercel.app/images/Neubla_logo_black_1729172124.png">
+
+<!-- Canonical URL -->
+<link rel="canonical" href="https://nebula-secret-supabase.vercel.app/">
+
+<!-- Favicon -->
 <link rel="icon" type="image/png" href="images/icon_512x512_android_ODEwMj.png">
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Comfortaa:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
 <style>
@@ -333,6 +359,13 @@ section.block{padding:40px 0}
 .spec-row:last-child{border-bottom:none}
 .spec-k{font-weight:600;color:var(--ink);flex-shrink:0}
 .spec-v{color:#4d4a52;text-align:right}
+.product-highlights{margin:16px 0;background:linear-gradient(135deg,var(--brand-soft),var(--accent-soft));border-radius:var(--radius);padding:18px 20px}
+.ph-title{font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--ink);margin-bottom:10px}
+.ph-list{list-style:none;padding:0;margin:0}
+.ph-list li{font-size:13px;color:var(--ink);line-height:1.7;padding:3px 0}
+.product-usecase{margin:16px 0;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0;padding:16px 20px}
+.pu-title{font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--ink);margin-bottom:8px}
+.pu-text{font-size:13px;color:var(--ink-soft);line-height:1.7;margin:0}
 .buy-panel{margin-top:20px;border:1px solid var(--line);border-radius:var(--radius);padding:18px;background:var(--card)}
 .qty-row{display:flex;align-items:center;gap:14px;margin-bottom:14px}
 .qty-label{font-size:13px;font-weight:600;color:var(--ink-soft)}
@@ -700,6 +733,10 @@ details.ct-block > .form-grid{padding:14px 16px}
       <span class="sep hide-m">|</span>
       <a href="#/about">About Us</a>
       <span class="sep hide-m">|</span>
+      <a href="why-us.html" class="hide-m">Why Us</a>
+      <span class="sep hide-m">|</span>
+      <a href="blog.html" class="hide-m">Blog</a>
+      <span class="sep hide-m">|</span>
       <a href="#/admin" class="hide-m">Admin Center</a>
       <span class="sep hide-m">|</span>
       <a href="#/info/track">Track Order</a>
@@ -780,6 +817,8 @@ details.ct-block > .form-grid{padding:14px 16px}
       <a href="#/about?scroll=story">Our Story</a>
       <a href="#/about?scroll=mission">Our Mission</a>
       <a href="#/about?scroll=promise">Our Promise</a>
+      <a href="why-us.html">Why Choose Us</a>
+      <a href="blog.html">Blog & Resources</a>
       <a href="#/about?scroll=contact">Contact Us</a>
     </div>
     <div class="footer-col">
@@ -2465,6 +2504,90 @@ function bindShopUI(){
   });
 }
 
+/* ============ Product detail page with enhanced descriptions ============ */
+function productHighlights(p){
+  const cs = p.cs || "";
+  const name = p.n || "";
+  const highlights = {
+    "body-scrub": [
+      "✨ Gently exfoliates dead skin cells for smoother, brighter skin",
+      "💧 Infused with nourishing oils to hydrate while exfoliating",
+      "🌿 Natural ingredients suitable for all skin types",
+      "🎁 Perfect for at-home spa experiences and gift sets"
+    ],
+    "body-sugar-scrub": [
+      "✨ Sugar crystals gently buff away dull, dry skin",
+      "💧 Moisturizing formula leaves skin soft and glowing",
+      "🌿 Gentle enough for sensitive skin areas",
+      "🎁 Ideal for self-care routines and pampering gifts"
+    ],
+    "body-and-face-scrub": [
+      "✨ Dual-action formula for both face and body",
+      "💧 Hydrating ingredients prevent dryness after exfoliation",
+      "🌿 Gentle enough for facial use, effective for body",
+      "🎁 Versatile product for complete skincare routine"
+    ],
+    "bath-salt": [
+      "✨ Mineral-rich salts soothe tired muscles and promote relaxation",
+      "💧 Aromatherapy benefits enhance mood and reduce stress",
+      "🌿 Natural minerals nourish and soften skin",
+      "🎁 Perfect for winding down after a long day"
+    ],
+    "hand-cream": [
+      "✨ Fast-absorbing formula hydrates hands without greasiness",
+      "💧 Rich moisturizers protect against dryness and cracking",
+      "🌿 Gentle formula suitable for frequent daily use",
+      "🎁 Travel-friendly size, perfect for on-the-go hydration"
+    ],
+    "essential-oil": [
+      "✨ 100% pure essential oils for aromatherapy and wellness",
+      "💧 Can be used in diffusers, baths, or with carrier oils",
+      "🌿 Therapeutic-grade quality for maximum benefits",
+      "🎁 Versatile product for relaxation, energy, and focus"
+    ],
+    "facial-mask": [
+      "✨ Targeted treatment for specific skin concerns",
+      "💧 Deep hydration and nourishment in one application",
+      "🌿 Suitable for weekly skincare routine enhancement",
+      "🎁 Easy to use, visible results after first application"
+    ],
+    "incense-sticks": [
+      "✨ Hand-rolled incense sticks for meditation and relaxation",
+      "💧 Long-lasting burn time with consistent fragrance release",
+      "🌿 Natural ingredients, no synthetic additives",
+      "🎁 Perfect for creating calming atmosphere at home or office"
+    ],
+    "perfume": [
+      "✨ Long-lasting Eau de Parfum with 6-8 hour wear time",
+      "💧 Unique fragrance blends crafted by expert perfumers",
+      "🌿 High-quality ingredients for superior scent projection",
+      "🎁 Elegant 50ml bottle, perfect for gifting and daily wear"
+    ]
+  };
+  return highlights[cs] || [
+    "✨ Premium quality product crafted with care",
+    "💧 Formulated with high-quality ingredients",
+    "🌿 Suitable for daily use and various skin types",
+    "🎁 Perfect for personal use or as thoughtful gifts"
+  ];
+}
+
+function productUseCases(p){
+  const cs = p.cs || "";
+  const useCases = {
+    "body-scrub": "Use 2-3 times per week in the shower. Apply to damp skin, massage in circular motions focusing on rough areas like elbows, knees, and heels. Rinse thoroughly and follow with body lotion. Avoid use on freshly shaved skin.",
+    "body-sugar-scrub": "Apply to wet skin during bath or shower. Gently massage in upward circular motions to stimulate circulation. Sugar dissolves as you scrub, revealing soft, smooth skin. Use 2-3 times weekly for best results. Ideal before self-tanning or special occasions.",
+    "body-and-face-scrub": "For body: use 2-3 times weekly in the shower. For face: use 1-2 times weekly, avoiding the delicate eye area. Apply to damp skin and massage gently. Rinse thoroughly and follow with moisturizer. Perfect for simplifying your skincare routine.",
+    "bath-salt": "Add 1-2 handfuls to warm bath water and stir to dissolve. Soak for 15-20 minutes to allow minerals to absorb and muscles to relax. For foot baths: add 2 tablespoons to warm water and soak feet for 10 minutes. Best used in the evening to wind down before bed.",
+    "hand-cream": "Apply a pea-sized amount to clean hands and massage thoroughly, paying attention to cuticles and knuckles. Use after hand washing, before bed, and whenever hands feel dry. Travel size fits easily in purse, desk drawer, or car. Reapply as needed throughout the day.",
+    "essential-oil": "Diffusion: add 3-5 drops to your diffuser with water. Bath: add 5-10 drops to bath water (mix with carrier oil first). Massage: dilute 2-3 drops with 10ml carrier oil and apply to skin. Inhalation: add 1-2 drops to a tissue and inhale deeply. Always dilute before skin application.",
+    "facial-mask": "Start with clean, dry skin. Apply an even layer avoiding the eye and mouth area. Leave on for 10-15 minutes (or as directed). Rinse thoroughly with lukewarm water. Follow with toner and moisturizer. Use 1-2 times per week for optimal results. Patch test before first use.",
+    "incense-sticks": "Light the tip of the incense stick and allow to burn for 10-15 seconds. Gently blow out the flame to release fragrant smoke. Place in an incense holder on a heat-resistant surface. Enjoy the aroma for meditation, yoga, relaxation, or to freshen your space. Burn time: approximately 30-45 minutes per stick.",
+    "perfume": "Apply to pulse points: wrists, neck, behind ears, and inner elbows. Do not rub wrists together as this breaks down the fragrance molecules. Layer with matching body products for longer wear. Reapply as needed throughout the day. For best longevity, apply to moisturized skin. Store in a cool, dry place away from direct sunlight."
+  };
+  return useCases[cs] || "Follow the specific usage instructions on the product packaging. For best results, use regularly as directed. Store in a cool, dry place away from direct sunlight. If irritation occurs, discontinue use and consult a healthcare professional.";
+}
+
 function viewProduct(id){
   const p = findProduct(id);
   if(!p){ location.hash = "#/shop"; return; }
@@ -2490,6 +2613,14 @@ function viewProduct(id){
         '<div class="d-rating"><span class="stars">' + stars(rt.r) + '</span><b>' + rt.r.toFixed(1) + '</b><span>· ' + rt.reviews + ' reviews · ' + sold + ' sold</span></div>' +
         '<div class="detail-price">' + fmt(p.p) + '<span class="tax-note"> incl. VAT</span></div>' +
         '<div class="spec-list">' + (props || '<div class="spec-row"><span class="spec-v">Premium quality product from Nebula Secret.</span></div>') + '</div>' +
+        '<div class="product-highlights">' +
+          '<h3 class="ph-title">Why You\'ll Love It</h3>' +
+          '<ul class="ph-list">' + productHighlights(p).map(h => '<li>' + h + '</li>').join("") + '</ul>' +
+        '</div>' +
+        '<div class="product-usecase">' +
+          '<h3 class="pu-title">How to Use</h3>' +
+          '<p class="pu-text">' + productUseCases(p) + '</p>' +
+        '</div>' +
         '<div class="buy-panel">' +
           '<div class="qty-row"><span class="qty-label">Quantity</span>' +
             '<div class="qty"><button onclick="changeQty(-1)">−</button><input id="qtyInput" type="number" min="1" value="1" onchange="setQtyInput(this.value)"><button onclick="changeQty(1)">+</button></div>' +
