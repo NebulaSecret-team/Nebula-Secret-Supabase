@@ -1,0 +1,17 @@
+# robots.txt for Nebula Secret
+# Allow all search engines to crawl the site
+
+User-agent: *
+Allow: /
+
+# Block admin pages from being indexed
+Disallow: /#/admin
+Disallow: /#/admin/
+
+# Block account pages
+Disallow: /#/account
+Disallow: /#/checkout
+Disallow: /#/cart
+
+# Sitemap location
+Sitemap: https://nebula-secret-supabase.vercel.app/sitemap.xml
