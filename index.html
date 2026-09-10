@@ -1051,7 +1051,20 @@ function defaultTheme(){
   };
 }
 function getTheme(){
-  const t = _cache.theme;
+  let t = _cache.theme;
+  /* If theme not loaded from Supabase yet, try localStorage first (prevents pink FOUC) */
+  if(!t){
+    try{
+      var raw = localStorage.getItem('ns_theme_v3');
+      if(raw){
+        var parsed = JSON.parse(raw);
+        if(parsed && typeof parsed === 'object' && parsed.brandColor){
+          _cache.theme = parsed;
+          t = parsed;
+        }
+      }
+    }catch(e){}
+  }
   if(t && t.heroKicker === "Fall Collection"){
     delete t.heroKicker; delete t.heroTitle; delete t.heroSub;
     _cache.theme = t; sbSave("theme", t);
