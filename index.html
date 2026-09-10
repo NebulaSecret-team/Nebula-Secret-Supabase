@@ -958,6 +958,10 @@ async function sbLoadAll(){
     _cache.admins = map.admins || null;
     _cache.loaded = true;
     console.log("Supabase: loaded", Object.keys(map).length, "settings");
+    /* Persist theme to localStorage for instant apply on next page load (prevents FOUC) */
+    try{
+      if(_cache.theme){ localStorage.setItem("ns_theme_v3", JSON.stringify(_cache.theme)); }
+    }catch(e){}
   }catch(e){
     console.warn("Supabase load exception:", e);
     _cache.loaded = true;
@@ -2528,14 +2532,14 @@ function viewHome(){
     '<div class="contact-form-wrap" id="contact-section">' +
       '<h2>Contact Nebula Secret</h2>' +
       '<p class="cf-sub">Thank you for considering Nebula Secret. Whether you are interested in wholesale pricing, OEM/ODM private label solutions, custom formulation, or simply have a question, we would be delighted to hear from you. Please fill out the form below and our dedicated team will respond to your inquiry within 24 hours.</p>' +
-      '<form class="contact-form" onsubmit="submitContactForm(event)" novalidate>' +
+      '<form class="contact-form" onsubmit="submitContactForm(event)">' +
         '<div class="cf-grid">' +
-          '<div class="field"><label>Your name *</label><input id="cfName" type="text" placeholder="e.g. John Smith" required></div>' +
-          '<div class="field"><label>Email address *</label><input id="cfEmail" type="email" placeholder="you@company.com" required></div>' +
+          '<div class="field"><label>Your name *</label><input id="cfName" type="text" placeholder="e.g. John Smith" required oninvalid="this.setCustomValidity(\'Please enter your name.\')" oninput="this.setCustomValidity(\'\')"></div>' +
+          '<div class="field"><label>Email address *</label><input id="cfEmail" type="email" placeholder="you@company.com" required oninvalid="this.setCustomValidity(\'Please enter a valid email address.\')" oninput="this.setCustomValidity(\'\')"></div>' +
           '<div class="field"><label>Company / Brand</label><input id="cfCompany" type="text" placeholder="e.g. Your Brand Ltd"></div>' +
           '<div class="field"><label>Inquiry type</label><select id="cfType"><option value="Wholesale">Wholesale / Bulk Order</option><option value="OEM/ODM">OEM / ODM Private Label</option><option value="Custom Formulation">Custom Formulation</option><option value="Sample Request">Sample Request</option><option value="Product Catalog">Product Catalog Request</option><option value="Pricing & MOQ">Pricing & MOQ Inquiry</option><option value="Shipping & Logistics">Shipping & Logistics</option><option value="Partnership">Partnership / Collaboration</option><option value="Press & Media">Press & Media</option><option value="General Inquiry">General Inquiry</option><option value="Other">Other</option></select></div>' +
         '</div>' +
-        '<div class="field full"><label>Your message *</label><textarea id="cfMessage" rows="5" placeholder="Please tell us about your project, product interests, required quantities, timeline, or any questions you may have..." required></textarea></div>' +
+        '<div class="field full"><label>Your message *</label><textarea id="cfMessage" rows="5" placeholder="Please tell us about your project, product interests, required quantities, timeline, or any questions you may have..." required oninvalid="this.setCustomValidity(\'Please enter your message.\')" oninput="this.setCustomValidity(\'\')"></textarea></div>' +
         '<div class="cf-actions">' +
           '<button type="submit" class="btn" id="cfSubmitBtn">Send Message</button>' +
           '<div id="cfMsg" style="display:none;margin-top:10px;font-size:14px;font-weight:600"></div>' +
