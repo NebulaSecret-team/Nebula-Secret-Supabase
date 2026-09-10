@@ -813,6 +813,8 @@ details.ct-block > .form-grid{padding:14px 16px}
     </div>
     <div class="footer-col">
       <h4>About</h4>
+      <a href="#/why-us">Why Us</a>
+      <a href="#/blog">Blog</a>
       <a href="#/about?scroll=story">Our Story</a>
       <a href="#/about?scroll=mission">Our Mission</a>
       <a href="#/about?scroll=promise">Our Promise</a>
@@ -1913,9 +1915,7 @@ function renderCatNav(){
         cats.map(c => '<a href="#/shop?cat=' + c.cs + '" onclick="closeMegaMenu()"><span>' + esc(c.c) + '</span><span class="n">' + getProducts().filter(p => p.cs === c.cs).length + '</span></a>').join("") +
       '</div>' +
     '</div>' +
-    cats.map(c => '<a href="#/shop?cat=' + c.cs + '" onclick="closeMegaMenu()">' + esc(c.c) + '</a>').join("") +
-    '<a href="#/why-us" onclick="closeMegaMenu()">Why Us</a>' +
-    '<a href="#/blog" onclick="closeMegaMenu()">Blog</a>';
+    cats.map(c => '<a href="#/shop?cat=' + c.cs + '" onclick="closeMegaMenu()">' + esc(c.c) + '</a>').join("");
 }
 function toggleAllCats(e){
   if(window.innerWidth <= 960){
