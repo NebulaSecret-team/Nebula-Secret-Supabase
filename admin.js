@@ -496,60 +496,14 @@ async function adminAddAdmin(){
   const n = ($("#auName").value || "").trim();
   if(!u){ showToast("Enter a login name"); return; }
   if(p.length < 6){ showToast("Password must be at least 6 characters"); return; }
-
-  /* Convert login name to email format for Supabase Auth */
-  const email = u.includes('@') ? u : u + '@nebulasecret.com';
-
-  try{
-    /* Save current admin session to restore later */
-    const { data: currentSession } = await supabase.auth.getSession();
-    const currentAdminEmail = currentSession?.session?.user?.email;
-    const currentAdminPassword = null; /* We can't get the password, so we'll need to re-login differently */
-
-    /* Create user via Supabase Auth */
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: email,
-      password: p,
-      options: {
-        data: { name: n || u }
-      }
-    });
-
-    if(signUpError){
-      if(signUpError.message.includes('already registered') || signUpError.message.includes('User already registered')){
-        showToast("This login name already exists");
-      }else{
-        showToast("Error creating admin: " + signUpError.message);
-      }
-      return;
-    }
-
-    /* Set admin role via RPC function */
-    const { error: roleError } = await supabase.rpc('set_admin_role', {
-      p_user_email: email
-    });
-
-    if(roleError){
-      console.warn("Role setting error:", roleError);
-      showToast("Admin created, but role setting failed. Please run SQL manually.");
-    }else{
-      showToast("Admin " + u + " added successfully");
-    }
-
-    /* Sign out the new user and restore admin session */
-    await supabase.auth.signOut();
-
-    /* If we have current admin credentials, re-login */
-    /* Note: We can't restore session without password, so admin will need to re-login */
-    showToast("Please re-login with your admin account");
-
-    /* Refresh the admin users list */
-    adminAdminUsers();
-
-  }catch(e){
-    console.error("Add admin error:", e);
-    showToast("An error occurred: " + e.message);
-  }
+  const admins = getAdmins();
+  if(admins.some(a => a.user.toLowerCase() === u.toLowerCase())){ showToast("This login name already exists"); return; }
+  /* Hash password before storing */
+  const hashedPass = await hashPass(p);
+  admins.push({ user: u, pass: hashedPass, name: n || u, created: new Date().toISOString() });
+  saveAdmins(admins);
+  showToast("Admin " + u + " added");
+  adminAdminUsers();
 }
 async function adminChangeAdminPass(user){
   const admins = getAdmins();
@@ -1000,40 +954,58 @@ async function doLogin(){
     return;
   }
   if(btn){ btn.disabled = true; btn.textContent = "Signing in..."; }
+
+  /* Method 1: Try Supabase Auth first */
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email,
       password: p
     });
-    if(error){
-      const err = $("#loginErr");
-      err.textContent = error.message || "Invalid email or password.";
-      err.classList.add("show");
-      if(btn){ btn.disabled = false; btn.textContent = "Sign in"; }
-      return;
-    }
-    if(data && data.user){
+    if(!error && data && data.user){
       /* Check if user has admin role */
       const role = data.user.app_metadata?.role || data.user.user_metadata?.role;
-      if(role !== 'admin' && role !== 'superadmin'){
-        /* Not an admin, sign out and show error */
-        await supabase.auth.signOut();
-        const err = $("#loginErr");
-        err.textContent = "You do not have admin access. Please contact the administrator.";
-        err.classList.add("show");
-        if(btn){ btn.disabled = false; btn.textContent = "Sign in"; }
+      if(role === 'admin' || role === 'superadmin'){
+        showToast("Welcome, " + (data.user.user_metadata?.name || data.user.email));
+        location.hash = "#/admin/dashboard";
         return;
+      }else{
+        /* Not an admin, sign out and try legacy method */
+        await supabase.auth.signOut();
       }
-      showToast("Welcome, " + (data.user.user_metadata?.name || data.user.email));
-      location.hash = "#/admin/dashboard";
     }
   } catch(e) {
-    console.error("Login error:", e);
-    const err = $("#loginErr");
-    err.textContent = "An error occurred during login. Please try again.";
-    err.classList.add("show");
-    if(btn){ btn.disabled = false; btn.textContent = "Sign in"; }
+    console.log("Supabase Auth login failed, trying legacy method:", e.message);
   }
+
+  /* Method 2: Try legacy admin system (stored in site_settings) */
+  try {
+    const admins = getAdmins();
+    /* Match by login name or email */
+    const admin = admins.find(a =>
+      a.user.toLowerCase() === email.toLowerCase() ||
+      (a.email && a.email.toLowerCase() === email.toLowerCase())
+    );
+
+    if(admin){
+      /* Verify password */
+      const isValid = await verifyPass(p, admin.pass);
+      if(isValid){
+        /* Set legacy admin session */
+        setAdminSession(admin.user, admin.name || admin.user);
+        showToast("Welcome, " + (admin.name || admin.user));
+        location.hash = "#/admin/dashboard";
+        return;
+      }
+    }
+  } catch(e) {
+    console.error("Legacy login error:", e);
+  }
+
+  /* Both methods failed */
+  const err = $("#loginErr");
+  err.textContent = "Invalid email or password.";
+  err.classList.add("show");
+  if(btn){ btn.disabled = false; btn.textContent = "Sign in"; }
 }
 
 async function logout(){
@@ -1052,19 +1024,9 @@ async function logout(){
 
 function adminRoute(){
   const h = location.hash || "#/";
-  /* Check Supabase Auth session asynchronously */
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if(!session){
-      if(h === "#/admin"){ viewAdminLogin(); return; }
-      viewAdminLogin("Please sign in to access the admin panel.");
-      return;
-    }
-    /* Check if user has admin role */
-    const role = session.user.app_metadata?.role || session.user.user_metadata?.role;
-    if(role !== 'admin' && role !== 'superadmin'){
-      viewAdminLogin("You do not have admin access. Please contact the administrator.");
-      return;
-    }
+
+  /* Helper function to render admin page */
+  const renderAdminPage = () => {
     const page = h.split("/")[2] || "dashboard";
     if(page === "dashboard") adminDashboard();
     else if(page === "products") adminProducts();
@@ -1077,8 +1039,41 @@ function adminRoute(){
     else if(page === "content") adminContent();
     else if(page === "cloudsync") adminCloudSync();
     else viewAdminLogin();
+  };
+
+  /* Method 1: Check Supabase Auth session */
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if(session){
+      /* Check if user has admin role */
+      const role = session.user.app_metadata?.role || session.user.user_metadata?.role;
+      if(role === 'admin' || role === 'superadmin'){
+        renderAdminPage();
+        return;
+      }
+    }
+
+    /* Method 2: Check legacy admin session */
+    try{
+      if(typeof validateAdminSession === 'function' && validateAdminSession()){
+        renderAdminPage();
+        return;
+      }
+    }catch(e){
+      console.error("Legacy session check error:", e);
+    }
+
+    /* No valid session */
+    if(h === "#/admin"){ viewAdminLogin(); return; }
+    viewAdminLogin("Please sign in to access the admin panel.");
   }).catch(e => {
     console.error("Auth session error:", e);
+    /* Fallback to legacy session check */
+    try{
+      if(typeof validateAdminSession === 'function' && validateAdminSession()){
+        renderAdminPage();
+        return;
+      }
+    }catch(e2){}
     viewAdminLogin("Authentication error. Please try again.");
   });
 }

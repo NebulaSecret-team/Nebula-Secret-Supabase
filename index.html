@@ -1303,11 +1303,20 @@ function saveCats(c){ _cache.cats = c; sbSave("cats", c); }
 /* isAdmin now returns a Promise - checks Supabase Auth session */
 async function isAdmin(){
   try {
+    /* First check Supabase Auth session */
     const { data: { session } } = await supabase.auth.getSession();
-    if(!session) return false;
-    const role = session.user.app_metadata?.role || session.user.user_metadata?.role;
-    return role === 'admin' || role === 'superadmin';
+    if(session){
+      const role = session.user.app_metadata?.role || session.user.user_metadata?.role;
+      if(role === 'admin' || role === 'superadmin') return true;
+    }
+    /* Then check legacy session */
+    if(typeof validateAdminSession === 'function' && validateAdminSession()) return true;
+    return false;
   } catch(e) {
+    /* Fallback to legacy session check */
+    try{
+      if(typeof validateAdminSession === 'function' && validateAdminSession()) return true;
+    }catch(e2){}
     return false;
   }
 }
