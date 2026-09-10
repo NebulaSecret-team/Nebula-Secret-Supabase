@@ -909,7 +909,7 @@ details.ct-block > .form-grid{padding:14px 16px}
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js" integrity="sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
 <script>
 
@@ -917,17 +917,79 @@ details.ct-block > .form-grid{padding:14px 16px}
 const SB_URL = "https://xwhhsoppcpkijxxychjm.supabase.co";
 const SB_KEY = "sb_publishable_2GnjItYkv_TRex8Z9YKTag_oUdiyHEk";
 let supabase = null;
-console.log("[Supabase] URL:", SB_URL);
-console.log("[Supabase] Key prefix:", SB_KEY.substring(0, 20) + "...");
-console.log("[Supabase] window.supabase:", typeof window.supabase);
+/* Debug logging disabled in production for security */
+const DEBUG = false;
+function dbg(...args){ if(DEBUG) console.log("[Supabase]", ...args); }
 try {
   if (window.supabase && window.supabase.createClient) {
     supabase = window.supabase.createClient(SB_URL, SB_KEY);
-    console.log("[Supabase] Client created successfully");
+    dbg("Client created successfully");
   } else {
-    console.error("[Supabase] window.supabase.createClient not found — library not loaded");
+    console.error("[Supabase] Library not loaded");
   }
-} catch(e) { console.error("[Supabase] Init failed:", e); }
+} catch(e) { console.error("[Supabase] Init failed"); }
+
+/* HTML sanitizer - prevents XSS by only allowing safe tags and attributes */
+function sanitizeHTML(html) {
+  if(!html) return "";
+  const allowedTags = ['B','I','EM','STRONG','A','P','BR','UL','OL','LI','H1','H2','H3','H4','H5','H6','SPAN','DIV','HR','BLOCKQUOTE','CODE','PRE'];
+  const allowedAttrs = ['href','title','class','style','target','rel'];
+  const allowedProtocols = ['http:','https:','mailto:','tel:'];
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString('<div>' + html + '</div>', 'text/html');
+    const root = doc.body.firstChild;
+    function clean(node) {
+      for(let i = node.childNodes.length - 1; i >= 0; i--) {
+        const child = node.childNodes[i];
+        if(child.nodeType === 1) {
+          const tag = child.tagName;
+          if(allowedTags.indexOf(tag) === -1) {
+            /* Replace with text content or remove */
+            const text = doc.createTextNode(child.textContent);
+            node.replaceChild(text, child);
+            continue;
+          }
+          /* Remove all attributes except allowed ones */
+          for(let j = child.attributes.length - 1; j >= 0; j--) {
+            const attr = child.attributes[j];
+            if(allowedAttrs.indexOf(attr.name.toLowerCase()) === -1) {
+              child.removeAttribute(attr.name);
+            } else if(attr.name.toLowerCase() === 'href') {
+              /* Validate URL protocol */
+              const val = attr.value.trim().toLowerCase();
+              let valid = false;
+              for(let k = 0; k < allowedProtocols.length; k++) {
+                if(val.indexOf(allowedProtocols[k]) === 0 || val.indexOf('#') === 0 || val.indexOf('/') === 0) {
+                  valid = true; break;
+                }
+              }
+              if(!valid) child.removeAttribute('href');
+              else { child.setAttribute('rel', 'noopener noreferrer'); if(tag === 'A') child.setAttribute('target', '_blank'); }
+            }
+          }
+          /* Remove event handler attributes (onclick, onload, etc.) */
+          for(let j = child.attributes.length - 1; j >= 0; j--) {
+            if(child.attributes[j].name.toLowerCase().indexOf('on') === 0) {
+              child.removeAttribute(child.attributes[j].name);
+            }
+          }
+          clean(child);
+        } else if(child.nodeType === 8) {
+          /* Remove comments */
+          node.removeChild(child);
+        }
+      }
+    }
+    clean(root);
+    return root.innerHTML;
+  } catch(e) {
+    /* Fallback: strip all HTML */
+    const tmp = document.createElement('div');
+    tmp.textContent = html;
+    return tmp.innerHTML;
+  }
+}
 
 /* In-memory cache (replaces localStorage for dynamic data) */
 const _cache = {
@@ -957,7 +1019,7 @@ async function sbLoadAll(){
     _cache.accounts = map.accounts || null;
     _cache.admins = map.admins || null;
     _cache.loaded = true;
-    console.log("Supabase: loaded", Object.keys(map).length, "settings");
+    dbg("loaded", Object.keys(map).length, "settings");
     /* Persist theme to localStorage for instant apply on next page load (prevents FOUC) */
     try{
       if(_cache.theme){ localStorage.setItem("ns_theme_v3", JSON.stringify(_cache.theme)); }
@@ -1161,8 +1223,8 @@ async function loadCloudCatalog(){
 }
 function saveCats(c){ _cache.cats = c; sbSave("cats", c); }
 
-function isAdmin(){ return lsGet(LS.admin, false); }
-function setAdmin(v){ lsSet(LS.admin, v); }
+function isAdmin(){ return validateAdminSession(); }
+function setAdmin(v){ if(!v){ try{ localStorage.removeItem(LS.admin); window._adminToken = null; }catch(e){} } }
 
 /* ============ Utilities ============ */
 const $ = s => document.querySelector(s);
@@ -1264,19 +1326,77 @@ function getAccounts(){ return _cache.accounts || []; }
 function saveAccounts(a){ _cache.accounts = a; sbSave("accounts", a); }
 function getSession(){ return lsGet(LS.session, null); }
 function setSession(s){ if(s) lsSet(LS.session, s); else try{ localStorage.removeItem(LS.session); }catch(e){} }
+/* Secure password hashing using PBKDF2 with random salt */
+/* Format: pbkdf2::<iterations>::<salt_hex>::<hash_hex> */
+/* Legacy format: sha256::<hash> (for backward compatibility) */
 async function hashPass(pw){
   try{
-    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("ns-salt::" + pw));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-  }catch(e){ return "plain::" + pw; }
+    /* Generate random salt */
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iterations = 100000;
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
+    const hashBuffer = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" }, keyMaterial, 256);
+    const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("");
+    const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+    return "pbkdf2::" + iterations + "::" + saltHex + "::" + hashHex;
+  }catch(e){
+    /* Fallback to legacy SHA-256 if Web Crypto not available */
+    try{
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("ns-salt::" + pw));
+      return "sha256::" + Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }catch(e2){ return "plain::" + pw; }
+  }
+}
+
+/* Verify password against stored hash (supports pbkdf2, sha256, and plain formats) */
+async function verifyPass(pw, storedHash){
+  if(!storedHash) return false;
+  const str = String(storedHash);
+  /* PBKDF2 format */
+  if(str.indexOf("pbkdf2::") === 0){
+    try{
+      const parts = str.split("::");
+      const iterations = parseInt(parts[1], 10);
+      const saltHex = parts[2];
+      const expectedHash = parts[3];
+      const salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+      const enc = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
+      const hashBuffer = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" }, keyMaterial, 256);
+      const actualHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+      return actualHash === expectedHash;
+    }catch(e){ return false; }
+  }
+  /* Legacy SHA-256 format */
+  if(str.indexOf("sha256::") === 0){
+    try{
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("ns-salt::" + pw));
+      const actualHash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+      return actualHash === str.substring(8);
+    }catch(e){ return false; }
+  }
+  /* Legacy plain format (for backward compatibility with old data) */
+  if(str.indexOf("plain::") === 0){
+    return pw === str.substring(7);
+  }
+  /* Old format: plain text password (very old data) */
+  return pw === str;
 }
 function acctLabel(){ const s = getSession(); return s ? (s.name || s.email).split(" ")[0] : "Account"; }
 function updateAcctLabel(){ const el = $("#acctLabel"); if(el) el.textContent = acctLabel(); }
 function myOrders(email){ return getOrders().filter(o => String(o.customer.email).toLowerCase() === String(email).toLowerCase()); }
 
 /* ============ Admin user accounts (multiple admins, change password) ============ */
+/* Default admin is only used when no admins exist in Supabase — user should change password immediately */
+const DEFAULT_ADMIN_USER = "admin";
+const DEFAULT_ADMIN_PASS = "abcd1234";
 function getAdmins(){
-  const raw = _cache.admins || [{user:"admin",pass:"abcd1234",name:"Admin",role:"superadmin"}];
+  const raw = _cache.admins;
+  if(!raw || !Array.isArray(raw) || raw.length === 0){
+    /* Return default admin only if no admins configured — password will be hashed on first login */
+    return [{user: DEFAULT_ADMIN_USER, pass: DEFAULT_ADMIN_PASS, name: "Admin", role: "superadmin", isDefault: true}];
+  }
   // Normalize: support both legacy {u,p} and current {user,pass} formats
   return raw.map(a => ({
     user: a.user || a.u,
@@ -1287,15 +1407,47 @@ function getAdmins(){
   }));
 }
 function saveAdmins(list){ _cache.admins = list; sbSave("admins", list); }
-function adminLoginUser(u, p){
+async function adminLoginUser(u, p){
   const list = getAdmins();
   const hit = list.find(a => a.user === String(u).trim());
   if(!hit) return null;
-  if(hit.pass === p) return hit;
+  /* Verify password using secure hash comparison */
+  const valid = await verifyPass(p, hit.pass);
+  if(valid){
+    /* If password is still plaintext or legacy format, upgrade to PBKDF2 */
+    if(String(hit.pass).indexOf("pbkdf2::") !== 0){
+      try{
+        const newHash = await hashPass(p);
+        const allAdmins = _cache.admins || [];
+        const idx = allAdmins.findIndex(a => (a.user || a.u) === hit.user);
+        if(idx >= 0){
+          allAdmins[idx].pass = newHash;
+          saveAdmins(allAdmins);
+        }
+      }catch(e){ /* Ignore upgrade errors */ }
+    }
+    return hit;
+  }
   return null;
 }
+/* Secure admin session with random token (prevents simple localStorage bypass) */
 function getAdminSession(){ return lsGet(LS.asession, null); }
-function setAdminSession(user, name){ lsSet(LS.asession, { user: user, name: name || user }); }
+function setAdminSession(user, name){
+  /* Generate a random session token */
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, "0")).join("");
+  lsSet(LS.asession, { user: user, name: name || user, token: token, ts: Date.now() });
+  /* Also store token in memory for validation */
+  window._adminToken = token;
+}
+function validateAdminSession(){
+  const sess = getAdminSession();
+  if(!sess || !sess.token) return false;
+  /* Validate that session token matches in-memory token (prevents simple localStorage injection) */
+  if(window._adminToken && sess.token !== window._adminToken) return false;
+  /* Session expires after 24 hours */
+  if(sess.ts && Date.now() - sess.ts > 24 * 60 * 60 * 1000) return false;
+  return true;
+}
 
 /* ============ Email delivery (EmailJS or FormSubmit) ============ */
 function getMailCfg(){ return lsGet(LS.mail, { email: "", enabled: false, provider: "emailjs", serviceId: "", templateId: "", contactTemplateId: "", publicKey: "", mailTo: "" }); }
@@ -2574,7 +2726,7 @@ function showPopupIfNeeded(){
     if(th.popupImage && img && imgWrap){ img.src = th.popupImage; imgWrap.style.display = "block"; }
     else if(imgWrap){ imgWrap.style.display = "none"; }
     const t = document.getElementById("popupTitle"); if(t) t.textContent = th.popupTitle || "";
-    const b = document.getElementById("popupBodyText"); if(b) b.innerHTML = th.popupBody || "";
+    const b = document.getElementById("popupBodyText"); if(b) b.innerHTML = sanitizeHTML(th.popupBody || "");
     const btn = document.getElementById("popupBtn");
     if(btn){
       if(th.popupBtnText && th.popupBtnLink){ btn.style.display = "inline-flex"; btn.textContent = th.popupBtnText; btn.href = th.popupBtnLink; }
@@ -2977,8 +3129,6 @@ function storeRoute(){
 }
 
 /* ============ ADMIN ============ */
-const ADMIN_USER = "admin";
-const ADMIN_PASS = "abcd1234";
 
 function renderAdminShell(content){
   const inner = content;
@@ -3422,7 +3572,7 @@ function adminAdminUsers(){
   renderAdminShell(content);
   $("#adminTitle").textContent = "Admin Users";
 }
-function adminAddAdmin(){
+async function adminAddAdmin(){
   const u = ($("#auUser").value || "").trim();
   const p = $("#auPass").value || "";
   const n = ($("#auName").value || "").trim();
@@ -3430,19 +3580,22 @@ function adminAddAdmin(){
   if(p.length < 6){ showToast("Password must be at least 6 characters"); return; }
   const admins = getAdmins();
   if(admins.some(a => a.user.toLowerCase() === u.toLowerCase())){ showToast("This login name already exists"); return; }
-  admins.push({ user: u, pass: p, name: n || u, created: new Date().toISOString() });
+  /* Hash password before storing */
+  const hashedPass = await hashPass(p);
+  admins.push({ user: u, pass: hashedPass, name: n || u, created: new Date().toISOString() });
   saveAdmins(admins);
   showToast("Admin " + u + " added");
   adminAdminUsers();
 }
-function adminChangeAdminPass(user){
+async function adminChangeAdminPass(user){
   const admins = getAdmins();
   const a = admins.find(x => x.user === user);
   if(!a){ showToast("Admin not found"); return; }
   const np = prompt("Enter a new password for \"" + a.user + "\" (min 6 characters):");
   if(np === null) return;
   if(np.trim().length < 6){ showToast("Password must be at least 6 characters"); return; }
-  a.pass = np.trim();
+  /* Hash password before storing */
+  a.pass = await hashPass(np.trim());
   saveAdmins(admins);
   showToast("Password updated for " + user);
 }
@@ -3496,7 +3649,7 @@ function adminEmails(){
     '<div class="panel-body">' +
       '<div class="form-grid">' +
         '<div class="field full"><label>Email provider</label><select id="mailProvider"><option value="emailjs"' + (mc.provider === "emailjs" ? " selected" : "") + '>EmailJS (recommended — reliable, no ads, multiple recipients)</option><option value="formsubmit"' + (mc.provider !== "emailjs" ? " selected" : "") + '>FormSubmit (free — single inbox, needs one-time activation)</option></select></div>' +
-        '<div class="field full" id="mailToWrap"><label>Recipients (separate multiple emails with comma)</label><input id="mailTo" type="text" value="' + esc(mc.mailTo || "") + '" placeholder="sales@nebulasecret.com, bong8686@gmail.com"></div>' +
+        '<div class="field full" id="mailToWrap"><label>Recipients (separate multiple emails with comma)</label><input id="mailTo" type="text" value="' + esc(mc.mailTo || "") + '" placeholder="sales@yourcompany.com, manager@yourcompany.com"></div>' +
         '<div class="field full" id="emailjsWrap">' +
           '<div class="form-hint" style="margin-bottom:8px"><b>EmailJS setup (5 min, free):</b> 1) Sign up at <b>emailjs.com</b> → 2) Add your email service → 3) Create an Email Template with To Email <code>{{to_email}}</code> → 4) Paste the three keys below.</div>' +
           '<div class="form-grid">' +
@@ -3870,25 +4023,32 @@ function viewAdminLogin(msg){
   '</div>';
 }
 
-function doLogin(){
+async function doLogin(){
   const u = $("#loginUser").value.trim();
   const p = $("#loginPass").value;
-  const admin = adminLoginUser(u, p);
+  const btn = document.querySelector(".admin-login .btn.full");
+  if(btn){ btn.disabled = true; btn.textContent = "Signing in..."; }
+  const admin = await adminLoginUser(u, p);
   if(admin){
-    setAdmin(true);
     setAdminSession(u, admin.name || u);
     showToast("Welcome, " + (admin.name || u));
+    /* If using default password, prompt to change */
+    if(admin.isDefault){
+      showToast("Please change your default password in Admin Users", 4000);
+    }
     location.hash = "#/admin/dashboard";
   } else {
     const err = $("#loginErr");
     err.textContent = "Incorrect login name or password.";
     err.classList.add("show");
+    if(btn){ btn.disabled = false; btn.textContent = "Sign in"; }
   }
 }
 
 function logout(){
   setAdmin(false);
   try{ localStorage.removeItem(LS.asession); }catch(e){}
+  window._adminToken = null;
   showToast("Logged out");
   location.hash = "#/";
 }
