@@ -496,14 +496,60 @@ async function adminAddAdmin(){
   const n = ($("#auName").value || "").trim();
   if(!u){ showToast("Enter a login name"); return; }
   if(p.length < 6){ showToast("Password must be at least 6 characters"); return; }
-  const admins = getAdmins();
-  if(admins.some(a => a.user.toLowerCase() === u.toLowerCase())){ showToast("This login name already exists"); return; }
-  /* Hash password before storing */
-  const hashedPass = await hashPass(p);
-  admins.push({ user: u, pass: hashedPass, name: n || u, created: new Date().toISOString() });
-  saveAdmins(admins);
-  showToast("Admin " + u + " added");
-  adminAdminUsers();
+
+  /* Convert login name to email format for Supabase Auth */
+  const email = u.includes('@') ? u : u + '@nebulasecret.com';
+
+  try{
+    /* Save current admin session to restore later */
+    const { data: currentSession } = await supabase.auth.getSession();
+    const currentAdminEmail = currentSession?.session?.user?.email;
+    const currentAdminPassword = null; /* We can't get the password, so we'll need to re-login differently */
+
+    /* Create user via Supabase Auth */
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: email,
+      password: p,
+      options: {
+        data: { name: n || u }
+      }
+    });
+
+    if(signUpError){
+      if(signUpError.message.includes('already registered') || signUpError.message.includes('User already registered')){
+        showToast("This login name already exists");
+      }else{
+        showToast("Error creating admin: " + signUpError.message);
+      }
+      return;
+    }
+
+    /* Set admin role via RPC function */
+    const { error: roleError } = await supabase.rpc('set_admin_role', {
+      p_user_email: email
+    });
+
+    if(roleError){
+      console.warn("Role setting error:", roleError);
+      showToast("Admin created, but role setting failed. Please run SQL manually.");
+    }else{
+      showToast("Admin " + u + " added successfully");
+    }
+
+    /* Sign out the new user and restore admin session */
+    await supabase.auth.signOut();
+
+    /* If we have current admin credentials, re-login */
+    /* Note: We can't restore session without password, so admin will need to re-login */
+    showToast("Please re-login with your admin account");
+
+    /* Refresh the admin users list */
+    adminAdminUsers();
+
+  }catch(e){
+    console.error("Add admin error:", e);
+    showToast("An error occurred: " + e.message);
+  }
 }
 async function adminChangeAdminPass(user){
   const admins = getAdmins();
