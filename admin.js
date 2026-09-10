@@ -16,6 +16,36 @@
  * - sendOrderEmail, exportOrdersCSV
  * ============================================================ */
 
+/* ============ Supabase Auth State Management ============ */
+let _currentAdminUser = null;
+
+/* Listen for auth state changes */
+if(typeof supabase !== 'undefined' && supabase.auth) {
+  supabase.auth.onAuthStateChange((event, session) => {
+    if(session && session.user) {
+      _currentAdminUser = session.user;
+    } else {
+      _currentAdminUser = null;
+    }
+  });
+  /* Get initial session */
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if(session && session.user) {
+      _currentAdminUser = session.user;
+    }
+  });
+}
+
+/* Get current admin display name */
+function getAdminDisplayName() {
+  if(_currentAdminUser) {
+    return _currentAdminUser.user_metadata?.name || _currentAdminUser.email || 'Admin';
+  }
+  /* Fallback to legacy session */
+  const legacy = getAdminSession();
+  return (legacy && legacy.name) || 'Admin';
+}
+
 /* ============ ADMIN ============ */
 
 function renderAdminShell(content){
@@ -44,7 +74,7 @@ function renderAdminShell(content){
       '</nav>' +
     '</aside>' +
     '<div class="admin-main">' +
-      '<div class="admin-top"><h2 id="adminTitle"></h2><div class="at-actions"><span class="at-user" style="font-size:13px;color:var(--ink-soft);margin-right:12px">' + esc((getAdminSession() && getAdminSession().name) || "Admin") + '</span><a class="btn ghost sm" href="#/">View Store</a></div></div>' +
+      '<div class="admin-top"><h2 id="adminTitle"></h2><div class="at-actions"><span class="at-user" style="font-size:13px;color:var(--ink-soft);margin-right:12px">' + esc(getAdminDisplayName()) + '</span><a class="btn ghost sm" href="#/">View Store</a></div></div>' +
       '<div class="admin-body">' + inner + '</div>' +
     '</div>' +
   '</div>';
@@ -904,36 +934,68 @@ function viewAdminLogin(msg){
       '<h1>Admin Login</h1>' +
       '<p class="l-sub">Nebula Secret management console</p>' +
       '<div class="login-err' + (msg ? " show" : "") + '" id="loginErr">' + (msg ? esc(msg) : "") + '</div>' +
-      '<div class="field"><label>Login name</label><input id="loginUser" type="text" placeholder="admin" autocomplete="username"></div>' +
+      '<div class="field"><label>Email</label><input id="loginEmail" type="email" placeholder="admin@nebulasecret.com" autocomplete="email"></div>' +
       '<div class="field"><label>Password</label><input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key===\'Enter\')doLogin()"></div>' +
       '<button class="btn full" style="margin-top:8px" onclick="doLogin()">Sign in</button>' +
+      '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px">Secure login powered by Supabase Auth</p>' +
     '</div>' +
   '</div>';
 }
 
 async function doLogin(){
-  const u = $("#loginUser").value.trim();
+  const email = $("#loginEmail").value.trim();
   const p = $("#loginPass").value;
   const btn = document.querySelector(".admin-login .btn.full");
-  if(btn){ btn.disabled = true; btn.textContent = "Signing in..."; }
-  const admin = await adminLoginUser(u, p);
-  if(admin){
-    setAdminSession(u, admin.name || u);
-    showToast("Welcome, " + (admin.name || u));
-    /* If using default password, prompt to change */
-    if(admin.isDefault){
-      showToast("Please change your default password in Admin Users", 4000);
-    }
-    location.hash = "#/admin/dashboard";
-  } else {
+  if(!email || !p){
     const err = $("#loginErr");
-    err.textContent = "Incorrect login name or password.";
+    err.textContent = "Please enter both email and password.";
+    err.classList.add("show");
+    return;
+  }
+  if(btn){ btn.disabled = true; btn.textContent = "Signing in..."; }
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: p
+    });
+    if(error){
+      const err = $("#loginErr");
+      err.textContent = error.message || "Invalid email or password.";
+      err.classList.add("show");
+      if(btn){ btn.disabled = false; btn.textContent = "Sign in"; }
+      return;
+    }
+    if(data && data.user){
+      /* Check if user has admin role */
+      const role = data.user.app_metadata?.role || data.user.user_metadata?.role;
+      if(role !== 'admin' && role !== 'superadmin'){
+        /* Not an admin, sign out and show error */
+        await supabase.auth.signOut();
+        const err = $("#loginErr");
+        err.textContent = "You do not have admin access. Please contact the administrator.";
+        err.classList.add("show");
+        if(btn){ btn.disabled = false; btn.textContent = "Sign in"; }
+        return;
+      }
+      showToast("Welcome, " + (data.user.user_metadata?.name || data.user.email));
+      location.hash = "#/admin/dashboard";
+    }
+  } catch(e) {
+    console.error("Login error:", e);
+    const err = $("#loginErr");
+    err.textContent = "An error occurred during login. Please try again.";
     err.classList.add("show");
     if(btn){ btn.disabled = false; btn.textContent = "Sign in"; }
   }
 }
 
-function logout(){
+async function logout(){
+  try {
+    await supabase.auth.signOut();
+  } catch(e) {
+    console.error("Logout error:", e);
+  }
+  /* Clear any legacy session data */
   setAdmin(false);
   try{ localStorage.removeItem(LS.asession); }catch(e){}
   window._adminToken = null;
@@ -943,22 +1005,33 @@ function logout(){
 
 function adminRoute(){
   const h = location.hash || "#/";
-  if(!isAdmin()){
-    if(h === "#/admin"){ viewAdminLogin(); return; }
-    // any admin route without session -> login
-    viewAdminLogin("Please sign in to access the admin panel.");
-    return;
-  }
-  const page = h.split("/")[2] || "dashboard";
-  if(page === "dashboard") adminDashboard();
-  else if(page === "products") adminProducts();
-  else if(page === "orders") adminOrders();
-  else if(page === "categories") adminCategories();
-  else if(page === "customers") adminCustomers();
-  else if(page === "users") adminAdminUsers();
-  else if(page === "theme") adminTheme();
-  else if(page === "emails") adminEmails();
-  else if(page === "content") adminContent();
-  else if(page === "cloudsync") adminCloudSync();
-  else viewAdminLogin();
+  /* Check Supabase Auth session asynchronously */
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if(!session){
+      if(h === "#/admin"){ viewAdminLogin(); return; }
+      viewAdminLogin("Please sign in to access the admin panel.");
+      return;
+    }
+    /* Check if user has admin role */
+    const role = session.user.app_metadata?.role || session.user.user_metadata?.role;
+    if(role !== 'admin' && role !== 'superadmin'){
+      viewAdminLogin("You do not have admin access. Please contact the administrator.");
+      return;
+    }
+    const page = h.split("/")[2] || "dashboard";
+    if(page === "dashboard") adminDashboard();
+    else if(page === "products") adminProducts();
+    else if(page === "orders") adminOrders();
+    else if(page === "categories") adminCategories();
+    else if(page === "customers") adminCustomers();
+    else if(page === "users") adminAdminUsers();
+    else if(page === "theme") adminTheme();
+    else if(page === "emails") adminEmails();
+    else if(page === "content") adminContent();
+    else if(page === "cloudsync") adminCloudSync();
+    else viewAdminLogin();
+  }).catch(e => {
+    console.error("Auth session error:", e);
+    viewAdminLogin("Authentication error. Please try again.");
+  });
 }

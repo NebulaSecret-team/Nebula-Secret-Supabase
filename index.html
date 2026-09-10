@@ -1223,7 +1223,17 @@ async function loadCloudCatalog(){
 }
 function saveCats(c){ _cache.cats = c; sbSave("cats", c); }
 
-function isAdmin(){ return validateAdminSession(); }
+/* isAdmin now returns a Promise - checks Supabase Auth session */
+async function isAdmin(){
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if(!session) return false;
+    const role = session.user.app_metadata?.role || session.user.user_metadata?.role;
+    return role === 'admin' || role === 'superadmin';
+  } catch(e) {
+    return false;
+  }
+}
 function setAdmin(v){ if(!v){ try{ localStorage.removeItem(LS.admin); window._adminToken = null; }catch(e){} } }
 
 /* ============ Utilities ============ */
