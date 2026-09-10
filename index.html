@@ -1463,6 +1463,72 @@ function validateAdminSession(){
 function getMailCfg(){ return lsGet(LS.mail, { email: "", enabled: false, provider: "emailjs", serviceId: "", templateId: "", contactTemplateId: "", publicKey: "", mailTo: "" }); }
 function saveMailCfg(m){ lsSet(LS.mail, m); }
 
+/* ============ EmailJS Security: Rate Limiting & Domain Validation ============ */
+const EMAILJS_RATE_LIMIT = {
+  maxPerMinute: 5,      // Max 5 emails per minute
+  maxPerHour: 20,       // Max 20 emails per hour
+  maxPerDay: 100        // Max 100 emails per day
+};
+
+function getEmailSendHistory(){
+  try{
+    return JSON.parse(localStorage.getItem('ns_email_send_history') || '[]');
+  }catch(e){
+    return [];
+  }
+}
+
+function saveEmailSendHistory(history){
+  try{
+    localStorage.setItem('ns_email_send_history', JSON.stringify(history));
+  }catch(e){}
+}
+
+function checkEmailRateLimit(){
+  const now = Date.now();
+  const history = getEmailSendHistory();
+  const oneMinuteAgo = now - 60 * 1000;
+  const oneHourAgo = now - 60 * 60 * 1000;
+  const oneDayAgo = now - 24 * 60 * 60 * 1000;
+  
+  const lastMinute = history.filter(t => t > oneMinuteAgo).length;
+  const lastHour = history.filter(t => t > oneHourAgo).length;
+  const lastDay = history.filter(t => t > oneDayAgo).length;
+  
+  if(lastMinute >= EMAILJS_RATE_LIMIT.maxPerMinute){
+    return { allowed: false, reason: "rate-limit-minute", message: "Too many emails sent. Please wait a moment and try again." };
+  }
+  if(lastHour >= EMAILJS_RATE_LIMIT.maxPerHour){
+    return { allowed: false, reason: "rate-limit-hour", message: "Hourly email limit reached. Please try again later." };
+  }
+  if(lastDay >= EMAILJS_RATE_LIMIT.maxPerDay){
+    return { allowed: false, reason: "rate-limit-day", message: "Daily email limit reached. Please try again tomorrow." };
+  }
+  
+  return { allowed: true };
+}
+
+function recordEmailSend(){
+  const history = getEmailSendHistory();
+  const now = Date.now();
+  const oneDayAgo = now - 24 * 60 * 60 * 1000;
+  const filtered = history.filter(t => t > oneDayAgo);
+  filtered.push(now);
+  saveEmailSendHistory(filtered);
+}
+
+function validateEmailDomain(){
+  const allowedDomains = [
+    'nebula-secret-supabase.vercel.app',
+    'nebulasecret.com',
+    'www.nebulasecret.com',
+    'localhost',
+    '127.0.0.1'
+  ];
+  const currentDomain = window.location.hostname;
+  return allowedDomains.includes(currentDomain) || currentDomain.endsWith('.vercel.app');
+}
+
 /* ============ Cloud Sync (GitHub repo as shared store) ============ */
 const CLOUD_FILES = {
   products: "data/products.json",
@@ -1577,13 +1643,34 @@ function emailTemplateParams(o, cfg){
 }
 async function sendViaEmailJS(o, cfg){
   try{
+    /* Security check 1: Validate domain */
+    if(!validateEmailDomain()){
+      return {ok:false, reason:"invalid-domain", detail:"Email sending is not allowed from this domain. Please configure domain whitelist in EmailJS dashboard."};
+    }
+    
+    /* Security check 2: Rate limiting */
+    const rateCheck = checkEmailRateLimit();
+    if(!rateCheck.allowed){
+      return {ok:false, reason:rateCheck.reason, detail:rateCheck.message};
+    }
+    
     if(!window.emailjs) return {ok:false, reason:"sdk-missing"};
     if(!cfg.serviceId || !cfg.templateId || !cfg.publicKey) return {ok:false, reason:"emailjs-config"};
+    
     const params = emailTemplateParams(o, cfg);
     const resp = await emailjs.send(cfg.serviceId, cfg.templateId, params, { publicKey: cfg.publicKey });
+    
+    /* Record successful send for rate limiting */
+    recordEmailSend();
+    
     return {ok: true, resp: resp};
   }catch(e){
-    return {ok:false, reason:"emailjs-error", detail: String(e && e.text ? e.text : (e && e.message ? e.message : e))};
+    const errorDetail = String(e && e.text ? e.text : (e && e.message ? e.message : e));
+    /* Check if error is due to domain whitelist */
+    if(errorDetail.includes('domain') || errorDetail.includes('Domain') || errorDetail.includes('not allowed')){
+      return {ok:false, reason:"domain-not-whitelisted", detail:"EmailJS domain whitelist not configured. Please add your domain in EmailJS dashboard → Account Settings → Domains."};
+    }
+    return {ok:false, reason:"emailjs-error", detail: errorDetail};
   }
 }
 async function sendViaFormSubmit(o, cfg){
@@ -2791,6 +2878,19 @@ async function submitContactForm(ev){
     return;
   }
 
+  /* Security check 1: Validate domain */
+  if(!validateEmailDomain()){
+    showCfMsg(msgEl, "#c0392b", "Email sending is not allowed from this domain. Please contact the site administrator.");
+    return;
+  }
+
+  /* Security check 2: Rate limiting */
+  const rateCheck = checkEmailRateLimit();
+  if(!rateCheck.allowed){
+    showCfMsg(msgEl, "#c0392b", rateCheck.message);
+    return;
+  }
+
   // Get recipients
   const recipients = (cfg.mailTo || "").split(",").map(s => s.trim()).filter(Boolean);
   if(!recipients.length){
@@ -2824,6 +2924,9 @@ async function submitContactForm(ev){
     const contactTpl = cfg.contactTemplateId || cfg.templateId;
     await emailjs.send(cfg.serviceId, contactTpl, params, { publicKey: cfg.publicKey });
 
+    /* Record successful send for rate limiting */
+    recordEmailSend();
+
     // Success
     showCfMsg(msgEl, "#2e7d32", "Thank you, " + name + "! Your message has been sent. Our team will get back to you within 24 hours.");
     // Reset form
@@ -2834,7 +2937,12 @@ async function submitContactForm(ev){
     document.getElementById("cfMessage").value = "";
   }catch(e){
     const errMsg = e && e.text ? e.text : (e && e.message ? e.message : String(e));
-    showCfMsg(msgEl, "#c0392b", "Sorry, we couldn't send your message. Please try again or email us directly at " + recipients[0] + ". Error: " + errMsg);
+    /* Check if error is due to domain whitelist */
+    if(errMsg.includes('domain') || errMsg.includes('Domain') || errMsg.includes('not allowed')){
+      showCfMsg(msgEl, "#c0392b", "EmailJS domain whitelist not configured. The site administrator needs to add this domain in EmailJS dashboard → Account Settings → Domains.");
+    }else{
+      showCfMsg(msgEl, "#c0392b", "Sorry, we couldn't send your message. Please try again or email us directly at " + recipients[0] + ". Error: " + errMsg);
+    }
   }finally{
     btn.disabled = false;
     btn.textContent = "Send Message";
