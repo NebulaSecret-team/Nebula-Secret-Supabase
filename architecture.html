@@ -37,115 +37,8 @@
     line-height: 1.6;
   }
 
-  /* Login Gate */
-  .login-gate {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, var(--bg) 0%, var(--bg-2) 100%);
-    padding: 20px;
-  }
-  .login-card {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 40px;
-    max-width: 420px;
-    width: 100%;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-  }
-  .login-card .lock-icon {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: var(--brand-soft);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    margin: 0 auto 20px;
-  }
-  .login-card h2 {
-    font-size: 22px;
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: var(--ink);
-  }
-  .login-card p {
-    font-size: 14px;
-    color: var(--ink-soft);
-    margin-bottom: 24px;
-  }
-  .login-card .field {
-    margin-bottom: 16px;
-    text-align: left;
-  }
-  .login-card label {
-    display: block;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--ink-soft);
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .login-card input {
-    width: 100%;
-    padding: 12px 16px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    color: var(--ink);
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .login-card input:focus {
-    border-color: var(--brand);
-    box-shadow: 0 0 0 3px var(--brand-soft);
-  }
-  .login-card .btn {
-    width: 100%;
-    padding: 14px;
-    background: var(--brand);
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.15s;
-    margin-top: 8px;
-  }
-  .login-card .btn:hover {
-    background: var(--brand-dark);
-    transform: translateY(-1px);
-  }
-  .login-card .error {
-    color: var(--red);
-    font-size: 13px;
-    margin-top: 12px;
-    display: none;
-  }
-  .login-card .error.show { display: block; }
-  .login-card .hint {
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid var(--line);
-    font-size: 12px;
-    color: var(--ink-muted);
-  }
-  .login-card .hint a {
-    color: var(--brand);
-    text-decoration: none;
-  }
-  .login-card .hint a:hover { text-decoration: underline; }
-
   /* Main Content (hidden by default) */
   .main-content { display: none; }
-  .main-content.visible { display: block; }
 
   /* Top Bar */
   .topbar {
@@ -666,31 +559,8 @@
 </head>
 <body>
 
-<!-- Login Gate -->
-<div class="login-gate" id="loginGate">
-  <div class="login-card">
-    <div class="lock-icon">🔒</div>
-    <h2>管理員驗證</h2>
-    <p>此頁面僅限 Nebula Secret 管理員訪問，請登錄以查看系統架構。</p>
-    <div class="field">
-      <label>管理員用戶名</label>
-      <input type="text" id="loginUser" placeholder="admin" autocomplete="username">
-    </div>
-    <div class="field">
-      <label>密碼</label>
-      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-    </div>
-    <button class="btn" onclick="doLogin()">登錄</button>
-    <div class="error" id="loginErr">用戶名或密碼錯誤，請重試。</div>
-    <div class="hint">
-      忘記密碼？請聯繫超級管理員重置。<br>
-      <a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank">返回 Admin Panel →</a>
-    </div>
-  </div>
-</div>
-
 <!-- Main Content -->
-<div class="main-content" id="mainContent">
+<div class="main-content" id="mainContent" style="display:none;">
 
 <!-- Top Bar -->
 <div class="topbar">
@@ -700,7 +570,7 @@
     <span class="sep">|</span>
     <a href="https://nebula-secret-supabase.vercel.app" target="_blank">返回網站</a>
     <span class="sep">|</span>
-    <a href="#" onclick="doLogout();return false;">登出</a>
+    <a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank">Admin Panel</a>
   </div>
 </div>
 
@@ -1721,54 +1591,42 @@
 </div>
 
 <script>
-// Admin authentication
-const ADMIN_USERS = [
-  { u: "admin", p: "abcd1234", name: "Admin", role: "superadmin" }
-];
-
-function checkAuth() {
+// Check admin session from main site (shared localStorage)
+// If logged in, show architecture page; if not, redirect to Admin Panel
+(function() {
   const session = localStorage.getItem('ns_asession_v3');
   if (session) {
     try {
       const data = JSON.parse(session);
       if (data && data.user) {
-        document.getElementById('loginGate').style.display = 'none';
-        document.getElementById('mainContent').classList.add('visible');
-        document.getElementById('adminBadge').textContent = data.name || data.user.toUpperCase();
-        return true;
+        // Admin is logged in - show architecture page
+        document.getElementById('mainContent').style.display = 'block';
+        document.getElementById('adminBadge').textContent = (data.name || data.user).toUpperCase();
+        return;
       }
-    } catch(e) {}
+    } catch(e) {
+      console.error('Failed to parse admin session:', e);
+    }
   }
-  return false;
-}
+  // Not logged in - redirect directly to Admin Panel
+  window.location.href = 'https://nebula-secret-supabase.vercel.app/#/admin';
+})();
 
-function doLogin() {
-  const u = document.getElementById('loginUser').value.trim();
-  const p = document.getElementById('loginPass').value;
-  const err = document.getElementById('loginErr');
-  
-  const admin = ADMIN_USERS.find(a => a.u === u && a.p === p);
-  if (admin) {
-    localStorage.setItem('ns_asession_v3', JSON.stringify({ user: admin.u, name: admin.name, role: admin.role }));
-    document.getElementById('loginGate').style.display = 'none';
-    document.getElementById('mainContent').classList.add('visible');
-    document.getElementById('adminBadge').textContent = admin.name || admin.u.toUpperCase();
-    err.classList.remove('show');
-  } else {
-    err.classList.add('show');
+// Listen for storage changes (in case admin logs in on another tab)
+window.addEventListener('storage', function(e) {
+  if (e.key === 'ns_asession_v3') {
+    const session = e.newValue;
+    if (session) {
+      try {
+        const data = JSON.parse(session);
+        if (data && data.user) {
+          document.getElementById('mainContent').style.display = 'block';
+          document.getElementById('adminBadge').textContent = (data.name || data.user).toUpperCase();
+        }
+      } catch(e) {}
+    }
   }
-}
-
-function doLogout() {
-  localStorage.removeItem('ns_asession_v3');
-  document.getElementById('mainContent').classList.remove('visible');
-  document.getElementById('loginGate').style.display = 'flex';
-  document.getElementById('loginUser').value = '';
-  document.getElementById('loginPass').value = '';
-}
-
-// Check auth on page load
-checkAuth();
+});
 </script>
 
 </body>
