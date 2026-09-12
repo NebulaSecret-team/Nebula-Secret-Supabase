@@ -2230,7 +2230,7 @@ function openQuoteRequest(){
       '<div class="field"><label>Preferred Contact</label><input id="qrContact" placeholder="e.g. WhatsApp, WeChat ID"></div>' +
       '<div class="field full"><label>Shipping Address</label><input id="qrAddress" placeholder="Street, city, postal code"></div>' +
       '<div class="field"><label>Country</label><select id="qrCountry">' + COUNTRIES.map(c => '<option value="' + c + '">' + c + '</option>').join("") + '</select></div>' +
-      '<div class="field"><label>Target Order Date</label><input id="qrDate" type="text" placeholder="YYYY-MM-DD (e.g. 2026-12-31)"></div>' +
+      '<div class="field"><label>Target Order Date</label><input id="qrDate" type="date" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;width:100%;box-sizing:border-box"></div>' +
       '<div class="field"><label>Your Target Price (EUR) <span style="color:var(--ink-soft);font-weight:400;font-size:11px">optional</span></label><input id="qrTargetPrice" type="number" step="0.01" min="0" placeholder="e.g. 500.00"></div>' +
       '<div class="field full"><label>Additional Notes / Special Requirements</label><textarea id="qrNotes" rows="3" placeholder="Tell us about your requirements, custom packaging, OEM/ODM needs, etc."></textarea></div>' +
     '</div>' +
