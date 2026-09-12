@@ -60,7 +60,7 @@ function renderAdminShell(content){
       '<nav class="admin-nav">' +
         '<a href="#/admin/dashboard" data-av="dashboard" class="active">' + IC.dashboard + ' Dashboard</a>' +
         '<a href="#/admin/orders" data-av="orders">' + IC.orders + ' Orders</a>' +
-        '<a href="#/admin/quotes" data-av="quotes">' + IC.file + ' Quotes & Inquiries</a>' +
+        '<a href="#/admin/quotes" data-av="quotes">' + IC.file + ' Quotes & Enquiries</a>' +
         '<a href="#/admin/products" data-av="products">' + IC.box + ' Products</a>' +
         '<a href="#/admin/categories" data-av="categories">' + IC.tag + ' Categories</a>' +
         '<a href="#/admin/customers" data-av="customers">' + IC.users + ' Customer Accounts</a>' +
@@ -286,7 +286,7 @@ function adminQuotes(){
   const quotes = getQuotes();
   const pending = quotes.filter(q => q.status === "Pending").length;
   const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Quotes & Inquiries</h3><div class="ph-sub">' + quotes.length + ' quotes · ' + pending + ' pending review</div></div></div>' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Quotes & Enquiries</h3><div class="ph-sub">' + quotes.length + ' quotes · ' + pending + ' pending review</div></div></div>' +
     (quotes.length
       ? '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th>Quote ID</th><th>Date</th><th>Customer</th><th>Items</th><th>Quoted Price</th><th>Status</th><th>Valid Until</th><th>Actions</th></tr></thead><tbody>' +
         quotes.map(q => {
@@ -309,7 +309,7 @@ function adminQuotes(){
       : '<div class="panel-body"><div style="font-size:13.5px;color:var(--ink-soft);padding:10px 0">No quote requests yet. When a customer requests a quote from their cart it will appear here.</div></div>') +
     '</div>';
   renderAdminShell(content);
-  $("#adminTitle").textContent = "Quotes";
+  $("#adminTitle").textContent = "Quotes & Enquiries";
 }
 function viewAdminQuote(id){
   const q = findQuoteById(id); if(!q) return;
