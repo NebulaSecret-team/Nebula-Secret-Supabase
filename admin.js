@@ -339,7 +339,7 @@ function viewAdminQuote(id){
         '<div class="field full"><label>Quote Notes / Terms</label><textarea id="qNotes" rows="3" placeholder="e.g. Prices include packaging, shipping quoted separately, MOQ applies...">' + (q.quoteNotes || "") + '</textarea></div>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:12px">' +
-        '<button class="btn" onclick="submitQuoteResponse(\'' + esc(q.id) + '\')">' + IC.check + ' Send Quote</button>' +
+        '<button class="btn" onclick="submitQuoteResponse(\'' + esc(q.id) + '\')">' + IC.mail + ' Send Quote</button>' +
         '<button class="btn ghost" onclick="setQuoteStatus(\'' + esc(q.id) + '\', \'Rejected\')">Reject</button>' +
       '</div>' +
     '</div>' +
