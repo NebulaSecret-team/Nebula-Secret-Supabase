@@ -60,7 +60,7 @@ function renderAdminShell(content){
       '<nav class="admin-nav">' +
         '<a href="#/admin/dashboard" data-av="dashboard" class="active">' + IC.dashboard + ' Dashboard</a>' +
         '<a href="#/admin/orders" data-av="orders">' + IC.orders + ' Orders</a>' +
-        '<a href="#/admin/quotes" data-av="quotes">' + IC.file + ' Quotes & Enquiries</a>' +
+        '<a href="#/admin/quotes" data-av="quotes">' + IC.mail + ' Quotes & Enquiries</a>' +
         '<a href="#/admin/products" data-av="products">' + IC.box + ' Products</a>' +
         '<a href="#/admin/categories" data-av="categories">' + IC.tag + ' Categories</a>' +
         '<a href="#/admin/customers" data-av="customers">' + IC.users + ' Customer Accounts</a>' +
