@@ -604,6 +604,7 @@ table.admin-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .acct-order .ao-items{font-size:13px;color:var(--ink-soft);line-height:1.6}
 .acct-order .ao-total{font-weight:700;margin-top:6px;font-size:14px}
 .acct-order .ao-top .badge{position:static;display:inline-block;font-size:11px;padding:4px 12px}
+.quote-view-btn:hover{background:var(--brand);transform:none;box-shadow:none}
 .status-badge{cursor:help;transition:all 0.2s ease;position:relative}
 .status-badge:hover{transform:scale(1.08);box-shadow:0 2px 8px rgba(0,0,0,0.15);filter:brightness(1.1)}
 .cat-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line)}
@@ -1459,6 +1460,7 @@ function setSession(s){ if(s) lsSet(LS.session, s); else try{ localStorage.remov
 function getQuotes(){ return _cache.quotes || []; }
 function saveQuotes(q){ _cache.quotes = q; sbSave("quotes", q); }
 function findQuoteById(id){ return getQuotes().find(q => q.id === id); }
+function findOrderById(id){ return getOrders().find(o => o.id === id); }
 
 /* Status descriptions for tooltip */
 function statusDesc(status){
@@ -3707,6 +3709,9 @@ function viewCustomerQuote(id){
   const q = findQuoteById(id);
   const s = getSession();
   if(!q){
+    /* Data may not be loaded yet on direct navigation — stay on this hash;
+       the post-load route() will retry. */
+    if(!_cache.loaded) return;
     showToast("Quote not found — please refresh the page");
     return;
   }
@@ -3732,7 +3737,7 @@ function viewCustomerQuote(id){
     '<div class="acct-card">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px">' +
         '<div><h2 style="margin:0">Quote ' + esc(q.id) + '</h2><p class="sub" style="margin:4px 0 0">' + fmtDT(q.date) + '</p></div>' +
-        '<span class="badge" style="font-size:14px;padding:8px 16px">' + esc(isExpired && q.status === "Quoted" ? "Expired" : q.status) + '</span>' +
+        '<span class="badge" style="font-size:14px;padding:8px 16px;position:static;display:inline-block">' + esc(isExpired && q.status === "Quoted" ? "Expired" : q.status) + '</span>' +
       '</div>' +
       '<div class="ov-grid" style="margin-bottom:20px">' +
         '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(qCustName(q)) + '</div></div>' +
@@ -3923,6 +3928,9 @@ function viewCustomerOrder(id){
   const o = findOrderById(id);
   const s = getSession();
   if(!o || !s || String(custEmail(o)).toLowerCase() !== String(s.email).toLowerCase()){
+    /* Data may not be loaded yet on direct navigation (boot route() runs before
+       sbLoadAll finishes) — stay on this hash; the post-load route() will retry. */
+    if(!_cache.loaded) return;
     showToast("Order not found");
     location.hash = "#/account";
     return;
@@ -3936,7 +3944,7 @@ function viewCustomerOrder(id){
     '<div class="acct-card">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px">' +
         '<div><h2 style="margin:0">Order ' + esc(o.id) + '</h2><p class="sub" style="margin:4px 0 0">' + fmtDT(o.date) + '</p></div>' +
-        '<span class="badge" style="font-size:14px;padding:8px 16px">' + esc(o.status) + '</span>' +
+        '<span class="badge" style="font-size:14px;padding:8px 16px;position:static;display:inline-block">' + esc(o.status) + '</span>' +
       '</div>' +
       '<div class="ov-grid" style="margin-bottom:20px">' +
         '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(custName(o)) + '</div></div>' +
@@ -4168,6 +4176,15 @@ window.addEventListener("hashchange", () => {
   if(mm) mm.classList.remove("open");
 });
 window.addEventListener("resize", syncSticky);
+window.addEventListener("load", syncSticky);
+if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ syncSticky(); }); }
+/* Header height can change after first measure (webfonts, logo image, account
+   label) — keep the sticky category bar offset in sync so it never slides
+   under the header when scrolling. */
+if(typeof ResizeObserver !== "undefined"){
+  var _sh = document.getElementById("siteHeader");
+  if(_sh){ new ResizeObserver(function(){ syncSticky(); }).observe(_sh); }
+}
 route();
 /* Cloud sync: pull the latest from GitHub in the background after first render */
 cloudPullAll().then(() => { try{ route(); }catch(e){} });
