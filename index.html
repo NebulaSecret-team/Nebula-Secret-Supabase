@@ -3571,10 +3571,12 @@ function accountSignedIn(s){
     ? quotes.map(q => {
         const isExpired = q.validUntil && new Date(q.validUntil) < new Date();
         const statusDisplay = isExpired && q.status === "Quoted" ? "Expired" : (q.status || "Pending");
+        const qCur = q.customerTargetCurrency || "EUR";
+        const qRate = rateOf(qCur);
         return '<div class="acct-order">' +
           '<div class="ao-top"><span class="ao-id">' + esc(q.id) + '</span><span class="ao-date">' + fmtD(q.date) + '</span><span class="badge status-badge" title="' + esc(statusDesc(statusDisplay)) + '">' + esc(statusDisplay) + '</span></div>' +
           '<div class="ao-items">' + q.items.map(it => esc(it.name || "Product") + ' × ' + (it.qty || 0)).join(" · ") + '</div>' +
-          '<div class="ao-total">' + (q.quotedPrice ? fmt(q.quotedPrice) : "Awaiting quote") + (q.customerTargetPrice ? ' <span style="color:#b8860b;font-weight:400;font-size:11px">· your target: ' + fmt(q.customerTargetPrice) + '</span>' : '') + (q.validUntil ? ' <span style="color:var(--ink-soft);font-weight:400;font-size:11px">valid until ' + fmtD(q.validUntil) + '</span>' : '') + '</div>' +
+          '<div class="ao-total">' + (q.quotedPrice ? fmtIn(q.quotedPrice, qCur, qRate) : "Awaiting quote") + (q.customerTargetPrice ? ' <span style="color:#b8860b;font-weight:400;font-size:11px">· your target: ' + fmtIn(q.customerTargetPrice, qCur, qRate) + '</span>' : '') + (q.validUntil ? ' <span style="color:var(--ink-soft);font-weight:400;font-size:11px">valid until ' + fmtD(q.validUntil) + '</span>' : '') + '</div>' +
           '<a href="#/quote/' + esc(q.id) + '" class="btn sm quote-view-btn" style="margin-top:10px;text-decoration:none;display:inline-block">View Details →</a>' +
         '</div>';
       }).join("")
@@ -3627,6 +3629,9 @@ function viewCustomerQuote(id){
     showToast("This quote belongs to another account");
     return;
   }
+  /* Use customer's selected currency for display (like orders) */
+  const qCur = q.customerTargetCurrency || "EUR";
+  const qRate = rateOf(qCur);
   const isExpired = q.validUntil && new Date(q.validUntil) < new Date();
   const canAccept = q.status === "Quoted" && !isExpired;
   $("#app").innerHTML =
@@ -3643,17 +3648,17 @@ function viewCustomerQuote(id){
         '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(qCustPhone(q) || "—") + '</div></div>' +
         '<div class="ov-box"><div class="ov-k">Company</div><div class="ov-v">' + esc(qCustCompany(q) || "—") + '</div></div>' +
         '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc(qCustAddr(q)) + '</div></div>' +
-        (q.customerTargetPrice ? '<div class="ov-box" style="background:rgba(250,173,20,0.06);border:1px solid rgba(250,173,20,0.3)"><div class="ov-k">Your Target Price</div><div class="ov-v" style="font-weight:800;color:#b8860b">' + fmt(q.customerTargetPrice) + '</div></div>' : '') +
+        (q.customerTargetPrice ? '<div class="ov-box" style="background:rgba(250,173,20,0.06);border:1px solid rgba(250,173,20,0.3)"><div class="ov-k">Your Target Price</div><div class="ov-v" style="font-weight:800;color:#b8860b">' + fmtIn(q.customerTargetPrice, qCur, qRate) + '</div></div>' : '') +
         '<div class="ov-box"><div class="ov-k">Valid Until</div><div class="ov-v" style="font-weight:' + (isExpired ? '700;color:var(--danger)' : '600') + '">' + (q.validUntil ? fmtD(q.validUntil) : "—") + '</div></div>' +
       '</div>' +
       '<h3 style="font-size:16px;margin-bottom:12px">Quote Items</h3>' +
-      '<table class="admin-table" style="margin-bottom:20px"><thead><tr><th>Product</th><th>Qty</th><th>Unit (EUR)</th><th>Line (EUR)</th></tr></thead><tbody>' +
-      q.items.map(it => '<tr><td style="font-weight:600">' + esc(it.name) + '</td><td>' + it.qty + '</td><td>' + fmt(it.price) + '</td><td style="font-weight:700">' + fmt(it.price * it.qty) + '</td></tr>').join("") +
+      '<table class="admin-table" style="margin-bottom:20px"><thead><tr><th>Product</th><th>Qty</th><th>Unit (' + qCur + ')</th><th>Line (' + qCur + ')</th></tr></thead><tbody>' +
+      q.items.map(it => '<tr><td style="font-weight:600">' + esc(it.name) + '</td><td>' + it.qty + '</td><td>' + fmtIn(it.price, qCur, qRate) + '</td><td style="font-weight:700">' + fmtIn(it.price * it.qty, qCur, qRate) + '</td></tr>').join("") +
       '</tbody></table>' +
       '<div style="display:flex;justify-content:flex-end;margin-bottom:20px">' +
         '<div style="text-align:right;min-width:250px">' +
-          '<div style="display:flex;justify-content:space-between;padding:6px 0"><span style="color:var(--ink-soft)">Subtotal</span><span>' + fmt(q.subtotal) + '</span></div>' +
-          (q.quotedPrice ? '<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid var(--border);font-weight:700;font-size:16px"><span>Quoted Price</span><span style="color:var(--brand)">' + fmt(q.quotedPrice) + '</span></div>' : '<div style="padding:8px 0;border-top:2px solid var(--border);color:var(--ink-soft);font-style:italic">Awaiting quote from our sales team</div>') +
+          '<div style="display:flex;justify-content:space-between;padding:6px 0"><span style="color:var(--ink-soft)">Subtotal</span><span>' + fmtIn(q.subtotal, qCur, qRate) + '</span></div>' +
+          (q.quotedPrice ? '<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid var(--border);font-weight:700;font-size:16px"><span>Quoted Price</span><span style="color:var(--brand)">' + fmtIn(q.quotedPrice, qCur, qRate) + '</span></div>' : '<div style="padding:8px 0;border-top:2px solid var(--border);color:var(--ink-soft);font-style:italic">Awaiting quote from our sales team</div>') +
         '</div>' +
       '</div>' +
       (q.quoteNotes ? '<div style="margin-bottom:20px;padding:14px;background:rgba(37,186,181,0.05);border-radius:10px;border-left:3px solid var(--brand)"><div style="font-weight:600;font-size:13px;margin-bottom:6px">Quote Notes</div><div style="font-size:13px;color:var(--ink);line-height:1.6">' + esc(q.quoteNotes) + '</div></div>' : '') +
