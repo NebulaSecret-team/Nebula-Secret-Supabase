@@ -1446,7 +1446,12 @@ async function loadRates(){
 
 /* ============ Customer accounts ============ */
 function getAccounts(){ return _cache.accounts || []; }
-function saveAccounts(a){ _cache.accounts = a; sbSave("accounts", a); }
+function saveAccounts(a){
+  _cache.accounts = a;
+  sbSave("accounts", a).then(res => {
+    if(!res.ok){ console.warn("Failed to save accounts to Supabase:", res.error); showToast("Warning: account may not have saved to cloud"); }
+  }).catch(e => { console.warn("Error saving accounts:", e); showToast("Error saving account to cloud"); });
+}
 function getSession(){ return lsGet(LS.session, null); }
 function setSession(s){ if(s) lsSet(LS.session, s); else try{ localStorage.removeItem(LS.session); }catch(e){} }
 
