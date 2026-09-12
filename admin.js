@@ -664,7 +664,10 @@ function moveCategory(cs, dir){
   const [item] = cats.splice(idx, 1);
   cats.splice(newIdx, 0, item);
   saveCats(cats);
-  renderCatNav();
+  /* Force re-render navigation bar with updated category order */
+  setTimeout(() => {
+    try{ renderCatNav(); }catch(e){ console.warn("renderCatNav error:", e); }
+  }, 50);
   showToast("Category reordered");
   adminCategories();
 }

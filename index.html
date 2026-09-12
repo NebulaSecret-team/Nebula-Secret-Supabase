@@ -1,6 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+/* Apply theme colors BEFORE page render to prevent FOUC (pink flash) */
+(function(){
+  try{
+    var raw = localStorage.getItem('ns_theme_v3');
+    if(raw){
+      var t = JSON.parse(raw);
+      var r = document.documentElement.style;
+      if(t.brandColor){ r.setProperty('--brand', t.brandColor); }
+      if(t.accentColor){ r.setProperty('--accent', t.accentColor); }
+      if(t.brandColor){
+        var hex = t.brandColor.replace('#','');
+        if(hex.length === 3){ hex = hex.split('').map(function(c){return c+c;}).join(''); }
+        var num = parseInt(hex, 16);
+        var br = (num >> 16) & 255, bg = (num >> 8) & 255, bb = num & 255;
+        var dr = Math.max(0, br - 30), dg = Math.max(0, bg - 30), db = Math.max(0, bb - 30);
+        var sr = Math.round(br + (255-br)*0.92), sg = Math.round(bg + (255-bg)*0.92), sb = Math.round(bb + (255-bb)*0.92);
+        r.setProperty('--brand-dark', 'rgb('+dr+','+dg+','+db+')');
+        r.setProperty('--brand-soft', 'rgb('+sr+','+sg+','+sb+')');
+      }
+      if(t.accentColor){
+        var hex2 = t.accentColor.replace('#','');
+        if(hex2.length === 3){ hex2 = hex2.split('').map(function(c){return c+c;}).join(''); }
+        var num2 = parseInt(hex2, 16);
+        var ar = (num2 >> 16) & 255, ag = (num2 >> 8) & 255, ab = num2 & 255;
+        var asr = Math.round(ar + (255-ar)*0.90), asg = Math.round(ag + (255-ag)*0.90), asb = Math.round(ab + (255-ab)*0.90);
+        r.setProperty('--accent-soft', 'rgb('+asr+','+asg+','+asb+')');
+      }
+    }
+  }catch(e){}
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nebula Secret — Wholesale Supplier &amp; OEM/ODM Manufacturer</title>
@@ -690,38 +722,6 @@ details.ct-block > .form-grid{padding:14px 16px}
   .panel-body{padding:14px}
 }
 </style>
-<script>
-/* Apply theme colors before page render to prevent FOUC (pink flash) */
-(function(){
-  try{
-    var raw = localStorage.getItem('ns_theme_v3');
-    if(raw){
-      var t = JSON.parse(raw);
-      var r = document.documentElement.style;
-      if(t.brandColor){ r.setProperty('--brand', t.brandColor); }
-      if(t.accentColor){ r.setProperty('--accent', t.accentColor); }
-      if(t.brandColor){
-        var hex = t.brandColor.replace('#','');
-        if(hex.length === 3){ hex = hex.split('').map(function(c){return c+c;}).join(''); }
-        var num = parseInt(hex, 16);
-        var br = (num >> 16) & 255, bg = (num >> 8) & 255, bb = num & 255;
-        var dr = Math.max(0, br - 30), dg = Math.max(0, bg - 30), db = Math.max(0, bb - 30);
-        var sr = Math.round(br + (255-br)*0.92), sg = Math.round(bg + (255-bg)*0.92), sb = Math.round(bb + (255-bb)*0.92);
-        r.setProperty('--brand-dark', 'rgb('+dr+','+dg+','+db+')');
-        r.setProperty('--brand-soft', 'rgb('+sr+','+sg+','+sb+')');
-      }
-      if(t.accentColor){
-        var hex2 = t.accentColor.replace('#','');
-        if(hex2.length === 3){ hex2 = hex2.split('').map(function(c){return c+c;}).join(''); }
-        var num2 = parseInt(hex2, 16);
-        var ar = (num2 >> 16) & 255, ag = (num2 >> 8) & 255, ab = num2 & 255;
-        var asr = Math.round(ar + (255-ar)*0.90), asg = Math.round(ag + (255-ag)*0.90), asb = Math.round(ab + (255-ab)*0.90);
-        r.setProperty('--accent-soft', 'rgb('+asr+','+asg+','+asb+')');
-      }
-    }
-  }catch(e){}
-})();
-</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
 <style>
   /* Flatpickr custom styling to match site design */
@@ -3827,16 +3827,17 @@ function quotePDFHtml(q){
 }
 
 function viewCustomerOrder(id){
-  const o = findOrderById(id);
-  const s = getSession();
-  if(!o || !s || String(custEmail(o)).toLowerCase() !== String(s.email).toLowerCase()){
-    showToast("Order not found");
-    return;
-  }
   // If we're not already on the order URL, update the hash and let the router handle it
   const expectedHash = "#/order/" + id;
   if(location.hash !== expectedHash){
     location.hash = expectedHash;
+    return;
+  }
+  const o = findOrderById(id);
+  const s = getSession();
+  if(!o || !s || String(custEmail(o)).toLowerCase() !== String(s.email).toLowerCase()){
+    showToast("Order not found");
+    location.hash = "#/account";
     return;
   }
   const cur = o.cur || "EUR";
