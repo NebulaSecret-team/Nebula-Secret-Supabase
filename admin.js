@@ -1285,7 +1285,17 @@ function adminRoute(){
     else if(page === "emails") adminEmails();
     else if(page === "content") adminContent();
     else if(page === "cloudsync") adminCloudSync();
-    else viewAdminLogin();
+    else {
+      /* Unknown page - show friendly 404 instead of login screen */
+      const content = '<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px">' +
+        '<div style="font-size:48px;margin-bottom:16px">🔍</div>' +
+        '<h3 style="margin-bottom:8px">Page Not Found</h3>' +
+        '<p style="color:var(--ink-soft);margin-bottom:24px">The page <strong>"' + esc(page) + '"</strong> does not exist.</p>' +
+        '<a href="#/admin/dashboard" class="btn">Go to Dashboard</a>' +
+      '</div></div>';
+      renderAdminShell(content);
+      $("#adminTitle").textContent = "Page Not Found";
+    }
   };
 
   /* Method 1: Check Supabase Auth session */
