@@ -60,6 +60,7 @@ function renderAdminShell(content){
       '<nav class="admin-nav">' +
         '<a href="#/admin/dashboard" data-av="dashboard" class="active">' + IC.dashboard + ' Dashboard</a>' +
         '<a href="#/admin/orders" data-av="orders">' + IC.orders + ' Orders</a>' +
+        '<a href="#/admin/quotes" data-av="quotes">' + IC.file + ' Quotes</a>' +
         '<a href="#/admin/products" data-av="products">' + IC.box + ' Products</a>' +
         '<a href="#/admin/categories" data-av="categories">' + IC.tag + ' Categories</a>' +
         '<a href="#/admin/customers" data-av="customers">' + IC.users + ' Customer Accounts</a>' +
@@ -151,7 +152,7 @@ function adminOrders(){
           '<td>' + o.items.reduce((s,i) => s + i.qty, 0) + '</td>' +
           '<td style="font-weight:700">' + fmtIn(o.total, cur, orate(o)) + ' <span style="font-weight:400;color:var(--ink-soft);font-size:11px">' + cur + '</span></td>' +
           '<td><select class="order-status ' + orderStatusColor(o.status) + '" onchange="setOrderStatus(\'' + esc(o.id) + '\', this.value)">' +
-            ["New","Processing","Shipped","Completed","Cancelled"].map(s => '<option ' + (o.status === s ? "selected" : "") + '>' + s + '</option>').join("") +
+            ORDER_STATUSES.map(s => '<option ' + (o.status === s ? "selected" : "") + '>' + s + '</option>').join("") +
           '</select></td>' +
           '<td><div class="table-actions">' +
             '<button onclick="viewOrder(\'' + esc(o.id) + '\')" title="View">' + IC.search + '</button>' +
@@ -164,13 +165,50 @@ function adminOrders(){
   renderAdminShell(content);
   $("#adminTitle").textContent = "Orders";
 }
+const ORDER_STATUSES = ["New", "Confirmed", "In Production", "Quality Check", "Shipped", "Completed", "On Hold", "Cancelled"];
+function orderStatusColor(status){
+  const colors = {
+    "New": "blue",
+    "Confirmed": "cyan",
+    "In Production": "orange",
+    "Quality Check": "purple",
+    "Shipped": "indigo",
+    "Completed": "green",
+    "On Hold": "yellow",
+    "Cancelled": "red"
+  };
+  return colors[status] || "gray";
+}
 function findOrderById(id){ return getOrders().find(o => o.id === id); }
 function lastOrderById(id){ const o = findOrderById(id); if(o) lastOrder = o; return o; }
-function setOrderStatus(id, status){
+function setOrderStatus(id, status, note){
   const orders = getOrders();
   const o = orders.find(x => x.id === id); if(!o) return;
-  o.status = status; saveOrders(orders);
+  o.status = status;
+  if(!o.statusHistory) o.statusHistory = [];
+  o.statusHistory.push({ status: status, date: new Date().toISOString(), note: note || "Status updated by admin" });
+  saveOrders(orders);
   showToast("Order " + id + " → " + status);
+  if(cloudReady()){
+    cloudPushKey("orders", orders).catch(() => {});
+  }
+}
+function addOrderNote(id, note, author){
+  const orders = getOrders();
+  const o = orders.find(x => x.id === id); if(!o) return;
+  if(!o.notes) o.notes = [];
+  o.notes.push({
+    id: "n" + Date.now(),
+    text: note,
+    author: author || "Admin",
+    date: new Date().toISOString(),
+    type: "admin"
+  });
+  saveOrders(orders);
+  showToast("Note added to order " + id);
+  if(cloudReady()){
+    cloudPushKey("orders", orders).catch(() => {});
+  }
 }
 function deleteOrder(id){
   if(!confirm("Delete order " + id + "?")) return;
@@ -182,6 +220,8 @@ function viewOrder(id){
   const o = findOrderById(id); if(!o) return;
   lastOrder = o;
   const cur = o.cur || "EUR";
+  const notes = o.notes || [];
+  const statusHistory = o.statusHistory || [{ status: o.status, date: o.date, note: "Order placed" }];
   $("#amTitle").textContent = "Order " + o.id;
   $("#amSub").textContent = fmtDT(o.date);
   $("#amBody").innerHTML =
@@ -191,17 +231,174 @@ function viewOrder(id){
       '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(o.customer.phone || "—") + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Preferred Contact</div><div class="ov-v">' + esc(o.customer.contact || "—") + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc((o.customer.address || "Not provided") + ", " + o.customer.country) + '</div></div>' +
-      '<div class="ov-box"><div class="ov-k">Status</div><div class="ov-v"><select class="order-status ' + orderStatusColor(o.status) + '" onchange="setOrderStatus(\'' + esc(o.id) + '\', this.value)">' + ["New","Processing","Shipped","Completed","Cancelled"].map(s => '<option ' + (o.status === s ? "selected" : "") + '>' + s + '</option>').join("") + '</select></div></div>' +
+      '<div class="ov-box"><div class="ov-k">Status</div><div class="ov-v"><select class="order-status ' + orderStatusColor(o.status) + '" onchange="setOrderStatus(\'' + esc(o.id) + '\', this.value)">' + ORDER_STATUSES.map(s => '<option ' + (o.status === s ? "selected" : "") + '>' + s + '</option>').join("") + '</select></div></div>' +
       '<div class="ov-box"><div class="ov-k">Total (' + cur + ')</div><div class="ov-v" style="font-weight:800">' + fmtIn(o.total, cur, orate(o)) + '</div></div>' +
     '</div>' +
     '<table class="admin-table" style="margin-top:14px"><thead><tr><th>Product</th><th>Category</th><th>Qty</th><th>Unit (' + cur + ')</th><th>Line (' + cur + ')</th></tr></thead><tbody>' +
     o.items.map(it => '<tr><td style="font-weight:600">' + esc(it.name) + '</td><td><span class="pill">' + esc(catName(it.cat)) + '</span></td><td>' + it.qty + '</td><td>' + fmtIn(it.price, cur, orate(o)) + '</td><td style="font-weight:700">' + fmtIn(it.price * it.qty, cur, orate(o)) + '</td></tr>').join("") +
     '</tbody></table>' +
-    '<div style="display:flex;gap:8px;margin-top:14px">' +
+    '<div style="margin-top:20px">' +
+      '<h4 style="font-size:15px;font-weight:600;margin-bottom:12px">Status History</h4>' +
+      '<div class="status-timeline" style="position:relative;padding-left:24px">' +
+        statusHistory.slice().reverse().map((h, i) => {
+          const isLast = i === 0;
+          return '<div class="timeline-item" style="position:relative;padding-bottom:16px">' +
+            '<div style="position:absolute;left:-24px;top:2px;width:12px;height:12px;border-radius:50%;background:' + (isLast ? 'var(--brand)' : 'var(--border)') + ';border:2px solid var(--card)"></div>' +
+            (i < statusHistory.length - 1 ? '<div style="position:absolute;left:-19px;top:14px;width:2px;height:calc(100% - 14px);background:var(--border)"></div>' : '') +
+            '<div style="font-weight:600;font-size:13px;color:var(--ink)">' + esc(h.status) + '</div>' +
+            '<div style="font-size:12px;color:var(--ink-soft)">' + fmtDT(h.date) + (h.note ? ' · ' + esc(h.note) : '') + '</div>' +
+          '</div>';
+        }).join("") +
+      '</div>' +
+    '</div>' +
+    '<div style="margin-top:20px">' +
+      '<h4 style="font-size:15px;font-weight:600;margin-bottom:12px">Order Notes</h4>' +
+      (notes.length ? notes.map(n => '<div class="order-note" style="padding:12px;background:var(--card);border-radius:10px;margin-bottom:8px;border-left:3px solid ' + (n.type === 'customer' ? 'var(--accent)' : 'var(--brand)') + '">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+          '<span style="font-weight:600;font-size:13px">' + esc(n.author) + '</span>' +
+          '<span style="font-size:11px;color:var(--ink-soft)">' + fmtDT(n.date) + '</span>' +
+        '</div>' +
+        '<div style="font-size:13px;color:var(--ink);line-height:1.5">' + esc(n.text) + '</div>' +
+      '</div>').join("") : '<p style="font-size:13px;color:var(--ink-soft)">No notes yet.</p>') +
+      '<div style="margin-top:12px;display:flex;gap:8px">' +
+        '<input type="text" id="orderNoteInput" placeholder="Add a note..." style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px" onkeypress="if(event.key===\'Enter\') submitOrderNote(\'' + esc(o.id) + '\')">' +
+        '<button class="btn sm" onclick="submitOrderNote(\'' + esc(o.id) + '\')">Add Note</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">' +
       '<button class="btn sm" onclick="mailOrder(lastOrder)">' + IC.mail + ' Email Order</button>' +
       '<button class="btn sm ghost" onclick="copyOrderSummary(lastOrder)">Copy Summary</button>' +
+      '<button class="btn sm ghost" onclick="downloadOrderPDF(\'' + esc(o.id) + '\')">' + IC.down + ' Download PDF</button>' +
     '</div>';
   $("#adminModal").classList.add("open");
+}
+
+function submitOrderNote(id){
+  const input = $("#orderNoteInput");
+  if(!input || !input.value.trim()) return;
+  addOrderNote(id, input.value.trim(), "Admin");
+  input.value = "";
+  viewOrder(id);
+}
+
+/* ---- Quotes / Inquiries admin ---- */
+function adminQuotes(){
+  const quotes = getQuotes();
+  const pending = quotes.filter(q => q.status === "Pending").length;
+  const content =
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Quotes & Inquiries</h3><div class="ph-sub">' + quotes.length + ' quotes · ' + pending + ' pending review</div></div></div>' +
+    (quotes.length
+      ? '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th>Quote ID</th><th>Date</th><th>Customer</th><th>Email</th><th>Items</th><th>Est. Total</th><th>Quoted Price</th><th>Status</th><th>Valid Until</th><th>Actions</th></tr></thead><tbody>' +
+        quotes.map(q => {
+          const isExpired = q.validUntil && new Date(q.validUntil) < new Date();
+          const statusDisplay = isExpired && q.status === "Quoted" ? "Expired" : q.status;
+          return '<tr>' +
+          '<td style="font-weight:600">' + esc(q.id) + '</td>' +
+          '<td style="white-space:nowrap">' + fmtDT(q.date) + '</td>' +
+          '<td>' + esc(q.customer.first + " " + q.customer.last) + '</td>' +
+          '<td><a href="mailto:' + esc(q.customer.email) + '" style="color:var(--accent)">' + esc(q.customer.email) + '</a></td>' +
+          '<td>' + q.items.reduce((s,i) => s + i.qty, 0) + '</td>' +
+          '<td>' + fmt(q.subtotal) + '</td>' +
+          '<td style="font-weight:700">' + (q.quotedPrice ? fmt(q.quotedPrice) : "—") + '</td>' +
+          '<td><span class="pill ' + (q.status === "Pending" ? "yellow" : q.status === "Quoted" ? "blue" : q.status === "Accepted" ? "green" : "gray") + '">' + esc(statusDisplay) + '</span></td>' +
+          '<td>' + (q.validUntil ? fmtD(q.validUntil) : "—") + '</td>' +
+          '<td><div class="table-actions">' +
+            '<button onclick="viewAdminQuote(\'' + esc(q.id) + '\')" title="View">' + IC.search + '</button>' +
+            '<button onclick="downloadQuotePDF(\'' + esc(q.id) + '\')" title="Download PDF">' + IC.down + '</button>' +
+            '<button class="del" onclick="deleteQuote(\'' + esc(q.id) + '\')" title="Delete">' + IC.del + '</button>' +
+          '</div></td></tr>'; }).join("") +
+        '</tbody></table></div>'
+      : '<div class="panel-body"><div style="font-size:13.5px;color:var(--ink-soft);padding:10px 0">No quote requests yet. When a customer requests a quote from their cart it will appear here.</div></div>') +
+    '</div>';
+  renderAdminShell(content);
+  $("#adminTitle").textContent = "Quotes";
+}
+function viewAdminQuote(id){
+  const q = findQuoteById(id); if(!q) return;
+  const isExpired = q.validUntil && new Date(q.validUntil) < new Date();
+  $("#amTitle").textContent = "Quote " + q.id;
+  $("#amSub").textContent = fmtDT(q.date);
+  $("#amBody").innerHTML =
+    '<div class="ov-grid">' +
+      '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(q.customer.first + " " + q.customer.last) + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v"><a href="mailto:' + esc(q.customer.email) + '" style="color:var(--accent)">' + esc(q.customer.email) + '</a></div></div>' +
+      '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(q.customer.phone || "—") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Company</div><div class="ov-v">' + esc(q.customer.company || "—") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc((q.customer.address || "Not provided") + ", " + q.customer.country) + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Status</div><div class="ov-v"><span class="pill ' + (q.status === "Pending" ? "yellow" : q.status === "Quoted" ? "blue" : q.status === "Accepted" ? "green" : "gray") + '">' + esc(isExpired && q.status === "Quoted" ? "Expired" : q.status) + '</span></div></div>' +
+      '<div class="ov-box"><div class="ov-k">Est. Total</div><div class="ov-v">' + fmt(q.subtotal) + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Quoted Price</div><div class="ov-v" style="font-weight:800;color:var(--brand)">' + (q.quotedPrice ? fmt(q.quotedPrice) : "—") + '</div></div>' +
+    '</div>' +
+    '<table class="admin-table" style="margin-top:14px"><thead><tr><th>Product</th><th>Category</th><th>Qty</th><th>Unit (EUR)</th><th>Line (EUR)</th></tr></thead><tbody>' +
+    q.items.map(it => '<tr><td style="font-weight:600">' + esc(it.name) + '</td><td><span class="pill">' + esc(catName(it.cat)) + '</span></td><td>' + it.qty + '</td><td>' + fmt(it.price) + '</td><td style="font-weight:700">' + fmt(it.price * it.qty) + '</td></tr>').join("") +
+    '</tbody></table>' +
+    (q.notes ? '<div style="margin-top:14px;padding:12px;background:var(--card);border-radius:8px"><div style="font-weight:600;font-size:13px;margin-bottom:6px">Customer Notes</div><div style="font-size:13px;color:var(--ink)">' + esc(q.notes) + '</div></div>' : '') +
+    '<div style="margin-top:20px;padding:16px;background:rgba(37,186,181,0.05);border-radius:10px;border:1px solid rgba(37,186,181,0.2)">' +
+      '<h4 style="font-size:15px;font-weight:600;margin-bottom:12px;color:var(--ink)">Send Quote Response</h4>' +
+      '<div class="form-grid">' +
+        '<div class="field"><label>Quoted Price (EUR) *</label><input id="qPrice" type="number" step="0.01" min="0" value="' + (q.quotedPrice || q.subtotal) + '"></div>' +
+        '<div class="field"><label>Valid Until *</label><input id="qValid" type="date" value="' + (q.validUntil ? q.validUntil.substring(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10)) + '"></div>' +
+        '<div class="field full"><label>Quote Notes / Terms</label><textarea id="qNotes" rows="3" placeholder="e.g. Prices include packaging, shipping quoted separately, MOQ applies...">' + (q.quoteNotes || "") + '</textarea></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:12px">' +
+        '<button class="btn" onclick="submitQuoteResponse(\'' + esc(q.id) + '\')">' + IC.check + ' Send Quote</button>' +
+        '<button class="btn ghost" onclick="setQuoteStatus(\'' + esc(q.id) + '\', \'Rejected\')">Reject</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">' +
+      '<button class="btn sm ghost" onclick="downloadQuotePDF(\'' + esc(q.id) + '\')">' + IC.down + ' Download Quote PDF</button>' +
+      '<button class="btn sm ghost" onclick="mailQuote(\'' + esc(q.id) + '\')">' + IC.mail + ' Email Customer</button>' +
+    '</div>';
+  $("#adminModal").classList.add("open");
+}
+function submitQuoteResponse(id){
+  const price = parseFloat($("#qPrice").value);
+  const valid = $("#qValid").value;
+  const notes = $("#qNotes").value.trim();
+  if(!price || price <= 0){ showToast("Please enter a valid quoted price"); return; }
+  if(!valid){ showToast("Please select a valid until date"); return; }
+  const quotes = getQuotes();
+  const q = quotes.find(x => x.id === id); if(!q) return;
+  q.quotedPrice = price;
+  q.validUntil = new Date(valid + "T23:59:59").toISOString();
+  q.quoteNotes = notes;
+  q.status = "Quoted";
+  q.history = q.history || [];
+  q.history.push({ status: "Quoted", date: new Date().toISOString(), note: "Quote sent by admin: " + fmt(price) + " EUR, valid until " + valid });
+  saveQuotes(quotes);
+  showToast("Quote " + id + " sent!");
+  if(cloudReady()){ cloudPushKey("quotes", quotes).catch(() => {}); }
+  $("#adminModal").classList.remove("open");
+  adminQuotes();
+}
+function setQuoteStatus(id, status){
+  if(!confirm("Set quote " + id + " status to " + status + "?")) return;
+  const quotes = getQuotes();
+  const q = quotes.find(x => x.id === id); if(!q) return;
+  q.status = status;
+  q.history = q.history || [];
+  q.history.push({ status: status, date: new Date().toISOString(), note: "Status updated by admin" });
+  saveQuotes(quotes);
+  showToast("Quote status updated to " + status);
+  if(cloudReady()){ cloudPushKey("quotes", quotes).catch(() => {}); }
+  adminQuotes();
+}
+function deleteQuote(id){
+  if(!confirm("Delete quote " + id + "?")) return;
+  saveQuotes(getQuotes().filter(q => q.id !== id));
+  showToast("Quote deleted");
+  adminQuotes();
+}
+function mailQuote(id){
+  const q = findQuoteById(id); if(!q) return;
+  const subject = encodeURIComponent("Your Nebula Secret Quote " + q.id);
+  const body = encodeURIComponent("Dear " + q.customer.first + ",\n\nThank you for your inquiry. Please find your formal quote below:\n\nQuote ID: " + q.id + "\n" +
+    (q.quotedPrice ? "Quoted Price: " + fmt(q.quotedPrice) + " EUR\n" : "") +
+    (q.validUntil ? "Valid Until: " + fmtD(q.validUntil) + "\n" : "") +
+    "\nItems:\n" + q.items.map(it => "- " + it.name + " × " + it.qty + " = " + fmt(it.price * it.qty) + " EUR").join("\n") +
+    (q.quoteNotes ? "\n\nNotes:\n" + q.quoteNotes : "") +
+    "\n\nPlease contact us if you have any questions.\n\nBest regards,\nNebula Secret Sales Team\nsales@nebulasecret.com");
+  window.location.href = "mailto:" + q.customer.email + "?subject=" + subject + "&body=" + body;
 }
 
 /* ---- Excel / CSV exports (EUR base + order currency columns) ---- */
@@ -256,23 +453,71 @@ function adminProducts(){
 function openProductForm(id){
   const p = id ? findProduct(id) : null;
   const cats = getCats();
+  const tiers = p && p.priceTiers && p.priceTiers.length ? p.priceTiers : [{ minQty: 1, price: p ? p.p : 1.00 }];
   $("#amTitle").textContent = p ? "Edit product" : "Add product";
   $("#amSub").textContent = p ? "Editing: " + p.n : "Fill in the details to add a new product";
   $("#amBody").innerHTML =
     '<div class="form-grid">' +
       '<div class="field full"><label>Product name *</label><input id="pfName" value="' + (p ? esc(p.n) : "") + '" placeholder="e.g. Rose Body Scrub"></div>' +
       '<div class="field"><label>Category *</label><select id="pfCat">' + cats.map(c => '<option value="' + c.cs + '"' + (p && p.cs === c.cs ? " selected" : "") + '>' + esc(c.c) + '</option>').join("") + '</select></div>' +
-      '<div class="field"><label>Price (EUR) *</label><input id="pfPrice" type="number" step="0.01" min="0" value="' + (p ? p.p : "1.00") + '"></div>' +
+      '<div class="field"><label>Base Price (EUR) *</label><input id="pfPrice" type="number" step="0.01" min="0" value="' + (p ? p.p : "1.00") + '"><div class="form-hint">Default price for 1 unit</div></div>' +
       '<div class="field full"><label>Image URL</label><input id="pfImg" value="' + (p ? esc(p.i) : "") + '" placeholder="https://… (leave empty for placeholder)" oninput="pfPreview(this.value)"></div>' +
       '<div class="field full"><label>Image preview</label><div class="pf-prev"><img id="pfImgPrev" src="' + (p ? imgUrl(p.i, 200) : PLACEHOLDER) + '" alt="" onerror="this.onerror=null;this.src=PLACEHOLDER"></div>' +
       '<div class="field full"><label>Or upload from your computer</label><label class="upload-btn" for="pfUpload">' + IC.up + ' Choose image file</label><input type="file" id="pfUpload" accept="image/*" style="display:none" onchange="uploadImageTo(\'pfUpload\',\'pfImg\',800)"><div class="form-hint">The image is compressed and stored with this product — no hosting needed. Tip: you can also paste any image URL directly.</div></div>' +
       '<div class="field full"><label>Description (one attribute per line)</label><textarea id="pfDesc" rows="5" placeholder="Country of Origin: China&#10;Scent: Rose&#10;Volume: 100ml">' + (p ? esc((p.d || []).join("\n")) : "") + '</textarea></div>' +
+      '<div class="field full">' +
+        '<label>Bulk Pricing Tiers (MOQ & Volume Discounts)</label>' +
+        '<div class="form-hint">Set different prices for different order quantities. The first tier should start at 1 (MOQ).</div>' +
+        '<div id="priceTiersContainer">' +
+          tiers.map((t, i) => renderTierRow(t, i)).join("") +
+        '</div>' +
+        '<button class="btn sm ghost" style="margin-top:8px" onclick="addPriceTier()">+ Add Tier</button>' +
+      '</div>' +
     '</div>' +
     '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">' +
       '<button class="btn ghost" onclick="closeAdminModal()">Cancel</button>' +
       '<button class="btn" onclick="saveProductForm(\'' + (p ? p.id : "") + '\')">' + (p ? "Save changes" : "Add product") + '</button>' +
     '</div>';
   $("#adminModal").classList.add("open");
+}
+
+function renderTierRow(tier, index){
+  return '<div class="tier-row" data-index="' + index + '" style="display:flex;gap:10px;align-items:center;margin-bottom:8px">' +
+    '<div style="flex:1"><label style="font-size:11px;color:var(--ink-soft)">Min Qty (MOQ)</label><input type="number" min="1" value="' + tier.minQty + '" class="tier-minqty" style="width:100%"></div>' +
+    '<div style="flex:1"><label style="font-size:11px;color:var(--ink-soft)">Price (EUR)</label><input type="number" step="0.01" min="0" value="' + tier.price + '" class="tier-price" style="width:100%"></div>' +
+    '<button class="btn sm del" style="margin-top:18px" onclick="removePriceTier(' + index + ')" title="Remove tier">×</button>' +
+  '</div>';
+}
+
+function addPriceTier(){
+  const container = $("#priceTiersContainer");
+  const rows = container.querySelectorAll(".tier-row");
+  const lastQty = rows.length > 0 ? parseInt(rows[rows.length - 1].querySelector(".tier-minqty").value) || 1 : 1;
+  const newIndex = rows.length;
+  const div = document.createElement("div");
+  div.innerHTML = renderTierRow({ minQty: lastQty * 10 || 100, price: 0.00 }, newIndex);
+  container.appendChild(div.firstElementChild);
+}
+
+function removePriceTier(index){
+  const container = $("#priceTiersContainer");
+  const rows = container.querySelectorAll(".tier-row");
+  if(rows.length <= 1){ showToast("At least one tier is required"); return; }
+  rows[index].remove();
+}
+
+function collectPriceTiers(){
+  const container = $("#priceTiersContainer");
+  if(!container) return null;
+  const rows = container.querySelectorAll(".tier-row");
+  const tiers = [];
+  rows.forEach(row => {
+    const minQty = parseInt(row.querySelector(".tier-minqty").value) || 1;
+    const price = parseFloat(row.querySelector(".tier-price").value) || 0;
+    tiers.push({ minQty, price });
+  });
+  tiers.sort((a, b) => a.minQty - b.minQty);
+  return tiers;
 }
 
 function pfPreview(v){
@@ -287,8 +532,10 @@ function saveProductForm(id){
   const price = parseFloat($("#pfPrice").value);
   const img = $("#pfImg").value.trim();
   const desc = $("#pfDesc").value.split("\n").map(s => s.trim()).filter(Boolean);
+  const priceTiers = collectPriceTiers();
   if(!name){ showToast("Please enter a product name"); return; }
   if(isNaN(price) || price < 0){ showToast("Please enter a valid price"); return; }
+  if(!priceTiers || priceTiers.length === 0){ showToast("Please add at least one price tier"); return; }
   const products = getProducts();
   const existing = id ? products.find(x => String(x.id) === String(id)) : null;
   const rec = {
@@ -298,6 +545,7 @@ function saveProductForm(id){
     cs: cs,
     p: price,
     pf: "€" + Number(price).toFixed(2),
+    priceTiers: priceTiers,
     i: img || PLACEHOLDER,
     d: desc,
     l: ORIGIN
@@ -1031,6 +1279,7 @@ function adminRoute(){
     if(page === "dashboard") adminDashboard();
     else if(page === "products") adminProducts();
     else if(page === "orders") adminOrders();
+    else if(page === "quotes") adminQuotes();
     else if(page === "categories") adminCategories();
     else if(page === "customers") adminCustomers();
     else if(page === "users") adminAdminUsers();

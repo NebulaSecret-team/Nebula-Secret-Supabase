@@ -881,6 +881,15 @@ details.ct-block > .form-grid{padding:14px 16px}
   </div>
 </div>
 
+<!-- ================= QUOTE REQUEST MODAL ================= -->
+<div class="modal-backdrop" id="quoteModal">
+  <div class="modal" style="max-width:680px;max-height:90vh;overflow-y:auto">
+    <h3 id="quoteModalTitle">Request a Quote</h3>
+    <p class="sub" id="quoteModalSub"></p>
+    <div id="quoteModalBody"></div>
+  </div>
+</div>
+
 <!-- ================= ORDER CONFIRMATION ================= -->
 <div class="modal-backdrop" id="orderModal">
   <div class="modal" style="max-width:620px">
@@ -1422,6 +1431,14 @@ function getAccounts(){ return _cache.accounts || []; }
 function saveAccounts(a){ _cache.accounts = a; sbSave("accounts", a); }
 function getSession(){ return lsGet(LS.session, null); }
 function setSession(s){ if(s) lsSet(LS.session, s); else try{ localStorage.removeItem(LS.session); }catch(e){} }
+
+/* ============ Quotes / Inquiries ============ */
+function getQuotes(){ return _cache.quotes || []; }
+function saveQuotes(q){ _cache.quotes = q; sbSave("quotes", q); }
+function findQuoteById(id){ return getQuotes().find(q => q.id === id); }
+function myQuotes(email){ return getQuotes().filter(q => String(q.customer.email).toLowerCase() === String(email).toLowerCase()); }
+function genQuoteId(){ return "Q-" + Date.now().toString(36).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase(); }
+const QUOTE_STATUSES = ["Pending", "Quoted", "Accepted", "Expired", "Rejected"];
 /* Secure password hashing using PBKDF2 with random salt */
 /* Format: pbkdf2::<iterations>::<salt_hex>::<hash_hex> */
 /* Legacy format: sha256::<hash> (for backward compatibility) */
@@ -1955,7 +1972,11 @@ function orderPDFHtml(o){
     '<div style="height:4px;background:linear-gradient(90deg,' + brand + ',#2d8f63);width:100%"></div>' +
   '</div>';
 }
-async function downloadOrderPDF(o){
+async function downloadOrderPDF(orderInput){
+  let o = orderInput;
+  if(typeof orderInput === 'string'){
+    o = findOrderById(orderInput);
+  }
   if(!o) return;
   try{
     if(!window.jspdf || !window.html2canvas){ showToast("PDF library loading — please try again in a moment"); return; }
@@ -2079,7 +2100,11 @@ function stars(r){
 /* ============ Cart ============ */
 let cart = lsGet(LS.cart, []);
 function cartCount(){ return cart.reduce((s,i) => s + i.q, 0); }
-function cartTotal(){ return cart.reduce((s,i) => s + i.q * (findProduct(i.id)?.p || 0), 0); }
+function cartTotal(){ return cart.reduce((s,i) => {
+  const p = findProduct(i.id);
+  const unitPrice = p ? getPriceForQty(p, i.q) : 0;
+  return s + i.q * unitPrice;
+}, 0); }
 function saveCart(){ lsSet(LS.cart, cart); }
 function addToCart(id, q){
   const p = findProduct(id); if(!p) return;
@@ -2129,26 +2154,125 @@ function renderCart(){
   }
   box.innerHTML = cart.map(i => {
     const p = findProduct(i.id); if(!p) return "";
+    const unitPrice = getPriceForQty(p, i.q);
+    const hasTierDiscount = p.priceTiers && p.priceTiers.length > 1 && unitPrice < p.p;
     return '<div class="cart-item">' +
       '<a href="#/product/' + p.id + '" onclick="closeCart()"><img src="' + imgUrl(p.i, 200) + '" alt="' + esc(p.n) + '" loading="lazy" data-pid="' + p.id + '" onerror="imgFallback(this)"></a>' +
       '<div><a class="ci-name" href="#/product/' + p.id + '" onclick="closeCart()">' + esc(p.n) + '</a>' +
-      '<div class="ci-price">' + fmt(p.p) + ' each</div>' +
+      '<div class="ci-price">' + fmt(unitPrice) + ' each' + (hasTierDiscount ? ' <span style="color:var(--brand);font-size:11px;font-weight:600">Bulk discount!</span>' : '') + '</div>' +
       '<div class="ci-qty"><button onclick="setQty(\'' + p.id + '\',' + (i.q - 1) + ')">−</button><input type="number" min="1" value="' + i.q + '" onchange="setCartQty(\'' + p.id + '\',this.value)"><button onclick="setQty(\'' + p.id + '\',' + (i.q + 1) + ')">+</button></div>' +
       '<button class="ci-remove" onclick="removeItem(\'' + p.id + '\')">Remove</button></div>' +
-      '<div class="ci-total">' + fmt(i.q * p.p) + '</div></div>';
+      '<div class="ci-total">' + fmt(i.q * unitPrice) + '</div></div>';
   }).join("");
   const total = cartTotal();
   $("#cartFoot").innerHTML =
     '<div class="cart-sub"><span>Subtotal</span><span>' + fmt(total) + '</span></div>' +
     '<div class="cart-note">Shipping and payment terms are quoted by our sales team per order</div>' +
-    '<button class="btn full" onclick="openCheckout()">Checkout</button>';
+    '<div style="display:flex;gap:8px">' +
+      '<button class="btn" style="flex:1" onclick="openCheckout()">Checkout</button>' +
+      '<button class="btn ghost" style="flex:1" onclick="openQuoteRequest()">Request Quote</button>' +
+    '</div>';
+}
+
+/* ============ Quote Request ============ */
+function openQuoteRequest(){
+  if(!cart.length){ showToast("Your cart is empty"); return; }
+  const s = getSession();
+  const total = cartTotal();
+  $("#quoteModalTitle").textContent = "Request a Quote";
+  $("#quoteModalSub").textContent = "Our sales team will review your request and provide a formal quote within 24 hours.";
+  $("#quoteModalBody").innerHTML =
+    '<div class="form-grid">' +
+      '<div class="field"><label>First Name *</label><input id="qrFirst" value="' + (s ? esc(s.name.split(" ")[0]) : "") + '"></div>' +
+      '<div class="field"><label>Last Name *</label><input id="qrLast" value="' + (s ? esc(s.name.split(" ").slice(1).join(" ")) : "") + '"></div>' +
+      '<div class="field"><label>Email *</label><input id="qrEmail" type="email" value="' + (s ? esc(s.email) : "") + '"></div>' +
+      '<div class="field"><label>Phone</label><input id="qrPhone" type="tel"></div>' +
+      '<div class="field"><label>Company / Brand</label><input id="qrCompany"></div>' +
+      '<div class="field"><label>Preferred Contact</label><input id="qrContact" placeholder="e.g. WhatsApp, WeChat ID"></div>' +
+      '<div class="field full"><label>Shipping Address</label><input id="qrAddress" placeholder="Street, city, postal code"></div>' +
+      '<div class="field"><label>Country</label><select id="qrCountry">' + COUNTRIES.map(c => '<option value="' + c + '">' + c + '</option>').join("") + '</select></div>' +
+      '<div class="field"><label>Target Order Date</label><input id="qrDate" type="date"></div>' +
+      '<div class="field full"><label>Additional Notes / Special Requirements</label><textarea id="qrNotes" rows="3" placeholder="Tell us about your requirements, custom packaging, OEM/ODM needs, etc."></textarea></div>' +
+    '</div>' +
+    '<div style="margin-top:16px;padding:14px;background:var(--card);border-radius:10px">' +
+      '<div style="font-weight:600;font-size:14px;margin-bottom:10px">Quote Summary (' + cart.length + ' items)</div>' +
+      cart.map(i => { const p = findProduct(i.id); const unitPrice = getPriceForQty(p, i.q); return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span>' + esc(p.n) + ' × ' + i.q + '</span><span>' + fmt(unitPrice * i.q) + '</span></div>'; }).join("") +
+      '<div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;padding-top:8px;border-top:1px solid var(--border);margin-top:8px"><span>Estimated Total</span><span>' + fmt(total) + '</span></div>' +
+      '<div style="font-size:11px;color:var(--ink-soft);margin-top:6px">Final price may vary based on quantity, shipping and custom requirements.</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">' +
+      '<button class="btn ghost" onclick="closeQuoteModal()">Cancel</button>' +
+      '<button class="btn" onclick="submitQuoteRequest()">Submit Quote Request</button>' +
+    '</div>';
+  $("#quoteModal").classList.add("open");
+}
+function closeQuoteModal(){ $("#quoteModal").classList.remove("open"); }
+function submitQuoteRequest(){
+  const first = $("#qrFirst").value.trim();
+  const last = $("#qrLast").value.trim();
+  const email = $("#qrEmail").value.trim();
+  const phone = $("#qrPhone").value.trim();
+  const company = $("#qrCompany").value.trim();
+  const contact = $("#qrContact").value.trim();
+  const address = $("#qrAddress").value.trim();
+  const country = $("#qrCountry").value;
+  const targetDate = $("#qrDate").value;
+  const notes = $("#qrNotes").value.trim();
+  if(!first || !last){ showToast("Please enter your first and last name"); return; }
+  if(!email || !/.+@.+\..+/.test(email)){ showToast("Please enter a valid email address"); return; }
+  if(!cart.length){ showToast("Your cart is empty"); return; }
+  const quote = {
+    id: genQuoteId(),
+    date: new Date().toISOString(),
+    status: "Pending",
+    customer: { first, last, email, phone, company, contact, address, country },
+    targetDate: targetDate || null,
+    notes: notes || "",
+    items: cart.map(i => {
+      const p = findProduct(i.id) || { id: i.id, n: "Product " + i.id, p: 0, cs: "other" };
+      const unitPrice = getPriceForQty(p, i.q);
+      return { id: p.id, name: p.n, cat: p.cs, price: unitPrice, basePrice: p.p, qty: i.q };
+    }),
+    subtotal: cartTotal(),
+    quotedPrice: null,
+    validUntil: null,
+    quoteNotes: "",
+    history: [{ status: "Pending", date: new Date().toISOString(), note: "Quote request submitted" }]
+  };
+  const quotes = getQuotes();
+  quotes.unshift(quote);
+  saveQuotes(quotes);
+  cart = []; saveCart(); updateCartUI();
+  closeQuoteModal();
+  closeCart();
+  showToast("Quote request submitted! Our team will contact you within 24 hours.");
+  /* Show confirmation */
+  $("#app").innerHTML =
+  '<section class="block"><div class="page">' +
+    '<div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<span class="cur">Quote Confirmation</span></div>' +
+    '<div class="acct-card" style="text-align:center;padding:40px 20px">' +
+      '<div style="width:64px;height:64px;background:rgba(37,186,181,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:32px;height:32px;color:var(--brand)"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+      '</div>' +
+      '<h2 style="margin:0 0 10px">Quote Request Submitted!</h2>' +
+      '<p style="color:var(--ink-soft);font-size:14px;margin:0 0 20px">Thank you for your interest. Our sales team will review your request and provide a formal quote within 24 hours.</p>' +
+      '<div style="display:inline-block;padding:12px 24px;background:var(--card);border-radius:10px;margin-bottom:20px">' +
+        '<div style="font-size:12px;color:var(--ink-soft)">Quote Reference Number</div>' +
+        '<div style="font-size:20px;font-weight:700;color:var(--ink)">' + esc(quote.id) + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">' +
+        '<a class="btn" href="#/account">View My Quotes</a>' +
+        '<a class="btn ghost" href="#/shop">Continue Shopping</a>' +
+      '</div>' +
+    '</div>' +
+  '</div></section>';
 }
 
 /* ============ Checkout ============ */
 function openCheckout(){
   $("#orderSummary").innerHTML =
     '<div class="row" style="border:none;font-size:12px;color:var(--ink-soft)"><span>All prices in ' + curCode + ' (1 EUR = ' + rateOf(curCode) + ' ' + curCode + ')</span></div>' +
-    cart.map(i => { const p = findProduct(i.id); return '<div class="row"><span>' + esc(p.n) + ' × ' + i.q + '</span><span>' + fmt(i.q * p.p) + '</span></div>'; }).join("") +
+    cart.map(i => { const p = findProduct(i.id); const unitPrice = getPriceForQty(p, i.q); return '<div class="row"><span>' + esc(p.n) + ' × ' + i.q + '</span><span>' + fmt(i.q * unitPrice) + '</span></div>'; }).join("") +
     '<div class="row total"><span>Total</span><span>' + fmt(cartTotal()) + '</span></div>' +
     '<div class="row" style="border:none;font-size:11.5px;color:var(--ink-soft)"><span>Shipping &amp; payment terms quoted by our sales team</span></div>';
   const s = getSession();
@@ -2187,10 +2311,13 @@ function placeOrder(){
     customer: { first, last, email, address: addr, country, phone, contact },
     items: cart.map(i => {
       const p = findProduct(i.id) || { id: i.id, n: "Product " + i.id, p: 0, cs: "other" };
-      return { id: p.id, name: p.n, cat: p.cs, price: p.p, qty: i.q };
+      const unitPrice = getPriceForQty(p, i.q);
+      return { id: p.id, name: p.n, cat: p.cs, price: unitPrice, basePrice: p.p, qty: i.q };
     }),
     total: cartTotal(),
-    status: "New"
+    status: "New",
+    notes: [],
+    statusHistory: [{ status: "New", date: new Date().toISOString(), note: "Order placed" }]
   };
   const orders = getOrders();
   orders.unshift(o);
@@ -3115,9 +3242,63 @@ function bindShopUI(){
   });
 }
 
+/* ============ Bulk Pricing (Price Tiers) ============ */
+function getPriceForQty(product, qty){
+  if(!product) return 0;
+  const tiers = product.priceTiers;
+  if(!tiers || tiers.length === 0) return product.p || 0;
+  let price = tiers[0].price;
+  for(let i = 0; i < tiers.length; i++){
+    if(qty >= tiers[i].minQty) price = tiers[i].price;
+  }
+  return price;
+}
+
+function renderPriceTiersTable(product){
+  const tiers = product.priceTiers;
+  if(!tiers || tiers.length === 0) return '';
+  let html = '<div class="price-tiers-section" style="margin:16px 0">' +
+    '<h4 style="font-size:14px;font-weight:600;margin-bottom:10px;color:var(--ink)">Bulk Pricing Tiers</h4>' +
+    '<div class="price-tiers-table" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">';
+  for(let i = 0; i < tiers.length; i++){
+    const t = tiers[i];
+    const nextQty = i < tiers.length - 1 ? tiers[i + 1].minQty - 1 : null;
+    const range = nextQty ? (t.minQty + ' – ' + nextQty) : (t.minQty + '+');
+    const isActive = qtySel >= t.minQty && (i === tiers.length - 1 || qtySel < tiers[i + 1].minQty);
+    html += '<div class="tier-card' + (isActive ? ' active' : '') + '" style="padding:12px;border-radius:10px;border:1px solid ' + (isActive ? 'var(--brand)' : 'var(--border)') + ';background:' + (isActive ? 'rgba(37,186,181,0.05)' : 'var(--card)') + ';text-align:center;transition:all 0.2s">' +
+      '<div style="font-size:12px;color:var(--ink-soft);font-weight:500">Qty ' + range + '</div>' +
+      '<div style="font-size:18px;font-weight:700;color:var(--ink);margin-top:4px">' + fmt(t.price) + '</div>' +
+      '<div style="font-size:11px;color:var(--ink-soft)">per unit</div>' +
+    '</div>';
+  }
+  html += '</div></div>';
+  return html;
+}
+
+function updateProductPriceDisplay(){
+  const priceEl = document.querySelector(".detail-price");
+  const addBtn = document.querySelector(".buy-row .btn");
+  if(!priceEl || !currentProduct) return;
+  const unitPrice = getPriceForQty(currentProduct, qtySel);
+  const totalPrice = unitPrice * qtySel;
+  priceEl.innerHTML = fmt(unitPrice) + '<span class="tax-note"> / unit · Total: ' + fmt(totalPrice) + '</span>';
+  if(addBtn) addBtn.innerHTML = 'Add to Cart — ' + fmt(totalPrice);
+  // Update tier card active states
+  document.querySelectorAll(".tier-card").forEach((card, i) => {
+    const tiers = currentProduct.priceTiers;
+    if(!tiers) return;
+    const isActive = qtySel >= tiers[i].minQty && (i === tiers.length - 1 || qtySel < tiers[i + 1].minQty);
+    card.style.borderColor = isActive ? 'var(--brand)' : 'var(--border)';
+    card.style.background = isActive ? 'rgba(37,186,181,0.05)' : 'var(--card)';
+  });
+}
+
+let currentProduct = null;
+
 function viewProduct(id){
   const p = findProduct(id);
   if(!p){ location.hash = "#/shop"; return; }
+  currentProduct = p;
   const rt = productRating(p); const sold = productSold(p);
   const props = (p.d || []).map(s => {
     const parts = String(s).split(":");
@@ -3126,6 +3307,7 @@ function viewProduct(id){
     }
     return '<div class="spec-row"><span class="spec-v" style="text-align:left">' + esc(s) + '</span></div>';
   }).join("");
+  const priceTiersHtml = renderPriceTiersTable(p);
   $("#app").innerHTML =
   '<section class="block"><div class="page">' +
     '<div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<a href="#/shop">Shop</a>' + IC.chev + '<a href="#/shop?cat=' + p.cs + '">' + esc(catName(p.cs)) + '</a>' + IC.chev + '<span class="cur">' + esc(p.n) + '</span></div>' +
@@ -3138,11 +3320,12 @@ function viewProduct(id){
         '<span class="d-cat">' + esc(catName(p.cs)) + '</span>' +
         '<h1>' + esc(p.n) + '</h1>' +
         '<div class="d-rating"><span class="stars">' + stars(rt.r) + '</span><b>' + rt.r.toFixed(1) + '</b><span>· ' + rt.reviews + ' reviews · ' + sold + ' sold</span></div>' +
-        '<div class="detail-price">' + fmt(p.p) + '<span class="tax-note"> incl. VAT</span></div>' +
+        '<div class="detail-price">' + fmt(p.p) + '<span class="tax-note"> / unit</span></div>' +
+        priceTiersHtml +
         '<div class="spec-list">' + (props || '<div class="spec-row"><span class="spec-v">Premium quality product from Nebula Secret.</span></div>') + '</div>' +
         '<div class="buy-panel">' +
-          '<div class="qty-row"><span class="qty-label">Quantity</span>' +
-            '<div class="qty"><button onclick="changeQty(-1)">−</button><input id="qtyInput" type="number" min="1" value="1" onchange="setQtyInput(this.value)"><button onclick="changeQty(1)">+</button></div>' +
+          '<div class="qty-row"><span class="qty-label">Quantity (MOQ: ' + (p.priceTiers && p.priceTiers.length ? p.priceTiers[0].minQty : 1) + ')</span>' +
+            '<div class="qty"><button onclick="changeQty(-1)">−</button><input id="qtyInput" type="number" min="' + (p.priceTiers && p.priceTiers.length ? p.priceTiers[0].minQty : 1) + '" value="' + (p.priceTiers && p.priceTiers.length ? p.priceTiers[0].minQty : 1) + '" onchange="setQtyInput(this.value)"><button onclick="changeQty(1)">+</button></div>' +
           '</div>' +
           '<div class="buy-row">' +
             '<button class="btn" style="flex:1" onclick="addToCart(\'' + p.id + '\', qtySel)">Add to Cart — ' + fmt(p.p) + '</button>' +
@@ -3162,18 +3345,24 @@ function viewProduct(id){
       '</div>' +
     '</div>' +
   '</div></section>';
-  qtySel = 1; const qi = $("#qtyInput"); if(qi) qi.value = 1;
+  qtySel = p.priceTiers && p.priceTiers.length ? p.priceTiers[0].minQty : 1;
+  const qi = $("#qtyInput"); if(qi) qi.value = qtySel;
+  setTimeout(updateProductPriceDisplay, 50);
 }
 
 let qtySel = 1;
 function changeQty(d){
-  qtySel = Math.max(1, qtySel + d);
+  const minQty = currentProduct && currentProduct.priceTiers && currentProduct.priceTiers.length ? currentProduct.priceTiers[0].minQty : 1;
+  qtySel = Math.max(minQty, qtySel + d);
   const qi = $("#qtyInput"); if(qi) qi.value = qtySel;
+  updateProductPriceDisplay();
 }
 function setQtyInput(v){
-  const n = Math.max(1, Math.floor(Number(v) || 1));
+  const minQty = currentProduct && currentProduct.priceTiers && currentProduct.priceTiers.length ? currentProduct.priceTiers[0].minQty : 1;
+  const n = Math.max(minQty, Math.floor(Number(v) || minQty));
   qtySel = n;
   const qi = $("#qtyInput"); if(qi) qi.value = n;
+  updateProductPriceDisplay();
 }
 
 /* ============ Customer account (register / login / change password / my orders) ============ */
@@ -3246,22 +3435,37 @@ function acctLogin(){
 }
 function accountSignedIn(s){
   const orders = myOrders(s.email);
+  const quotes = myQuotes(s.email);
   const orderHtml = orders.length
     ? orders.map(o => {
         const cur = o.cur || "EUR";
-        return '<div class="acct-order">' +
+        return '<div class="acct-order" style="cursor:pointer" onclick="viewCustomerOrder(\'' + esc(o.id) + '\')">' +
           '<div class="ao-top"><span class="ao-id">' + esc(o.id) + '</span><span class="ao-date">' + fmtD(o.date) + '</span><span class="badge">' + esc(o.status) + '</span></div>' +
           '<div class="ao-items">' + o.items.map(it => esc(it.name) + ' × ' + it.qty).join(" · ") + '</div>' +
           '<div class="ao-total">' + fmtIn(o.total, cur, orate(o)) + ' <span style="color:var(--ink-soft);font-weight:400">(' + cur + ')</span></div>' +
+          '<div style="font-size:12px;color:var(--brand);margin-top:6px;font-weight:600">Click to view details →</div>' +
         '</div>';
       }).join("")
     : '<p style="color:var(--ink-soft);font-size:13.5px">You have no orders yet — <a href="#/shop" style="color:var(--brand-dark);font-weight:600">start shopping</a>.</p>';
+  const quoteHtml = quotes.length
+    ? quotes.map(q => {
+        const isExpired = q.validUntil && new Date(q.validUntil) < new Date();
+        const statusDisplay = isExpired && q.status === "Quoted" ? "Expired" : q.status;
+        return '<div class="acct-order" style="cursor:pointer" onclick="viewCustomerQuote(\'' + esc(q.id) + '\')">' +
+          '<div class="ao-top"><span class="ao-id">' + esc(q.id) + '</span><span class="ao-date">' + fmtD(q.date) + '</span><span class="badge">' + esc(statusDisplay) + '</span></div>' +
+          '<div class="ao-items">' + q.items.map(it => esc(it.name) + ' × ' + it.qty).join(" · ") + '</div>' +
+          '<div class="ao-total">' + (q.quotedPrice ? fmt(q.quotedPrice) : "Pending") + (q.validUntil ? ' <span style="color:var(--ink-soft);font-weight:400;font-size:11px">valid until ' + fmtD(q.validUntil) + '</span>' : '') + '</div>' +
+          '<div style="font-size:12px;color:var(--brand);margin-top:6px;font-weight:600">Click to view details →</div>' +
+        '</div>';
+      }).join("")
+    : '<p style="color:var(--ink-soft);font-size:13.5px">You have no quote requests yet — <a href="#/shop" style="color:var(--brand-dark);font-weight:600">browse products</a> and request a quote from your cart.</p>';
   return '<div class="acct-card">' +
     '<h2>Hello, ' + esc(s.name.split(" ")[0]) + '</h2>' +
     '<p class="sub">' + esc(s.email) + '</p>' +
     '<div class="acct-row"><span class="k">Signed in as</span><span class="v">' + esc(s.name) + '</span></div>' +
     '<div class="acct-row"><span class="k">Email</span><span class="v">' + esc(s.email) + '</span></div>' +
     '<div class="acct-row"><span class="k">Orders</span><span class="v">' + orders.length + '</span></div>' +
+    '<div class="acct-row"><span class="k">Quotes</span><span class="v">' + quotes.length + '</span></div>' +
     '<div style="display:flex;gap:10px;margin-top:18px">' +
       '<button class="btn" onclick="changePassOpen()">Change password</button>' +
       '<button class="btn ghost" onclick="acctLogout()">Sign out</button>' +
@@ -3274,7 +3478,284 @@ function accountSignedIn(s){
     '<p id="cpErr" style="color:var(--danger);font-size:13px;min-height:18px;margin-bottom:6px"></p>' +
     '<button class="btn" onclick="changePassSave()">Update password</button>' +
   '</div>' +
+  '<div class="acct-card"><h2>My Quotes</h2>' + quoteHtml + '</div>' +
   '<div class="acct-card"><h2>My orders</h2>' + orderHtml + '</div>';
+}
+
+function viewCustomerQuote(id){
+  const q = findQuoteById(id);
+  const s = getSession();
+  if(!q || !s || String(q.customer.email).toLowerCase() !== String(s.email).toLowerCase()){
+    showToast("Quote not found");
+    return;
+  }
+  const isExpired = q.validUntil && new Date(q.validUntil) < new Date();
+  const canAccept = q.status === "Quoted" && !isExpired;
+  $("#app").innerHTML =
+  '<section class="block"><div class="page">' +
+    '<div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<a href="#/account">My Account</a>' + IC.chev + '<span class="cur">Quote ' + esc(q.id) + '</span></div>' +
+    '<div class="acct-card">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px">' +
+        '<div><h2 style="margin:0">Quote ' + esc(q.id) + '</h2><p class="sub" style="margin:4px 0 0">' + fmtDT(q.date) + '</p></div>' +
+        '<span class="badge" style="font-size:14px;padding:8px 16px">' + esc(isExpired && q.status === "Quoted" ? "Expired" : q.status) + '</span>' +
+      '</div>' +
+      '<div class="ov-grid" style="margin-bottom:20px">' +
+        '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(q.customer.first + " " + q.customer.last) + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v">' + esc(q.customer.email) + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(q.customer.phone || "—") + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Company</div><div class="ov-v">' + esc(q.customer.company || "—") + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc((q.customer.address || "Not provided") + ", " + q.customer.country) + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Valid Until</div><div class="ov-v" style="font-weight:' + (isExpired ? '700;color:var(--danger)' : '600') + '">' + (q.validUntil ? fmtD(q.validUntil) : "—") + '</div></div>' +
+      '</div>' +
+      '<h3 style="font-size:16px;margin-bottom:12px">Quote Items</h3>' +
+      '<table class="admin-table" style="margin-bottom:20px"><thead><tr><th>Product</th><th>Qty</th><th>Unit (EUR)</th><th>Line (EUR)</th></tr></thead><tbody>' +
+      q.items.map(it => '<tr><td style="font-weight:600">' + esc(it.name) + '</td><td>' + it.qty + '</td><td>' + fmt(it.price) + '</td><td style="font-weight:700">' + fmt(it.price * it.qty) + '</td></tr>').join("") +
+      '</tbody></table>' +
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:20px">' +
+        '<div style="text-align:right;min-width:250px">' +
+          '<div style="display:flex;justify-content:space-between;padding:6px 0"><span style="color:var(--ink-soft)">Subtotal</span><span>' + fmt(q.subtotal) + '</span></div>' +
+          (q.quotedPrice ? '<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid var(--border);font-weight:700;font-size:16px"><span>Quoted Price</span><span style="color:var(--brand)">' + fmt(q.quotedPrice) + '</span></div>' : '<div style="padding:8px 0;border-top:2px solid var(--border);color:var(--ink-soft);font-style:italic">Awaiting quote from our sales team</div>') +
+        '</div>' +
+      '</div>' +
+      (q.quoteNotes ? '<div style="margin-bottom:20px;padding:14px;background:rgba(37,186,181,0.05);border-radius:10px;border-left:3px solid var(--brand)"><div style="font-weight:600;font-size:13px;margin-bottom:6px">Quote Notes</div><div style="font-size:13px;color:var(--ink);line-height:1.6">' + esc(q.quoteNotes) + '</div></div>' : '') +
+      (q.notes ? '<div style="margin-bottom:20px;padding:14px;background:var(--card);border-radius:10px"><div style="font-weight:600;font-size:13px;margin-bottom:6px">Your Notes</div><div style="font-size:13px;color:var(--ink);line-height:1.6">' + esc(q.notes) + '</div></div>' : '') +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
+        (canAccept ? '<button class="btn" onclick="acceptQuote(\'' + esc(q.id) + '\')">Accept Quote & Create Order</button>' : '') +
+        '<button class="btn ghost" onclick="downloadQuotePDF(\'' + esc(q.id) + '\')">' + IC.down + ' Download Quote PDF</button>' +
+        '<a class="btn ghost" href="#/account">Back to Account</a>' +
+      '</div>' +
+    '</div>' +
+  '</div></section>';
+}
+
+function acceptQuote(id){
+  const q = findQuoteById(id);
+  if(!q) return;
+  if(!confirm("Accept this quote and create an order? Our sales team will contact you to confirm details.")) return;
+  /* Create order from quote */
+  const order = {
+    id: genOrderId(),
+    date: new Date().toISOString(),
+    cur: "EUR",
+    rate: 1,
+    customer: q.customer,
+    items: q.items.map(it => ({ id: it.id, name: it.name, cat: it.cat, price: it.price, basePrice: it.basePrice, qty: it.qty })),
+    total: q.quotedPrice || q.subtotal,
+    status: "Confirmed",
+    notes: [{ id: "n" + Date.now(), text: "Order created from accepted quote " + q.id, author: "System", date: new Date().toISOString(), type: "system" }],
+    statusHistory: [
+      { status: "New", date: q.date, note: "Quote request submitted" },
+      { status: "Confirmed", date: new Date().toISOString(), note: "Quote accepted by customer" }
+    ],
+    quoteId: q.id
+  };
+  const orders = getOrders();
+  orders.unshift(order);
+  saveOrders(orders);
+  /* Update quote status */
+  const quotes = getQuotes();
+  const qIndex = quotes.findIndex(x => x.id === id);
+  if(qIndex >= 0){
+    quotes[qIndex].status = "Accepted";
+    quotes[qIndex].history = quotes[qIndex].history || [];
+    quotes[qIndex].history.push({ status: "Accepted", date: new Date().toISOString(), note: "Quote accepted by customer, order " + order.id + " created" });
+    saveQuotes(quotes);
+  }
+  showToast("Quote accepted! Order " + order.id + " created.");
+  viewCustomerOrder(order.id);
+}
+
+async function downloadQuotePDF(id){
+  const q = findQuoteById(id);
+  if(!q) return;
+  try{
+    if(!window.jspdf || !window.html2canvas){ showToast("PDF library loading — please try again in a moment"); return; }
+    const { jsPDF } = window.jspdf;
+    const html = quotePDFHtml(q);
+    const holder = document.createElement("div");
+    holder.innerHTML = html;
+    holder.style.cssText = "position:fixed;top:0;left:0;width:750px;max-width:100vw;background:#fff;z-index:2147483647;overflow:hidden;";
+    document.body.appendChild(holder);
+    holder.scrollIntoView();
+    await new Promise(r => setTimeout(r, 200));
+    let canvas = null;
+    let imgData = null;
+    try{
+      canvas = await window.html2canvas(holder, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        logging: false,
+        useCORS: true,
+        width: 750,
+        windowWidth: 750
+      });
+      imgData = canvas.toDataURL("image/jpeg", 0.95);
+    }finally{ holder.remove(); }
+    if(!imgData || !canvas){ showToast("PDF generation failed"); return; }
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 36;
+    const imgW = pageW - margin * 2;
+    const imgH = imgW * (canvas.height / canvas.width);
+    const maxH = pageH - margin * 2;
+    if(imgH <= maxH){
+      doc.addImage(imgData, "JPEG", margin, margin, imgW, imgH);
+    }else{
+      const pxPerPt = canvas.width / imgW;
+      let remainingPt = imgH, offsetPt = 0, first = true;
+      while(remainingPt > 0){
+        if(!first) doc.addPage();
+        const thisChunkPt = Math.min(remainingPt, maxH);
+        const srcY = Math.round(offsetPt * pxPerPt);
+        const srcH = Math.round(thisChunkPt * pxPerPt);
+        doc.addImage(imgData, "JPEG", margin, margin, imgW, thisChunkPt, undefined, undefined, undefined, 0, srcY, canvas.width, srcH);
+        remainingPt -= thisChunkPt;
+        offsetPt += thisChunkPt;
+        first = false;
+      }
+    }
+    doc.save(q.id + "-quote.pdf");
+    showToast("Quote PDF downloaded");
+  }catch(e){
+    console.error("Quote PDF error:", e);
+    showToast("PDF download failed");
+  }
+}
+
+function quotePDFHtml(q){
+  const isExpired = q.validUntil && new Date(q.validUntil) < new Date();
+  return '<div style="font-family:Arial,sans-serif;width:750px;padding:40px;background:#fff;color:#1a1b1c">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #25bab5;padding-bottom:20px;margin-bottom:30px">' +
+      '<div><h1 style="margin:0;font-size:28px;color:#1a1b1c">Nebula Secret</h1><p style="margin:4px 0 0;color:#6b7280;font-size:13px">Wholesale & OEM/ODM Beauty Products</p></div>' +
+      '<div style="text-align:right"><div style="font-size:20px;font-weight:700;color:#25bab5">QUOTATION</div><div style="font-size:14px;color:#6b7280;margin-top:4px">' + esc(q.id) + '</div></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:30px">' +
+      '<div><div style="font-size:12px;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:8px">Customer</div>' +
+        '<div style="font-size:14px"><b>' + esc(q.customer.first + " " + q.customer.last) + '</b></div>' +
+        '<div style="font-size:13px;color:#4b5563">' + esc(q.customer.email) + '</div>' +
+        (q.customer.phone ? '<div style="font-size:13px;color:#4b5563">' + esc(q.customer.phone) + '</div>' : '') +
+        (q.customer.company ? '<div style="font-size:13px;color:#4b5563">' + esc(q.customer.company) + '</div>' : '') +
+        '<div style="font-size:13px;color:#4b5563">' + esc((q.customer.address || "") + (q.customer.address ? ", " : "") + q.customer.country) + '</div>' +
+      '</div>' +
+      '<div><div style="font-size:12px;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:8px">Quote Details</div>' +
+        '<div style="font-size:13px;margin-bottom:4px"><b>Date:</b> ' + fmtD(q.date) + '</div>' +
+        '<div style="font-size:13px;margin-bottom:4px"><b>Status:</b> ' + esc(isExpired && q.status === "Quoted" ? "Expired" : q.status) + '</div>' +
+        (q.validUntil ? '<div style="font-size:13px;margin-bottom:4px"><b>Valid Until:</b> ' + fmtD(q.validUntil) + '</div>' : '') +
+        (q.targetDate ? '<div style="font-size:13px;margin-bottom:4px"><b>Target Order Date:</b> ' + fmtD(q.targetDate) + '</div>' : '') +
+      '</div>' +
+    '</div>' +
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:20px">' +
+      '<thead><tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb">' +
+        '<th style="text-align:left;padding:12px;font-size:13px;font-weight:600">Product</th>' +
+        '<th style="text-align:center;padding:12px;font-size:13px;font-weight:600;width:80px">Qty</th>' +
+        '<th style="text-align:right;padding:12px;font-size:13px;font-weight:600;width:100px">Unit (EUR)</th>' +
+        '<th style="text-align:right;padding:12px;font-size:13px;font-weight:600;width:100px">Line (EUR)</th>' +
+      '</tr></thead>' +
+      '<tbody>' + q.items.map((it, i) => '<tr style="border-bottom:1px solid #f3f4f6">' +
+        '<td style="padding:12px;font-size:13px">' + esc(it.name) + '</td>' +
+        '<td style="padding:12px;font-size:13px;text-align:center">' + it.qty + '</td>' +
+        '<td style="padding:12px;font-size:13px;text-align:right">' + fmt(it.price) + '</td>' +
+        '<td style="padding:12px;font-size:13px;text-align:right;font-weight:600">' + fmt(it.price * it.qty) + '</td>' +
+      '</tr>').join("") + '</tbody>' +
+    '</table>' +
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:30px">' +
+      '<div style="width:280px">' +
+        '<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px"><span style="color:#6b7280">Subtotal</span><span>' + fmt(q.subtotal) + ' EUR</span></div>' +
+        (q.quotedPrice ? '<div style="display:flex;justify-content:space-between;padding:12px 0;border-top:2px solid #25bab5;font-size:18px;font-weight:700"><span>Quoted Price</span><span style="color:#25bab5">' + fmt(q.quotedPrice) + ' EUR</span></div>' : '') +
+      '</div>' +
+    '</div>' +
+    (q.quoteNotes ? '<div style="background:#f9fafb;border-left:4px solid #25bab5;padding:16px;margin-bottom:20px;border-radius:0 8px 8px 0"><div style="font-weight:600;font-size:13px;margin-bottom:8px">Quote Notes</div><div style="font-size:13px;line-height:1.6;color:#374151">' + esc(q.quoteNotes) + '</div></div>' : '') +
+    '<div style="border-top:1px solid #e5e7eb;padding-top:20px;margin-top:40px;text-align:center">' +
+      '<p style="font-size:12px;color:#9ca3af;margin:0">This is a formal quotation from Nebula Secret. Prices are valid until the date stated above.</p>' +
+      '<p style="font-size:12px;color:#9ca3af;margin:4px 0 0">Contact: sales@nebulasecret.com | WhatsApp: +852 0000 0000</p>' +
+    '</div>' +
+  '</div>';
+}
+
+function viewCustomerOrder(id){
+  const o = findOrderById(id);
+  const s = getSession();
+  if(!o || !s || String(o.customer.email).toLowerCase() !== String(s.email).toLowerCase()){
+    showToast("Order not found");
+    return;
+  }
+  const cur = o.cur || "EUR";
+  const notes = o.notes || [];
+  const statusHistory = o.statusHistory || [{ status: o.status, date: o.date, note: "Order placed" }];
+  $("#app").innerHTML =
+  '<section class="block"><div class="page">' +
+    '<div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<a href="#/account">My Account</a>' + IC.chev + '<span class="cur">Order ' + esc(o.id) + '</span></div>' +
+    '<div class="acct-card">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px">' +
+        '<div><h2 style="margin:0">Order ' + esc(o.id) + '</h2><p class="sub" style="margin:4px 0 0">' + fmtDT(o.date) + '</p></div>' +
+        '<span class="badge" style="font-size:14px;padding:8px 16px">' + esc(o.status) + '</span>' +
+      '</div>' +
+      '<div class="ov-grid" style="margin-bottom:20px">' +
+        '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(o.customer.first + " " + o.customer.last) + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v">' + esc(o.customer.email) + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(o.customer.phone || "—") + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc((o.customer.address || "Not provided") + ", " + o.customer.country) + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Total (' + cur + ')</div><div class="ov-v" style="font-weight:800">' + fmtIn(o.total, cur, orate(o)) + '</div></div>' +
+      '</div>' +
+      '<h3 style="font-size:16px;margin-bottom:12px">Order Items</h3>' +
+      '<table class="admin-table" style="margin-bottom:20px"><thead><tr><th>Product</th><th>Qty</th><th>Unit (' + cur + ')</th><th>Line (' + cur + ')</th></tr></thead><tbody>' +
+      o.items.map(it => '<tr><td style="font-weight:600">' + esc(it.name) + '</td><td>' + it.qty + '</td><td>' + fmtIn(it.price, cur, orate(o)) + '</td><td style="font-weight:700">' + fmtIn(it.price * it.qty, cur, orate(o)) + '</td></tr>').join("") +
+      '</tbody></table>' +
+      '<h3 style="font-size:16px;margin-bottom:12px">Order Status</h3>' +
+      '<div class="status-timeline" style="position:relative;padding-left:24px;margin-bottom:20px">' +
+        statusHistory.slice().reverse().map((h, i) => {
+          const isLast = i === 0;
+          return '<div class="timeline-item" style="position:relative;padding-bottom:16px">' +
+            '<div style="position:absolute;left:-24px;top:2px;width:12px;height:12px;border-radius:50%;background:' + (isLast ? 'var(--brand)' : 'var(--border)') + ';border:2px solid var(--card)"></div>' +
+            (i < statusHistory.length - 1 ? '<div style="position:absolute;left:-19px;top:14px;width:2px;height:calc(100% - 14px);background:var(--border)"></div>' : '') +
+            '<div style="font-weight:600;font-size:13px;color:var(--ink)">' + esc(h.status) + '</div>' +
+            '<div style="font-size:12px;color:var(--ink-soft)">' + fmtDT(h.date) + (h.note ? ' · ' + esc(h.note) : '') + '</div>' +
+          '</div>';
+        }).join("") +
+      '</div>' +
+      '<h3 style="font-size:16px;margin-bottom:12px">Order Notes</h3>' +
+      (notes.length ? notes.map(n => '<div class="order-note" style="padding:12px;background:var(--card);border-radius:10px;margin-bottom:8px;border-left:3px solid ' + (n.type === 'customer' ? 'var(--accent)' : 'var(--brand)') + '">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+          '<span style="font-weight:600;font-size:13px">' + esc(n.author) + '</span>' +
+          '<span style="font-size:11px;color:var(--ink-soft)">' + fmtDT(n.date) + '</span>' +
+        '</div>' +
+        '<div style="font-size:13px;color:var(--ink);line-height:1.5">' + esc(n.text) + '</div>' +
+      '</div>').join("") : '<p style="font-size:13px;color:var(--ink-soft)">No notes yet.</p>') +
+      '<div style="margin-top:12px;display:flex;gap:8px">' +
+        '<input type="text" id="customerNoteInput" placeholder="Add a note to this order..." style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px" onkeypress="if(event.key===\'Enter\') submitCustomerOrderNote(\'' + esc(o.id) + '\')">' +
+        '<button class="btn sm" onclick="submitCustomerOrderNote(\'' + esc(o.id) + '\')">Add Note</button>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">' +
+        '<button class="btn" onclick="downloadOrderPDF(\'' + esc(o.id) + '\')">' + IC.down + ' Download Order PDF</button>' +
+        '<a class="btn ghost" href="#/account">Back to Account</a>' +
+      '</div>' +
+    '</div>' +
+  '</div></section>';
+}
+
+function submitCustomerOrderNote(id){
+  const input = $("#customerNoteInput");
+  if(!input || !input.value.trim()) return;
+  const s = getSession();
+  if(!s) return;
+  const orders = getOrders();
+  const o = orders.find(x => x.id === id);
+  if(!o) return;
+  if(!o.notes) o.notes = [];
+  o.notes.push({
+    id: "n" + Date.now(),
+    text: input.value.trim(),
+    author: s.name,
+    date: new Date().toISOString(),
+    type: "customer"
+  });
+  saveOrders(orders);
+  showToast("Note added");
+  if(typeof cloudReady === 'function' && cloudReady()){
+    cloudPushKey("orders", orders).catch(() => {});
+  }
+  viewCustomerOrder(id);
 }
 function changePassOpen(){
   const b = $("#passBox"); if(b) b.style.display = "";
