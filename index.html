@@ -1810,12 +1810,15 @@ async function sendViaEmailJS(o, cfg){
     }
     
     /* Try Edge Function first (more secure, private key not exposed) */
+    /* Temporarily disabled for debugging - using EmailJS SDK directly */
+    /*
     const edgeResult = await sendViaEdgeFunction(o, cfg, "order");
     if(edgeResult.ok){
       recordEmailSend();
       return edgeResult;
     }
     console.log("Edge Function failed, falling back to EmailJS SDK:", edgeResult.reason);
+    */
     
     /* Fallback to EmailJS SDK */
     if(!window.emailjs) return {ok:false, reason:"sdk-missing"};
@@ -3301,6 +3304,8 @@ async function submitContactForm(ev){
     };
     
     // Try Edge Function first (more secure, private key not exposed)
+    // Temporarily disabled for debugging - using EmailJS SDK directly
+    /*
     const edgeResult = await sendViaEdgeFunction(formData, cfg, "contact");
     if(edgeResult.ok){
       /* Record successful send for rate limiting */
@@ -3317,6 +3322,7 @@ async function submitContactForm(ev){
       return;
     }
     console.log("Edge Function failed for contact form, falling back to EmailJS SDK:", edgeResult.reason);
+    */
     
     // Fallback to EmailJS SDK
     if(!window.emailjs) throw new Error("EmailJS library not loaded");
