@@ -3091,22 +3091,31 @@ function showPopupIfNeeded(){
       if(th.popupBtnText && th.popupBtnLink){
         btn.style.display = "inline-flex";
         btn.textContent = th.popupBtnText;
-        btn.href = "#/";
+        btn.href = th.popupBtnLink;
         btn.onclick = function(e){
-          e.preventDefault();
-          closePopup();
-          const goToContact = function(){
-            setTimeout(function(){
-              var el = document.getElementById("contact-section");
-              if(el) el.scrollIntoView({behavior:"smooth", block:"start"});
-            }, 300);
-          };
-          if(location.hash !== "#/" && location.hash !== ""){
-            location.hash = "#/";
-            setTimeout(goToContact, 400);
-          } else {
-            goToContact();
+          const link = th.popupBtnLink || "#/";
+          /* Handle different link types */
+          if(link.startsWith("mailto:")){
+            /* Email link - let default behavior open mail client */
+            closePopup();
+            return;
           }
+          if(link.startsWith("http://") || link.startsWith("https://")){
+            /* External link - open in new tab */
+            e.preventDefault();
+            closePopup();
+            window.open(link, "_blank");
+            return;
+          }
+          if(link.startsWith("#/")){
+            /* Internal hash link - navigate and close popup */
+            e.preventDefault();
+            closePopup();
+            location.hash = link;
+            return;
+          }
+          /* Other links - default behavior */
+          closePopup();
         };
       }
       else btn.style.display = "none";
