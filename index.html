@@ -3591,7 +3591,7 @@ function accountSignedIn(s){
           '<div class="ao-top"><span class="ao-id">' + esc(q.id) + '</span><span class="ao-date">' + fmtD(q.date) + '</span><span class="badge status-badge" title="' + esc(statusDesc(statusDisplay)) + '">' + esc(statusDisplay) + '</span></div>' +
           '<div class="ao-items">' + q.items.map(it => esc(it.name || "Product") + ' × ' + (it.qty || 0)).join(" · ") + '</div>' +
           '<div class="ao-total">' + (q.quotedPrice ? fmt(q.quotedPrice) : "Awaiting quote") + (q.customerTargetPrice ? ' <span style="color:#b8860b;font-weight:400;font-size:11px">· your target: ' + fmt(q.customerTargetPrice) + '</span>' : '') + (q.validUntil ? ' <span style="color:var(--ink-soft);font-weight:400;font-size:11px">valid until ' + fmtD(q.validUntil) + '</span>' : '') + '</div>' +
-          '<button type="button" class="btn sm quote-view-btn" style="margin-top:10px" data-quote-id="' + esc(q.id) + '">View Details →</button>' +
+          '<a href="#/quote/' + esc(q.id) + '" class="btn sm quote-view-btn" style="margin-top:10px;text-decoration:none;display:inline-block">View Details →</a>' +
         '</div>';
       }).join("")
     : '<p style="color:var(--ink-soft);font-size:13.5px">You have no quote requests yet — <a href="#/shop" style="color:var(--brand-dark);font-weight:600">browse products</a> and request a quote from your cart.</p>';
