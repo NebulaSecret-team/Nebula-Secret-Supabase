@@ -3620,6 +3620,12 @@ function accountSignedIn(s){
 
 function viewCustomerQuote(id){
   try{
+  // If we're not already on the quote URL, update the hash and let the router handle it
+  const expectedHash = "#/quote/" + id;
+  if(location.hash !== expectedHash){
+    location.hash = expectedHash;
+    return;
+  }
   const q = findQuoteById(id);
   const s = getSession();
   if(!q){
@@ -3947,6 +3953,8 @@ function storeRoute(){
   window.scrollTo(0, 0);
   if(h.startsWith("#/product/")){
     viewProduct(h.split("/")[2]);
+  } else if(h.startsWith("#/quote/")){
+    viewCustomerQuote(h.split("/")[2]);
   } else if(h.startsWith("#/shop")){
     viewShop();
   } else if(h.startsWith("#/account")){
