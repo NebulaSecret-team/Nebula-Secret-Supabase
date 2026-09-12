@@ -1807,6 +1807,15 @@ async function sendViaEmailJS(o, cfg){
       return {ok:false, reason:rateCheck.reason, detail:rateCheck.message};
     }
     
+    /* Try Edge Function first (more secure, private key not exposed) */
+    const edgeResult = await sendViaEdgeFunction(o, cfg, "order");
+    if(edgeResult.ok){
+      recordEmailSend();
+      return edgeResult;
+    }
+    console.log("Edge Function failed, falling back to EmailJS SDK:", edgeResult.reason);
+    
+    /* Fallback to EmailJS SDK */
     if(!window.emailjs) return {ok:false, reason:"sdk-missing"};
     if(!cfg.serviceId || !cfg.templateId || !cfg.publicKey) return {ok:false, reason:"emailjs-config"};
     
@@ -1824,6 +1833,56 @@ async function sendViaEmailJS(o, cfg){
       return {ok:false, reason:"domain-not-whitelisted", detail:"EmailJS domain whitelist not configured. Please add your domain in EmailJS dashboard → Account Settings → Domains."};
     }
     return {ok:false, reason:"emailjs-error", detail: errorDetail};
+  }
+}
+
+/* Build contact form email template params */
+function contactTemplateParams(formData, cfg){
+  const recipients = (cfg.mailTo || "").split(",").map(s => s.trim()).filter(Boolean);
+  return {
+    from_name: formData.name,
+    from_email: formData.email,
+    to_email: recipients.join(", "),
+    company: formData.company || "Not provided",
+    inquiry_type: formData.type,
+    subject: "New " + formData.type + " Inquiry from " + formData.name + " — Nebula Secret",
+    message: formData.message,
+    reply_to: formData.email,
+    store_name: (getTheme() || {}).storeName || "Nebula Secret",
+    date: new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" })
+  };
+}
+
+/* Send email via Vercel Edge Function (private key stored server-side) */
+async function sendViaEdgeFunction(o, cfg, type){
+  try{
+    const edgeUrl = "/api/send-email";
+    const params = type === "order" ? emailTemplateParams(o, cfg) : contactTemplateParams(o, cfg);
+    
+    const response = await fetch(edgeUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: type, // "order" or "contact"
+        params: params,
+      }),
+    });
+    
+    if(!response.ok){
+      const errorText = await response.text();
+      return {ok:false, reason:"edge-function-error", detail:"Edge Function returned " + response.status + ": " + errorText};
+    }
+    
+    const result = await response.json();
+    if(result.ok){
+      return {ok:true, resp: result};
+    }else{
+      return {ok:false, reason: result.reason || "edge-function-failed", detail: result.detail || result.error || "Unknown error"};
+    }
+  }catch(e){
+    return {ok:false, reason:"edge-function-unavailable", detail: String(e && e.message ? e.message : e)};
   }
 }
 async function sendViaFormSubmit(o, cfg){
@@ -3230,6 +3289,34 @@ async function submitContactForm(ev){
   showCfMsg(msgEl, "#666", "Sending your message...");
 
   try{
+    // Build form data object for Edge Function
+    const formData = {
+      name: name,
+      email: email,
+      company: company || "Not provided",
+      type: type,
+      message: message
+    };
+    
+    // Try Edge Function first (more secure, private key not exposed)
+    const edgeResult = await sendViaEdgeFunction(formData, cfg, "contact");
+    if(edgeResult.ok){
+      /* Record successful send for rate limiting */
+      recordEmailSend();
+      
+      // Success
+      showCfMsg(msgEl, "#2e7d32", "Thank you, " + name + "! Your message has been sent. Our team will get back to you within 24 hours.");
+      // Reset form
+      document.getElementById("cfName").value = "";
+      document.getElementById("cfEmail").value = "";
+      document.getElementById("cfCompany").value = "";
+      document.getElementById("cfType").value = "Wholesale";
+      document.getElementById("cfMessage").value = "";
+      return;
+    }
+    console.log("Edge Function failed for contact form, falling back to EmailJS SDK:", edgeResult.reason);
+    
+    // Fallback to EmailJS SDK
     if(!window.emailjs) throw new Error("EmailJS library not loaded");
 
     // Build email params — these map to your EmailJS template variables
