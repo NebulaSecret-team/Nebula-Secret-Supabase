@@ -344,7 +344,7 @@ function viewAdminQuote(id){
       '<h4 style="font-size:15px;font-weight:600;margin-bottom:12px;color:var(--ink)">Send Your Own Quote</h4>' +
       '<div class="form-grid">' +
         '<div class="field"><label>Quoted Price (EUR) *</label><input id="qPrice" type="number" step="0.01" min="0" value="' + (q.quotedPrice || q.subtotal) + '"></div>' +
-        '<div class="field"><label>Valid Until *</label><input id="qValid" type="date" lang="en" value="' + (q.validUntil ? q.validUntil.substring(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10)) + '" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;width:100%;box-sizing:border-box"></div>' +
+        '<div class="field"><label>Valid Until *</label><input id="qValid" type="text" class="date-picker" placeholder="Select date" readonly value="' + (q.validUntil ? q.validUntil.substring(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10)) + '"></div>' +
         '<div class="field full"><label>Quote Notes / Terms</label><textarea id="qNotes" rows="3" placeholder="e.g. Prices include packaging, shipping quoted separately, MOQ applies...">' + (q.quoteNotes || "") + '</textarea></div>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:12px">' +
@@ -357,6 +357,26 @@ function viewAdminQuote(id){
       '<button class="btn sm ghost" onclick="mailQuote(\'' + esc(q.id) + '\')">' + IC.mail + ' Email Customer</button>' +
     '</div>';
   $("#adminModal").classList.add("open");
+  /* Initialize flatpickr date picker */
+  setTimeout(function(){
+    if(typeof flatpickr !== "undefined"){
+      flatpickr("#qValid", {
+        dateFormat: "Y-m-d",
+        allowInput: true,
+        locale: {
+          firstDayOfWeek: 1,
+          weekdays: {
+            shorthand: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+            longhand: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+          },
+          months: {
+            shorthand: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+            longhand: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+          }
+        }
+      });
+    }
+  }, 100);
 }
 function submitQuoteResponse(id){
   const price = parseFloat($("#qPrice").value);
