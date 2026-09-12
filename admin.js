@@ -1245,7 +1245,7 @@ function viewAdminLogin(msg){
       '<h1>Admin Login</h1>' +
       '<p class="l-sub">Nebula Secret management console</p>' +
       '<div class="login-err' + (msg ? " show" : "") + '" id="loginErr">' + (msg ? esc(msg) : "") + '</div>' +
-      '<div class="field"><label>Email</label><input id="loginEmail" type="email" placeholder="admin@nebulasecret.com" autocomplete="email"></div>' +
+      '<div class="field"><label>Email</label><input id="loginEmail" type="email" placeholder="Enter your email" autocomplete="email"></div>' +
       '<div class="field"><label>Password</label><input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key===\'Enter\')doLogin()"></div>' +
       '<button class="btn full" style="margin-top:8px" onclick="doLogin()">Sign in</button>' +
       '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px">Secure login powered by Supabase Auth</p>' +
