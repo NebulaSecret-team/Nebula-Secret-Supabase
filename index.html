@@ -4086,6 +4086,36 @@ route();
 cloudPullAll().then(() => { try{ route(); }catch(e){} });
 /* Cloud catalog deprecated — using Supabase for all dynamic data */
 /* loadCloudCatalog(); */
+
+/* ============ Supabase Keep-Alive (prevent 7-day pause) ============ */
+/* Supabase Free plan pauses after 7 days of inactivity.
+   This heartbeat makes a lightweight query every hour to keep the project active.
+   It only runs when the tab is visible (saves resources on mobile). */
+function supabaseHeartbeat(){
+  try{
+    if(!supabase) return;
+    /* Lightweight query — just check if we can reach the database */
+    supabase.from('site_settings').select('id').limit(1).then(() => {
+      console.log('[Heartbeat] Supabase keep-alive ping at', new Date().toISOString());
+    }).catch(e => {
+      console.warn('[Heartbeat] Supabase ping failed:', e.message);
+    });
+  }catch(e){ console.warn('[Heartbeat] Error:', e); }
+}
+/* Run immediately on page load */
+supabaseHeartbeat();
+/* Then every hour (3600000 ms), but only when tab is visible */
+setInterval(() => {
+  if(document.visibilityState === 'visible'){
+    supabaseHeartbeat();
+  }
+}, 3600000);
+/* Also ping when the tab becomes visible again after being hidden */
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible'){
+    supabaseHeartbeat();
+  }
+});
 </script>
 </body>
 </html>
