@@ -1118,7 +1118,7 @@ function defaultTheme(){
     popupBody: "Contact us for wholesale pricing and OEM/ODM services.",
     popupImage: "",
     popupBtnText: "Contact Sales",
-    popupBtnLink: "mailto:sales@nebulasecret.com"
+    popupBtnLink: "#/"
   };
 }
 function getTheme(){
@@ -3040,7 +3040,27 @@ function showPopupIfNeeded(){
     const b = document.getElementById("popupBodyText"); if(b) b.innerHTML = sanitizeHTML(th.popupBody || "");
     const btn = document.getElementById("popupBtn");
     if(btn){
-      if(th.popupBtnText && th.popupBtnLink){ btn.style.display = "inline-flex"; btn.textContent = th.popupBtnText; btn.href = th.popupBtnLink; }
+      if(th.popupBtnText && th.popupBtnLink){
+        btn.style.display = "inline-flex";
+        btn.textContent = th.popupBtnText;
+        btn.href = "#/";
+        btn.onclick = function(e){
+          e.preventDefault();
+          closePopup();
+          const goToContact = function(){
+            setTimeout(function(){
+              var el = document.getElementById("contact-section");
+              if(el) el.scrollIntoView({behavior:"smooth", block:"start"});
+            }, 300);
+          };
+          if(location.hash !== "#/" && location.hash !== ""){
+            location.hash = "#/";
+            setTimeout(goToContact, 400);
+          } else {
+            goToContact();
+          }
+        };
+      }
       else btn.style.display = "none";
     }
     document.getElementById("popupBackdrop").classList.add("open");
