@@ -325,14 +325,23 @@ function viewAdminQuote(id){
       '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc(qCustAddr(q)) + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Status</div><div class="ov-v"><span class="pill ' + (q.status === "Pending" ? "yellow" : q.status === "Quoted" ? "blue" : q.status === "Accepted" ? "green" : "gray") + '">' + esc(isExpired && q.status === "Quoted" ? "Expired" : q.status) + '</span></div></div>' +
       '<div class="ov-box"><div class="ov-k">Est. Total</div><div class="ov-v">' + fmt(q.subtotal) + '</div></div>' +
+      (q.customerTargetPrice ? '<div class="ov-box" style="background:rgba(250,173,20,0.08);border:1px solid rgba(250,173,20,0.3)"><div class="ov-k">Customer Target Price</div><div class="ov-v" style="font-weight:800;color:#b8860b">' + fmt(q.customerTargetPrice) + '</div></div>' : '') +
       '<div class="ov-box"><div class="ov-k">Quoted Price</div><div class="ov-v" style="font-weight:800;color:var(--brand)">' + (q.quotedPrice ? fmt(q.quotedPrice) : "—") + '</div></div>' +
     '</div>' +
     '<table class="admin-table" style="margin-top:14px"><thead><tr><th>Product</th><th>Category</th><th>Qty</th><th>Unit (EUR)</th><th>Line (EUR)</th></tr></thead><tbody>' +
     q.items.map(it => '<tr><td style="font-weight:600">' + esc(it.name) + '</td><td><span class="pill">' + esc(catName(it.cat)) + '</span></td><td>' + it.qty + '</td><td>' + fmt(it.price) + '</td><td style="font-weight:700">' + fmt(it.price * it.qty) + '</td></tr>').join("") +
     '</tbody></table>' +
     (q.notes ? '<div style="margin-top:14px;padding:12px;background:var(--card);border-radius:8px"><div style="font-weight:600;font-size:13px;margin-bottom:6px">Customer Notes</div><div style="font-size:13px;color:var(--ink)">' + esc(q.notes) + '</div></div>' : '') +
+    (q.customerTargetPrice ? '<div style="margin-top:20px;padding:16px;background:rgba(250,173,20,0.06);border-radius:10px;border:1px solid rgba(250,173,20,0.3)">' +
+      '<h4 style="font-size:15px;font-weight:600;margin-bottom:8px;color:#b8860b">Customer Has Proposed a Target Price</h4>' +
+      '<p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px">Customer requested <strong style="color:#b8860b;font-size:16px">' + fmt(q.customerTargetPrice) + ' EUR</strong>. You can accept this price or send your own quote.</p>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+        '<button class="btn" style="background:#22c55e" onclick="acceptCustomerTargetPrice(\'' + esc(q.id) + '\')">' + IC.sparkle + ' Accept Customer Price</button>' +
+        '<button class="btn ghost" style="color:#ef4444;border-color:#ef4444" onclick="rejectCustomerTargetPrice(\'' + esc(q.id) + '\')">Reject Target Price</button>' +
+      '</div>' +
+    '</div>' : '') +
     '<div style="margin-top:20px;padding:16px;background:rgba(37,186,181,0.05);border-radius:10px;border:1px solid rgba(37,186,181,0.2)">' +
-      '<h4 style="font-size:15px;font-weight:600;margin-bottom:12px;color:var(--ink)">Send Quote Response</h4>' +
+      '<h4 style="font-size:15px;font-weight:600;margin-bottom:12px;color:var(--ink)">Send Your Own Quote</h4>' +
       '<div class="form-grid">' +
         '<div class="field"><label>Quoted Price (EUR) *</label><input id="qPrice" type="number" step="0.01" min="0" value="' + (q.quotedPrice || q.subtotal) + '"></div>' +
         '<div class="field"><label>Valid Until * (YYYY-MM-DD)</label><input id="qValid" type="text" placeholder="e.g. 2026-12-31" value="' + (q.validUntil ? q.validUntil.substring(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10)) + '"></div>' +
@@ -340,7 +349,7 @@ function viewAdminQuote(id){
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:12px">' +
         '<button class="btn" onclick="submitQuoteResponse(\'' + esc(q.id) + '\')">' + IC.mail + ' Send Quote</button>' +
-        '<button class="btn ghost" onclick="setQuoteStatus(\'' + esc(q.id) + '\', \'Rejected\')">Reject</button>' +
+        '<button class="btn ghost" onclick="setQuoteStatus(\'' + esc(q.id) + '\', \'Rejected\')">Reject Request</button>' +
       '</div>' +
     '</div>' +
     '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">' +
@@ -379,6 +388,36 @@ function setQuoteStatus(id, status){
   saveQuotes(quotes);
   showToast("Quote status updated to " + status);
   if(cloudReady()){ cloudPushKey("quotes", quotes).catch(() => {}); }
+  adminQuotes();
+}
+function acceptCustomerTargetPrice(id){
+  const quotes = getQuotes();
+  const q = quotes.find(x => x.id === id); if(!q) return;
+  if(!q.customerTargetPrice){ showToast("No customer target price found"); return; }
+  if(!confirm("Accept customer's target price of " + fmt(q.customerTargetPrice) + " EUR and send quote?")) return;
+  q.quotedPrice = q.customerTargetPrice;
+  q.validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  q.quoteNotes = q.quoteNotes || "Price accepted as per customer's target price request.";
+  q.status = "Quoted";
+  q.history = q.history || [];
+  q.history.push({ status: "Quoted", date: new Date().toISOString(), note: "Admin accepted customer target price: " + fmt(q.customerTargetPrice) + " EUR" });
+  saveQuotes(quotes);
+  showToast("Customer target price accepted! Quote sent.");
+  if(cloudReady()){ cloudPushKey("quotes", quotes).catch(() => {}); }
+  $("#adminModal").classList.remove("open");
+  adminQuotes();
+}
+function rejectCustomerTargetPrice(id){
+  const quotes = getQuotes();
+  const q = quotes.find(x => x.id === id); if(!q) return;
+  if(!confirm("Reject customer's target price? The quote request will be marked as Rejected.")) return;
+  q.status = "Rejected";
+  q.history = q.history || [];
+  q.history.push({ status: "Rejected", date: new Date().toISOString(), note: "Admin rejected customer target price of " + (q.customerTargetPrice ? fmt(q.customerTargetPrice) : "N/A") + " EUR" });
+  saveQuotes(quotes);
+  showToast("Customer target price rejected.");
+  if(cloudReady()){ cloudPushKey("quotes", quotes).catch(() => {}); }
+  $("#adminModal").classList.remove("open");
   adminQuotes();
 }
 function deleteQuote(id){

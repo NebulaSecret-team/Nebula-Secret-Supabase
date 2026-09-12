@@ -2231,6 +2231,7 @@ function openQuoteRequest(){
       '<div class="field full"><label>Shipping Address</label><input id="qrAddress" placeholder="Street, city, postal code"></div>' +
       '<div class="field"><label>Country</label><select id="qrCountry">' + COUNTRIES.map(c => '<option value="' + c + '">' + c + '</option>').join("") + '</select></div>' +
       '<div class="field"><label>Target Order Date</label><input id="qrDate" type="text" placeholder="YYYY-MM-DD (e.g. 2026-12-31)"></div>' +
+      '<div class="field"><label>Your Target Price (EUR) <span style="color:var(--ink-soft);font-weight:400;font-size:11px">optional</span></label><input id="qrTargetPrice" type="number" step="0.01" min="0" placeholder="e.g. 500.00"></div>' +
       '<div class="field full"><label>Additional Notes / Special Requirements</label><textarea id="qrNotes" rows="3" placeholder="Tell us about your requirements, custom packaging, OEM/ODM needs, etc."></textarea></div>' +
     '</div>' +
     '<div style="margin-top:16px;padding:14px;background:var(--card);border-radius:10px">' +
@@ -2256,6 +2257,8 @@ function submitQuoteRequest(){
   const address = $("#qrAddress").value.trim();
   const country = $("#qrCountry").value;
   const targetDate = $("#qrDate").value;
+  const targetPriceInput = $("#qrTargetPrice").value.trim();
+  const customerTargetPrice = targetPriceInput ? parseFloat(targetPriceInput) : null;
   const notes = $("#qrNotes").value.trim();
   if(!first || !last){ showToast("Please enter your first and last name"); return; }
   if(!email || !/.+@.+\..+/.test(email)){ showToast("Please enter a valid email address"); return; }
@@ -2266,6 +2269,7 @@ function submitQuoteRequest(){
     status: "Pending",
     customer: { first, last, email, phone, company, contact, address, country },
     targetDate: targetDate || null,
+    customerTargetPrice: customerTargetPrice,
     notes: notes || "",
     items: cart.map(i => {
       const p = findProduct(i.id) || { id: i.id, n: "Product " + i.id, p: 0, cs: "other" };
@@ -3525,7 +3529,7 @@ function accountSignedIn(s){
         return '<div class="acct-order" style="cursor:pointer" onclick="viewCustomerQuote(\'' + esc(q.id) + '\')">' +
           '<div class="ao-top"><span class="ao-id">' + esc(q.id) + '</span><span class="ao-date">' + fmtD(q.date) + '</span><span class="badge status-badge" title="' + esc(statusDesc(statusDisplay)) + '">' + esc(statusDisplay) + '</span></div>' +
           '<div class="ao-items">' + q.items.map(it => esc(it.name || "Product") + ' × ' + (it.qty || 0)).join(" · ") + '</div>' +
-          '<div class="ao-total">' + (q.quotedPrice ? fmt(q.quotedPrice) : "Awaiting quote") + (q.validUntil ? ' <span style="color:var(--ink-soft);font-weight:400;font-size:11px">valid until ' + fmtD(q.validUntil) + '</span>' : '') + '</div>' +
+          '<div class="ao-total">' + (q.quotedPrice ? fmt(q.quotedPrice) : "Awaiting quote") + (q.customerTargetPrice ? ' <span style="color:#b8860b;font-weight:400;font-size:11px">· your target: ' + fmt(q.customerTargetPrice) + '</span>' : '') + (q.validUntil ? ' <span style="color:var(--ink-soft);font-weight:400;font-size:11px">valid until ' + fmtD(q.validUntil) + '</span>' : '') + '</div>' +
           '<a href="javascript:void(0)" class="btn sm" style="margin-top:10px;text-decoration:none" onclick="viewCustomerQuote(\'' + esc(q.id) + '\');return false;">View Details →</a>' +
         '</div>';
       }).join("")
@@ -3587,6 +3591,7 @@ function viewCustomerQuote(id){
         '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(qCustPhone(q) || "—") + '</div></div>' +
         '<div class="ov-box"><div class="ov-k">Company</div><div class="ov-v">' + esc(qCustCompany(q) || "—") + '</div></div>' +
         '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc(qCustAddr(q)) + '</div></div>' +
+        (q.customerTargetPrice ? '<div class="ov-box" style="background:rgba(250,173,20,0.06);border:1px solid rgba(250,173,20,0.3)"><div class="ov-k">Your Target Price</div><div class="ov-v" style="font-weight:800;color:#b8860b">' + fmt(q.customerTargetPrice) + ' EUR</div></div>' : '') +
         '<div class="ov-box"><div class="ov-k">Valid Until</div><div class="ov-v" style="font-weight:' + (isExpired ? '700;color:var(--danger)' : '600') + '">' + (q.validUntil ? fmtD(q.validUntil) : "—") + '</div></div>' +
       '</div>' +
       '<h3 style="font-size:16px;margin-bottom:12px">Quote Items</h3>' +
