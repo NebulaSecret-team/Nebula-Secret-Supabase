@@ -3573,6 +3573,7 @@ function accountSignedIn(s){
 }
 
 function viewCustomerQuote(id){
+  try{
   const q = findQuoteById(id);
   const s = getSession();
   if(!q){
@@ -3628,6 +3629,10 @@ function viewCustomerQuote(id){
       '</div>' +
     '</div>' +
   '</div></section>';
+  }catch(e){
+    console.error("viewCustomerQuote error:", e);
+    showToast("Error loading quote: " + e.message);
+  }
 }
 
 function acceptQuote(id){
