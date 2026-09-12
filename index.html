@@ -3544,7 +3544,7 @@ function accountSignedIn(s){
         return '<div class="acct-order">' +
           '<div class="ao-top"><span class="ao-id">' + esc(q.id) + '</span><span class="ao-date">' + fmtD(q.date) + '</span><span class="badge status-badge" title="' + esc(statusDesc(statusDisplay)) + '">' + esc(statusDisplay) + '</span></div>' +
           '<div class="ao-items">' + q.items.map(it => esc(it.name || "Product") + ' × ' + (it.qty || 0)).join(" · ") + '</div>' +
-          '<div class="ao-total">' + (q.quotedPrice ? fmt(q.quotedPrice) : "Awaiting quote") + (q.customerTargetPrice ? ' <span style="color:#b8860b;font-weight:400;font-size:11px">· your target: ' + fmtIn(q.customerTargetPrice, q.customerTargetCurrency || "EUR", rateOf(q.customerTargetCurrency || "EUR")) + '</span>' : '') + (q.validUntil ? ' <span style="color:var(--ink-soft);font-weight:400;font-size:11px">valid until ' + fmtD(q.validUntil) + '</span>' : '') + '</div>' +
+          '<div class="ao-total">' + (q.quotedPrice ? fmt(q.quotedPrice) : "Awaiting quote") + (q.customerTargetPrice ? ' <span style="color:#b8860b;font-weight:400;font-size:11px">· your target: ' + fmt(q.customerTargetPrice) + '</span>' : '') + (q.validUntil ? ' <span style="color:var(--ink-soft);font-weight:400;font-size:11px">valid until ' + fmtD(q.validUntil) + '</span>' : '') + '</div>' +
           '<button type="button" class="btn sm" style="margin-top:10px" onclick="viewCustomerQuote(\'' + esc(q.id) + '\')">View Details →</button>' +
         '</div>';
       }).join("")
@@ -3606,7 +3606,7 @@ function viewCustomerQuote(id){
         '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(qCustPhone(q) || "—") + '</div></div>' +
         '<div class="ov-box"><div class="ov-k">Company</div><div class="ov-v">' + esc(qCustCompany(q) || "—") + '</div></div>' +
         '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc(qCustAddr(q)) + '</div></div>' +
-        (q.customerTargetPrice ? '<div class="ov-box" style="background:rgba(250,173,20,0.06);border:1px solid rgba(250,173,20,0.3)"><div class="ov-k">Your Target Price</div><div class="ov-v" style="font-weight:800;color:#b8860b">' + fmtIn(q.customerTargetPrice, q.customerTargetCurrency || "EUR", rateOf(q.customerTargetCurrency || "EUR")) + '</div></div>' : '') +
+        (q.customerTargetPrice ? '<div class="ov-box" style="background:rgba(250,173,20,0.06);border:1px solid rgba(250,173,20,0.3)"><div class="ov-k">Your Target Price</div><div class="ov-v" style="font-weight:800;color:#b8860b">' + fmt(q.customerTargetPrice) + '</div></div>' : '') +
         '<div class="ov-box"><div class="ov-k">Valid Until</div><div class="ov-v" style="font-weight:' + (isExpired ? '700;color:var(--danger)' : '600') + '">' + (q.validUntil ? fmtD(q.validUntil) : "—") + '</div></div>' +
       '</div>' +
       '<h3 style="font-size:16px;margin-bottom:12px">Quote Items</h3>' +
