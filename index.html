@@ -2192,7 +2192,7 @@ function openQuoteRequest(){
       '<div class="field"><label>Preferred Contact</label><input id="qrContact" placeholder="e.g. WhatsApp, WeChat ID"></div>' +
       '<div class="field full"><label>Shipping Address</label><input id="qrAddress" placeholder="Street, city, postal code"></div>' +
       '<div class="field"><label>Country</label><select id="qrCountry">' + COUNTRIES.map(c => '<option value="' + c + '">' + c + '</option>').join("") + '</select></div>' +
-      '<div class="field"><label>Target Order Date</label><input id="qrDate" type="date"></div>' +
+      '<div class="field"><label>Target Order Date</label><input id="qrDate" type="text" placeholder="YYYY-MM-DD (e.g. 2026-12-31)"></div>' +
       '<div class="field full"><label>Additional Notes / Special Requirements</label><textarea id="qrNotes" rows="3" placeholder="Tell us about your requirements, custom packaging, OEM/ODM needs, etc."></textarea></div>' +
     '</div>' +
     '<div style="margin-top:16px;padding:14px;background:var(--card);border-radius:10px">' +

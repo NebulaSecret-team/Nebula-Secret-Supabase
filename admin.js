@@ -288,20 +288,18 @@ function adminQuotes(){
   const content =
     '<div class="admin-panel"><div class="panel-head"><div><h3>Quotes & Inquiries</h3><div class="ph-sub">' + quotes.length + ' quotes · ' + pending + ' pending review</div></div></div>' +
     (quotes.length
-      ? '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th>Quote ID</th><th>Date</th><th>Customer</th><th>Email</th><th>Items</th><th>Est. Total</th><th>Quoted Price</th><th>Status</th><th>Valid Until</th><th>Actions</th></tr></thead><tbody>' +
+      ? '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th>Quote ID</th><th>Date</th><th>Customer</th><th>Items</th><th>Quoted Price</th><th>Status</th><th>Valid Until</th><th>Actions</th></tr></thead><tbody>' +
         quotes.map(q => {
           const isExpired = q.validUntil && new Date(q.validUntil) < new Date();
           const statusDisplay = isExpired && q.status === "Quoted" ? "Expired" : q.status;
           return '<tr>' +
-          '<td style="font-weight:600">' + esc(q.id) + '</td>' +
+          '<td style="font-weight:600;white-space:nowrap">' + esc(q.id) + '</td>' +
           '<td style="white-space:nowrap">' + fmtDT(q.date) + '</td>' +
-          '<td>' + esc(q.customer.first + " " + q.customer.last) + '</td>' +
-          '<td><a href="mailto:' + esc(q.customer.email) + '" style="color:var(--accent)">' + esc(q.customer.email) + '</a></td>' +
-          '<td>' + q.items.reduce((s,i) => s + i.qty, 0) + '</td>' +
-          '<td>' + fmt(q.subtotal) + '</td>' +
-          '<td style="font-weight:700">' + (q.quotedPrice ? fmt(q.quotedPrice) : "—") + '</td>' +
+          '<td>' + esc(q.customer.first + " " + q.customer.last) + '<div style="font-size:11px;color:var(--ink-soft)">' + esc(q.customer.email) + '</div></td>' +
+          '<td style="text-align:center">' + q.items.reduce((s,i) => s + i.qty, 0) + '</td>' +
+          '<td style="font-weight:700;white-space:nowrap">' + (q.quotedPrice ? fmt(q.quotedPrice) : '<span style="color:var(--ink-soft);font-weight:400">Pending</span>') + '</td>' +
           '<td><span class="pill ' + (q.status === "Pending" ? "yellow" : q.status === "Quoted" ? "blue" : q.status === "Accepted" ? "green" : "gray") + '">' + esc(statusDisplay) + '</span></td>' +
-          '<td>' + (q.validUntil ? fmtD(q.validUntil) : "—") + '</td>' +
+          '<td style="white-space:nowrap">' + (q.validUntil ? fmtD(q.validUntil) : "—") + '</td>' +
           '<td><div class="table-actions">' +
             '<button onclick="viewAdminQuote(\'' + esc(q.id) + '\')" title="View">' + IC.search + '</button>' +
             '<button onclick="downloadQuotePDF(\'' + esc(q.id) + '\')" title="Download PDF">' + IC.down + '</button>' +
@@ -337,7 +335,7 @@ function viewAdminQuote(id){
       '<h4 style="font-size:15px;font-weight:600;margin-bottom:12px;color:var(--ink)">Send Quote Response</h4>' +
       '<div class="form-grid">' +
         '<div class="field"><label>Quoted Price (EUR) *</label><input id="qPrice" type="number" step="0.01" min="0" value="' + (q.quotedPrice || q.subtotal) + '"></div>' +
-        '<div class="field"><label>Valid Until *</label><input id="qValid" type="date" value="' + (q.validUntil ? q.validUntil.substring(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10)) + '"></div>' +
+        '<div class="field"><label>Valid Until * (YYYY-MM-DD)</label><input id="qValid" type="text" placeholder="e.g. 2026-12-31" value="' + (q.validUntil ? q.validUntil.substring(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10)) + '"></div>' +
         '<div class="field full"><label>Quote Notes / Terms</label><textarea id="qNotes" rows="3" placeholder="e.g. Prices include packaging, shipping quoted separately, MOQ applies...">' + (q.quoteNotes || "") + '</textarea></div>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:12px">' +
