@@ -1027,6 +1027,7 @@ async function sbLoadAll(){
     _cache.orders = map.orders || null;
     _cache.accounts = map.accounts || null;
     _cache.admins = map.admins || null;
+    _cache.quotes = map.quotes || null;
     _cache.loaded = true;
     dbg("loaded", Object.keys(map).length, "settings");
     /* Persist theme to localStorage for instant apply on next page load (prevents FOUC) */
@@ -3391,6 +3392,18 @@ function viewAccount(){
   const s = getSession();
   const inner = s ? accountSignedIn(s) : accountSignIn();
   $("#app").innerHTML = '<section class="block"><div class="page"><div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<span class="cur">My Account</span></div><div class="acct-wrap">' + inner + '</div></div></section>';
+  /* Refresh latest orders & quotes from Supabase when signed in */
+  if(s && supabase){
+    sbRefreshKey("orders").catch(()=>{});
+    sbRefreshKey("quotes").catch(()=>{});
+  }
+}
+/* Refresh a single key from Supabase and update cache */
+async function sbRefreshKey(key){
+  try{
+    const { data, error } = await supabase.from('site_settings').select('data').eq('id', key).single();
+    if(!error && data){ _cache[key] = data.data; if(key === "orders" || key === "quotes"){ if(location.hash.startsWith("#/account")) viewAccount(); } }
+  }catch(e){}
 }
 function accountSignIn(){
   return '<div class="acct-card">' +
