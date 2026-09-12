@@ -1438,9 +1438,17 @@ function setSession(s){ if(s) lsSet(LS.session, s); else try{ localStorage.remov
 function getQuotes(){ return _cache.quotes || []; }
 function saveQuotes(q){ _cache.quotes = q; sbSave("quotes", q); }
 function findQuoteById(id){ return getQuotes().find(q => q.id === id); }
-function myQuotes(email){ return getQuotes().filter(q => String(q.customer.email).toLowerCase() === String(email).toLowerCase()); }
+function myQuotes(email){ return getQuotes().filter(q => String(qCustEmail(q)).toLowerCase() === String(email).toLowerCase()); }
 function genQuoteId(){ return "Q-" + Date.now().toString(36).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase(); }
 const QUOTE_STATUSES = ["Pending", "Quoted", "Accepted", "Expired", "Rejected"];
+/* Safe quote customer info helpers */
+function qCustName(q){ const c = q.customer || {}; return ((c.first || "") + " " + (c.last || "")).trim() || c.name || "Customer"; }
+function qCustEmail(q){ const c = q.customer || {}; return c.email || ""; }
+function qCustPhone(q){ const c = q.customer || {}; return c.phone || ""; }
+function qCustCompany(q){ const c = q.customer || {}; return c.company || ""; }
+function qCustContact(q){ const c = q.customer || {}; return c.contact || ""; }
+function qCustAddr(q){ const c = q.customer || {}; const addr = c.address || "Not provided"; const country = c.country ? ", " + c.country : ""; return addr + country; }
+function qCustCountry(q){ const c = q.customer || {}; return c.country || ""; }
 /* Secure password hashing using PBKDF2 with random salt */
 /* Format: pbkdf2::<iterations>::<salt_hex>::<hash_hex> */
 /* Legacy format: sha256::<hash> (for backward compatibility) */
@@ -1500,7 +1508,7 @@ async function verifyPass(pw, storedHash){
 }
 function acctLabel(){ const s = getSession(); return s ? (s.name || s.email).split(" ")[0] : "Account"; }
 function updateAcctLabel(){ const el = $("#acctLabel"); if(el) el.textContent = acctLabel(); }
-function myOrders(email){ return getOrders().filter(o => String(o.customer.email).toLowerCase() === String(email).toLowerCase()); }
+function myOrders(email){ return getOrders().filter(o => String(custEmail(o)).toLowerCase() === String(email).toLowerCase()); }
 
 /* ============ Admin user accounts (multiple admins, change password) ============ */
 /* Default admin is only used when no admins exist in Supabase — user should change password immediately */
@@ -1733,11 +1741,11 @@ function emailTemplateParams(o, cfg){
     store_name: storeName,
     order_no: o.id,
     date: fmtDT(o.date),
-    customer: o.customer.first + " " + o.customer.last,
-    email: o.customer.email,
-    phone: o.customer.phone || "",
-    contact: o.customer.contact || "",
-    address: (o.customer.address || "Not provided") + ", " + o.customer.country,
+    customer: custName(o),
+    email: custEmail(o),
+    phone: custPhone(o),
+    contact: custContact(o),
+    address: custAddr(o),
     items: itemsLines,
     total: fmtIn(o.total, cur, r),
     currency: cur,
@@ -1841,6 +1849,13 @@ function uploadImageTo(inputId, targetId, maxW){
 /* ============ Orders (saved at checkout, managed in admin) ============ */
 function getOrders(){ return _cache.orders || []; }
 function saveOrders(o){ _cache.orders = o; sbSave("orders", o); }
+/* Safe customer info helpers (prevents "undefined" for legacy orders) */
+function custName(o){ const c = o.customer || {}; return ((c.first || "") + " " + (c.last || "")).trim() || c.name || "Customer"; }
+function custEmail(o){ const c = o.customer || {}; return c.email || ""; }
+function custPhone(o){ const c = o.customer || {}; return c.phone || ""; }
+function custContact(o){ const c = o.customer || {}; return c.contact || ""; }
+function custAddr(o){ const c = o.customer || {}; const addr = c.address || "Not provided"; const country = c.country ? ", " + c.country : ""; return addr + country; }
+function custCountry(o){ const c = o.customer || {}; return c.country || ""; }
 function genOrderId(){
   const n = Date.now().toString().slice(-5);
   const r = Math.floor(Math.random() * 100).toString().padStart(2, "0");
@@ -1855,11 +1870,11 @@ function orderEmailText(o, storeName){
   lines.push("");
   lines.push("Order: " + o.id);
   lines.push("Date: " + fmtDT(o.date));
-  lines.push("Customer: " + o.customer.first + " " + o.customer.last);
-  lines.push("Email: " + o.customer.email);
-  if(o.customer.phone) lines.push("Phone: " + o.customer.phone);
-  if(o.customer.contact) lines.push("Preferred contact: " + o.customer.contact);
-  lines.push("Address: " + (o.customer.address || "Not provided") + ", " + o.customer.country);
+  lines.push("Customer: " + custName(o));
+  lines.push("Email: " + custEmail(o));
+  if(custPhone(o)) lines.push("Phone: " + custPhone(o));
+  if(custContact(o)) lines.push("Preferred contact: " + custContact(o));
+  lines.push("Address: " + custAddr(o));
   const cur = o.cur || "EUR";
   const r = orate(o);
   lines.push("Currency: " + cur);
@@ -1928,11 +1943,11 @@ function orderPDFHtml(o){
     '<div style="display:flex;gap:16px;margin-bottom:24px">' +
       '<div style="flex:1;background:' + brandLight + ';border-radius:10px;padding:16px 18px;border-left:3px solid ' + brand + '">' +
         '<div style="font-size:10px;font-weight:700;color:' + brand + ';text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Customer Information</div>' +
-        '<div style="font-weight:700;font-size:14px;color:#232328">' + esc(o.customer.first + " " + o.customer.last) + '</div>' +
-        '<div style="font-size:12px;color:#666;margin-top:3px">' + esc(o.customer.email) + '</div>' +
-        (o.customer.phone ? '<div style="font-size:12px;color:#666;margin-top:2px">' + esc(o.customer.phone) + '</div>' : '') +
-        (o.customer.contact ? '<div style="font-size:12px;color:#666;margin-top:2px">Via: ' + esc(o.customer.contact) + '</div>' : '') +
-        '<div style="font-size:12px;color:#666;margin-top:3px">' + esc(o.customer.address || "Address not provided") + (o.customer.country ? ", " + esc(o.customer.country) : "") + '</div>' +
+        '<div style="font-weight:700;font-size:14px;color:#232328">' + esc(custName(o)) + '</div>' +
+        '<div style="font-size:12px;color:#666;margin-top:3px">' + esc(custEmail(o)) + '</div>' +
+        (custPhone(o) ? '<div style="font-size:12px;color:#666;margin-top:2px">' + esc(custPhone(o)) + '</div>' : '') +
+        (custContact(o) ? '<div style="font-size:12px;color:#666;margin-top:2px">Via: ' + esc(custContact(o)) + '</div>' : '') +
+        '<div style="font-size:12px;color:#666;margin-top:3px">' + esc(custAddr(o)) + '</div>' +
       '</div>' +
       '<div style="width:200px;background:#fafafa;border-radius:10px;padding:16px 18px;border:1px solid #eee">' +
         '<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Order Summary</div>' +
@@ -2198,7 +2213,7 @@ function openQuoteRequest(){
     '</div>' +
     '<div style="margin-top:16px;padding:14px;background:var(--card);border-radius:10px">' +
       '<div style="font-weight:600;font-size:14px;margin-bottom:10px">Quote Summary (' + cart.length + ' items)</div>' +
-      cart.map(i => { const p = findProduct(i.id); const unitPrice = getPriceForQty(p, i.q); return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span>' + esc(p.n) + ' × ' + i.q + '</span><span>' + fmt(unitPrice * i.q) + '</span></div>'; }).join("") +
+      cart.map(i => { const p = findProduct(i.id) || { n: "Product " + i.id, p: 0, priceTiers: [] }; const unitPrice = getPriceForQty(p, i.q); return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span>' + esc(p.n) + ' × ' + i.q + '</span><span>' + fmt(unitPrice * i.q) + '</span></div>'; }).join("") +
       '<div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;padding-top:8px;border-top:1px solid var(--border);margin-top:8px"><span>Estimated Total</span><span>' + fmt(total) + '</span></div>' +
       '<div style="font-size:11px;color:var(--ink-soft);margin-top:6px">Final price may vary based on quantity, shipping and custom requirements.</div>' +
     '</div>' +
@@ -2274,7 +2289,7 @@ function submitQuoteRequest(){
 function openCheckout(){
   $("#orderSummary").innerHTML =
     '<div class="row" style="border:none;font-size:12px;color:var(--ink-soft)"><span>All prices in ' + curCode + ' (1 EUR = ' + rateOf(curCode) + ' ' + curCode + ')</span></div>' +
-    cart.map(i => { const p = findProduct(i.id); const unitPrice = getPriceForQty(p, i.q); return '<div class="row"><span>' + esc(p.n) + ' × ' + i.q + '</span><span>' + fmt(i.q * unitPrice) + '</span></div>'; }).join("") +
+    cart.map(i => { const p = findProduct(i.id) || { n: "Product " + i.id, p: 0, priceTiers: [] }; const unitPrice = getPriceForQty(p, i.q); return '<div class="row"><span>' + esc(p.n) + ' × ' + i.q + '</span><span>' + fmt(i.q * unitPrice) + '</span></div>'; }).join("") +
     '<div class="row total"><span>Total</span><span>' + fmt(cartTotal()) + '</span></div>' +
     '<div class="row" style="border:none;font-size:11.5px;color:var(--ink-soft)"><span>Shipping &amp; payment terms quoted by our sales team</span></div>';
   const s = getSession();
@@ -2334,7 +2349,7 @@ function placeOrder(){
     '<div class="o-row"><span class="k">Date</span><span class="v">' + fmtDT(o.date) + '</span></div>' +
     '<div class="o-row"><span class="k">Customer</span><span class="v">' + esc(first + " " + last) + '</span></div>' +
     '<div class="o-row"><span class="k">Email</span><span class="v">' + esc(email) + '</span></div>' +
-    '<div class="o-row"><span class="k">Delivery</span><span class="v">' + esc((addr || "Not provided") + ", " + country) + '</span></div>' +
+    '<div class="o-row"><span class="k">Delivery</span><span class="v">' + esc((addr || "Not provided") + (country ? ", " + country : "")) + '</span></div>' +
     (contact ? '<div class="o-row"><span class="k">Contact</span><span class="v">' + esc(contact) + '</span></div>' : "") +
     '<div class="o-row"><span class="k">Currency</span><span class="v">' + esc(o.cur) + '</span></div>' +
     '<div class="o-row"><span class="k">Status</span><span class="v">New</span></div>' +
@@ -3519,7 +3534,7 @@ function accountSignedIn(s){
 function viewCustomerQuote(id){
   const q = findQuoteById(id);
   const s = getSession();
-  if(!q || !s || String(q.customer.email).toLowerCase() !== String(s.email).toLowerCase()){
+  if(!q || !s || String(qCustEmail(q)).toLowerCase() !== String(s.email).toLowerCase()){
     showToast("Quote not found");
     return;
   }
@@ -3534,11 +3549,11 @@ function viewCustomerQuote(id){
         '<span class="badge" style="font-size:14px;padding:8px 16px">' + esc(isExpired && q.status === "Quoted" ? "Expired" : q.status) + '</span>' +
       '</div>' +
       '<div class="ov-grid" style="margin-bottom:20px">' +
-        '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(q.customer.first + " " + q.customer.last) + '</div></div>' +
-        '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v">' + esc(q.customer.email) + '</div></div>' +
-        '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(q.customer.phone || "—") + '</div></div>' +
-        '<div class="ov-box"><div class="ov-k">Company</div><div class="ov-v">' + esc(q.customer.company || "—") + '</div></div>' +
-        '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc((q.customer.address || "Not provided") + ", " + q.customer.country) + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(qCustName(q)) + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v">' + esc(qCustEmail(q)) + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(qCustPhone(q) || "—") + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Company</div><div class="ov-v">' + esc(qCustCompany(q) || "—") + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc(qCustAddr(q)) + '</div></div>' +
         '<div class="ov-box"><div class="ov-k">Valid Until</div><div class="ov-v" style="font-weight:' + (isExpired ? '700;color:var(--danger)' : '600') + '">' + (q.validUntil ? fmtD(q.validUntil) : "—") + '</div></div>' +
       '</div>' +
       '<h3 style="font-size:16px;margin-bottom:12px">Quote Items</h3>' +
@@ -3666,11 +3681,11 @@ function quotePDFHtml(q){
     '</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:30px">' +
       '<div><div style="font-size:12px;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:8px">Customer</div>' +
-        '<div style="font-size:14px"><b>' + esc(q.customer.first + " " + q.customer.last) + '</b></div>' +
-        '<div style="font-size:13px;color:#4b5563">' + esc(q.customer.email) + '</div>' +
-        (q.customer.phone ? '<div style="font-size:13px;color:#4b5563">' + esc(q.customer.phone) + '</div>' : '') +
-        (q.customer.company ? '<div style="font-size:13px;color:#4b5563">' + esc(q.customer.company) + '</div>' : '') +
-        '<div style="font-size:13px;color:#4b5563">' + esc((q.customer.address || "") + (q.customer.address ? ", " : "") + q.customer.country) + '</div>' +
+        '<div style="font-size:14px"><b>' + esc(qCustName(q)) + '</b></div>' +
+        '<div style="font-size:13px;color:#4b5563">' + esc(qCustEmail(q)) + '</div>' +
+        (qCustPhone(q) ? '<div style="font-size:13px;color:#4b5563">' + esc(qCustPhone(q)) + '</div>' : '') +
+        (qCustCompany(q) ? '<div style="font-size:13px;color:#4b5563">' + esc(qCustCompany(q)) + '</div>' : '') +
+        '<div style="font-size:13px;color:#4b5563">' + esc(qCustAddr(q)) + '</div>' +
       '</div>' +
       '<div><div style="font-size:12px;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:8px">Quote Details</div>' +
         '<div style="font-size:13px;margin-bottom:4px"><b>Date:</b> ' + fmtD(q.date) + '</div>' +
@@ -3710,7 +3725,7 @@ function quotePDFHtml(q){
 function viewCustomerOrder(id){
   const o = findOrderById(id);
   const s = getSession();
-  if(!o || !s || String(o.customer.email).toLowerCase() !== String(s.email).toLowerCase()){
+  if(!o || !s || String(custEmail(o)).toLowerCase() !== String(s.email).toLowerCase()){
     showToast("Order not found");
     return;
   }
@@ -3726,10 +3741,10 @@ function viewCustomerOrder(id){
         '<span class="badge" style="font-size:14px;padding:8px 16px">' + esc(o.status) + '</span>' +
       '</div>' +
       '<div class="ov-grid" style="margin-bottom:20px">' +
-        '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(o.customer.first + " " + o.customer.last) + '</div></div>' +
-        '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v">' + esc(o.customer.email) + '</div></div>' +
-        '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(o.customer.phone || "—") + '</div></div>' +
-        '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc((o.customer.address || "Not provided") + ", " + o.customer.country) + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(custName(o)) + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v">' + esc(custEmail(o)) + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(custPhone(o) || "—") + '</div></div>' +
+        '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc(custAddr(o)) + '</div></div>' +
         '<div class="ov-box"><div class="ov-k">Total (' + cur + ')</div><div class="ov-v" style="font-weight:800">' + fmtIn(o.total, cur, orate(o)) + '</div></div>' +
       '</div>' +
       '<h3 style="font-size:16px;margin-bottom:12px">Order Items</h3>' +

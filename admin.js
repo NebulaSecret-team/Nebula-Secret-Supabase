@@ -106,7 +106,7 @@ function adminDashboard(){
     '<div class="admin-panel"><div class="panel-head"><div><h3>Recent Orders</h3><div class="ph-sub">Latest customer orders</div></div><a class="btn sm" href="#/admin/orders">All Orders</a></div>' +
     (recentOrders.length
       ? '<div class="panel-body" style="padding:0"><table class="admin-table"><thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th></tr></thead><tbody>' +
-        recentOrders.map(o => '<tr><td style="font-weight:600">' + esc(o.id) + '</td><td style="white-space:nowrap">' + new Date(o.date).toLocaleDateString() + '</td><td>' + esc(o.customer.first + " " + o.customer.last) + '</td><td>' + o.items.reduce((s,i) => s + i.qty, 0) + '</td><td>' + fmt(o.total) + '</td><td><span class="pill ' + orderStatusColor(o.status) + '">' + esc(o.status) + '</span></td></tr>').join("") +
+        recentOrders.map(o => '<tr><td style="font-weight:600">' + esc(o.id) + '</td><td style="white-space:nowrap">' + new Date(o.date).toLocaleDateString() + '</td><td>' + esc(custName(o)) + '</td><td>' + o.items.reduce((s,i) => s + i.qty, 0) + '</td><td>' + fmt(o.total) + '</td><td><span class="pill ' + orderStatusColor(o.status) + '">' + esc(o.status) + '</span></td></tr>').join("") +
         '</tbody></table></div>'
       : '<div class="panel-body"><div style="font-size:13.5px;color:var(--ink-soft);padding:8px 0">No orders yet. Place an order on the storefront and it will appear here.</div></div>') +
     '</div>' +
@@ -147,8 +147,8 @@ function adminOrders(){
           return '<tr>' +
           '<td style="font-weight:600">' + esc(o.id) + '</td>' +
           '<td style="white-space:nowrap">' + fmtDT(o.date) + '</td>' +
-          '<td>' + esc(o.customer.first + " " + o.customer.last) + '</td>' +
-          '<td><a href="mailto:' + esc(o.customer.email) + '" style="color:var(--accent)">' + esc(o.customer.email) + '</a></td>' +
+          '<td>' + esc(custName(o)) + '</td>' +
+          '<td><a href="mailto:' + esc(custEmail(o)) + '" style="color:var(--accent)">' + esc(custEmail(o)) + '</a></td>' +
           '<td>' + o.items.reduce((s,i) => s + i.qty, 0) + '</td>' +
           '<td style="font-weight:700">' + fmtIn(o.total, cur, orate(o)) + ' <span style="font-weight:400;color:var(--ink-soft);font-size:11px">' + cur + '</span></td>' +
           '<td><select class="order-status ' + orderStatusColor(o.status) + '" onchange="setOrderStatus(\'' + esc(o.id) + '\', this.value)">' +
@@ -226,11 +226,11 @@ function viewOrder(id){
   $("#amSub").textContent = fmtDT(o.date);
   $("#amBody").innerHTML =
     '<div class="ov-grid">' +
-      '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(o.customer.first + " " + o.customer.last) + '</div></div>' +
-      '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v"><a href="mailto:' + esc(o.customer.email) + '" style="color:var(--accent)">' + esc(o.customer.email) + '</a></div></div>' +
-      '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(o.customer.phone || "—") + '</div></div>' +
-      '<div class="ov-box"><div class="ov-k">Preferred Contact</div><div class="ov-v">' + esc(o.customer.contact || "—") + '</div></div>' +
-      '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc((o.customer.address || "Not provided") + ", " + o.customer.country) + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(custName(o)) + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v"><a href="mailto:' + esc(custEmail(o)) + '" style="color:var(--accent)">' + esc(custEmail(o)) + '</a></div></div>' +
+      '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(custPhone(o) || "—") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Preferred Contact</div><div class="ov-v">' + esc(custContact(o) || "—") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc(custAddr(o)) + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Status</div><div class="ov-v"><select class="order-status ' + orderStatusColor(o.status) + '" onchange="setOrderStatus(\'' + esc(o.id) + '\', this.value)">' + ORDER_STATUSES.map(s => '<option ' + (o.status === s ? "selected" : "") + '>' + s + '</option>').join("") + '</select></div></div>' +
       '<div class="ov-box"><div class="ov-k">Total (' + cur + ')</div><div class="ov-v" style="font-weight:800">' + fmtIn(o.total, cur, orate(o)) + '</div></div>' +
     '</div>' +
@@ -295,7 +295,7 @@ function adminQuotes(){
           return '<tr>' +
           '<td style="font-weight:600;white-space:nowrap">' + esc(q.id) + '</td>' +
           '<td style="white-space:nowrap">' + fmtDT(q.date) + '</td>' +
-          '<td>' + esc(q.customer.first + " " + q.customer.last) + '<div style="font-size:11px;color:var(--ink-soft)">' + esc(q.customer.email) + '</div></td>' +
+          '<td>' + esc(qCustName(q)) + '<div style="font-size:11px;color:var(--ink-soft)">' + esc(qCustEmail(q)) + '</div></td>' +
           '<td style="text-align:center">' + q.items.reduce((s,i) => s + i.qty, 0) + '</td>' +
           '<td style="font-weight:700;white-space:nowrap">' + (q.quotedPrice ? fmt(q.quotedPrice) : '<span style="color:var(--ink-soft);font-weight:400">Pending</span>') + '</td>' +
           '<td><span class="pill ' + (q.status === "Pending" ? "yellow" : q.status === "Quoted" ? "blue" : q.status === "Accepted" ? "green" : "gray") + '">' + esc(statusDisplay) + '</span></td>' +
@@ -318,11 +318,11 @@ function viewAdminQuote(id){
   $("#amSub").textContent = fmtDT(q.date);
   $("#amBody").innerHTML =
     '<div class="ov-grid">' +
-      '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(q.customer.first + " " + q.customer.last) + '</div></div>' +
-      '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v"><a href="mailto:' + esc(q.customer.email) + '" style="color:var(--accent)">' + esc(q.customer.email) + '</a></div></div>' +
-      '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(q.customer.phone || "—") + '</div></div>' +
-      '<div class="ov-box"><div class="ov-k">Company</div><div class="ov-v">' + esc(q.customer.company || "—") + '</div></div>' +
-      '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc((q.customer.address || "Not provided") + ", " + q.customer.country) + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(qCustName(q)) + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v"><a href="mailto:' + esc(qCustEmail(q)) + '" style="color:var(--accent)">' + esc(qCustEmail(q)) + '</a></div></div>' +
+      '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(qCustPhone(q) || "—") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Company</div><div class="ov-v">' + esc(qCustCompany(q) || "—") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc(qCustAddr(q)) + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Status</div><div class="ov-v"><span class="pill ' + (q.status === "Pending" ? "yellow" : q.status === "Quoted" ? "blue" : q.status === "Accepted" ? "green" : "gray") + '">' + esc(isExpired && q.status === "Quoted" ? "Expired" : q.status) + '</span></div></div>' +
       '<div class="ov-box"><div class="ov-k">Est. Total</div><div class="ov-v">' + fmt(q.subtotal) + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Quoted Price</div><div class="ov-v" style="font-weight:800;color:var(--brand)">' + (q.quotedPrice ? fmt(q.quotedPrice) : "—") + '</div></div>' +
@@ -390,13 +390,13 @@ function deleteQuote(id){
 function mailQuote(id){
   const q = findQuoteById(id); if(!q) return;
   const subject = encodeURIComponent("Your Nebula Secret Quote " + q.id);
-  const body = encodeURIComponent("Dear " + q.customer.first + ",\n\nThank you for your inquiry. Please find your formal quote below:\n\nQuote ID: " + q.id + "\n" +
+  const body = encodeURIComponent("Dear " + qCustName(q) + ",\n\nThank you for your inquiry. Please find your formal quote below:\n\nQuote ID: " + q.id + "\n" +
     (q.quotedPrice ? "Quoted Price: " + fmt(q.quotedPrice) + " EUR\n" : "") +
     (q.validUntil ? "Valid Until: " + fmtD(q.validUntil) + "\n" : "") +
     "\nItems:\n" + q.items.map(it => "- " + it.name + " × " + it.qty + " = " + fmt(it.price * it.qty) + " EUR").join("\n") +
     (q.quoteNotes ? "\n\nNotes:\n" + q.quoteNotes : "") +
     "\n\nPlease contact us if you have any questions.\n\nBest regards,\nNebula Secret Sales Team\nsales@nebulasecret.com");
-  window.location.href = "mailto:" + q.customer.email + "?subject=" + subject + "&body=" + body;
+  window.location.href = "mailto:" + qCustEmail(q) + "?subject=" + subject + "&body=" + body;
 }
 
 /* ---- Excel / CSV exports (EUR base + order currency columns) ---- */
@@ -404,7 +404,7 @@ function exportOrdersCSV(){
   const orders = getOrders();
   const rows = [["Order No","Date","Customer","Email","Phone","Preferred Contact","Country","Address","Items Qty","Order Total (EUR)","Currency","Order Total (orig)","Status"]];
   orders.forEach(o => { const cur = o.cur || "EUR"; const r = orate(o); const dec = getCurDec(cur);
-    rows.push([o.id, fmtDT(o.date), o.customer.first + " " + o.customer.last, o.customer.email, o.customer.phone || "", o.customer.contact || "", o.customer.country, o.customer.address, o.items.reduce((s,i) => s + i.qty, 0), Number(o.total).toFixed(2), cur, (Number(o.total) * r).toFixed(dec), o.status]);
+    rows.push([o.id, fmtDT(o.date), custName(o), custEmail(o), custPhone(o), custContact(o), custCountry(o), (o.customer && o.customer.address) || "", o.items.reduce((s,i) => s + i.qty, 0), Number(o.total).toFixed(2), cur, (Number(o.total) * r).toFixed(dec), o.status]);
   });
   if(orders.length === 0) rows.push(["No orders yet"]);
   downloadCSV("nebula-secret-orders.csv", rows);
@@ -416,7 +416,7 @@ function exportItemsCSV(){
   const rows = [["Order No","Date","Customer","Email","Product","Category","Qty","Unit Price (EUR)","Line Total (EUR)","Order Total (EUR)","Currency","Unit Price (orig)","Line Total (orig)","Status"]];
   orders.forEach(o => { const cur = o.cur || "EUR"; const r = orate(o); const dec = getCurDec(cur);
     o.items.forEach(it =>
-      rows.push([o.id, fmtDT(o.date), o.customer.first + " " + o.customer.last, o.customer.email, it.name, catName(it.cat), it.qty, Number(it.price).toFixed(2), Number(it.price * it.qty).toFixed(2), Number(o.total).toFixed(2), cur, (it.price * r).toFixed(dec), (it.price * it.qty * r).toFixed(dec), o.status])
+      rows.push([o.id, fmtDT(o.date), custName(o), custEmail(o), it.name, catName(it.cat), it.qty, Number(it.price).toFixed(2), Number(it.price * it.qty).toFixed(2), Number(o.total).toFixed(2), cur, (it.price * r).toFixed(dec), (it.price * it.qty * r).toFixed(dec), o.status])
     );
   });
   if(rows.length === 1) rows.push(["No orders yet"]);
