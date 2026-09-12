@@ -84,13 +84,21 @@ export default async function handler(req) {
     // Send email via EmailJS REST API
     console.log('[Edge Function] Sending email via EmailJS REST API...');
     
+    // 使用標準的 EmailJS REST API 認證方式（只使用 user_id，不使用 accessToken）
     const emailjsPayload = {
       service_id: serviceId,
       template_id: templateId,
       user_id: publicKey,
-      accessToken: privateKey,
       template_params: params,
     };
+    
+    // 如果有 Private Key，添加 accessToken 參數（可選，用於更高的安全性）
+    if (privateKey) {
+      emailjsPayload.accessToken = privateKey;
+      console.log('[Edge Function] Using accessToken for authentication');
+    } else {
+      console.log('[Edge Function] Using user_id only for authentication');
+    }
 
     console.log('[Edge Function] EmailJS payload:', JSON.stringify(emailjsPayload).substring(0, 500));
 
@@ -113,10 +121,19 @@ export default async function handler(req) {
     } else {
       const errorText = await response.text();
       console.error('[Edge Function] EmailJS error:', response.status, errorText);
+      console.error('[Edge Function] Request payload:', JSON.stringify(emailjsPayload).substring(0, 1000));
       return new Response(JSON.stringify({ 
         ok: false, 
         error: 'Failed to send email', 
-        detail: `EmailJS returned ${response.status}: ${errorText}`
+        detail: `EmailJS returned ${response.status}: ${errorText}`,
+        debug: {
+          serviceId: serviceId ? 'set' : 'missing',
+          templateId: templateId ? 'set' : 'missing',
+          publicKey: publicKey ? 'set' : 'missing',
+          privateKey: privateKey ? 'set' : 'missing',
+          emailjsStatus: response.status,
+          emailjsError: errorText
+        }
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
