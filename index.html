@@ -3157,22 +3157,6 @@ function showPopupIfNeeded(){
 function closePopup(){ const el = document.getElementById("popupBackdrop"); if(el) el.classList.remove("open"); }
 document.addEventListener("click", e => { if(e.target && e.target.id === "popupBackdrop") closePopup(); });
 
-/* Event delegation for quote view details buttons (more reliable than inline onclick) */
-document.addEventListener("click", function(e){
-  const btn = e.target.closest(".quote-view-btn");
-  if(btn){
-    e.preventDefault();
-    const quoteId = btn.getAttribute("data-quote-id");
-    if(quoteId){
-      console.log("Quote view button clicked:", quoteId);
-      viewCustomerQuote(quoteId);
-    } else {
-      console.error("Quote view button has no data-quote-id");
-      alert("Error: Quote ID not found. Please refresh the page.");
-    }
-  }
-});
-
 function subscribeNewsletter(ev){
   ev.preventDefault();
   const email = (document.getElementById("nlEmail").value || "").trim();
