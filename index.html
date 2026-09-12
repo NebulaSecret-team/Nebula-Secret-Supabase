@@ -3559,12 +3559,12 @@ function accountSignedIn(s){
   const orderHtml = orders.length
     ? orders.map(o => {
         const cur = o.cur || "EUR";
-        return '<div class="acct-order" style="cursor:pointer" onclick="viewCustomerOrder(\'' + esc(o.id) + '\')">' +
+        return '<a href="#/order/' + esc(o.id) + '" class="acct-order" style="cursor:pointer;text-decoration:none;color:inherit;display:block">' +
           '<div class="ao-top"><span class="ao-id">' + esc(o.id) + '</span><span class="ao-date">' + fmtD(o.date) + '</span><span class="badge status-badge" title="' + esc(statusDesc(o.status)) + '">' + esc(o.status) + '</span></div>' +
           '<div class="ao-items">' + o.items.map(it => esc(it.name) + ' × ' + it.qty).join(" · ") + '</div>' +
           '<div class="ao-total">' + fmtIn(o.total, cur, orate(o)) + ' <span style="color:var(--ink-soft);font-weight:400">(' + cur + ')</span></div>' +
           '<div style="font-size:12px;color:var(--brand);margin-top:6px;font-weight:600">Click to view details →</div>' +
-        '</div>';
+        '</a>';
       }).join("")
     : '<p style="color:var(--ink-soft);font-size:13.5px">You have no orders yet — <a href="#/shop" style="color:var(--brand-dark);font-weight:600">start shopping</a>.</p>';
   const quoteHtml = quotes.length
@@ -3823,6 +3823,12 @@ function viewCustomerOrder(id){
     showToast("Order not found");
     return;
   }
+  // If we're not already on the order URL, update the hash and let the router handle it
+  const expectedHash = "#/order/" + id;
+  if(location.hash !== expectedHash){
+    location.hash = expectedHash;
+    return;
+  }
   const cur = o.cur || "EUR";
   const notes = o.notes || [];
   const statusHistory = o.statusHistory || [{ status: o.status, date: o.date, note: "Order placed" }];
@@ -3939,6 +3945,8 @@ function storeRoute(){
     viewProduct(h.split("/")[2]);
   } else if(h.startsWith("#/quote/")){
     viewCustomerQuote(h.split("/")[2]);
+  } else if(h.startsWith("#/order/")){
+    viewCustomerOrder(h.split("/")[2]);
   } else if(h.startsWith("#/shop")){
     viewShop();
   } else if(h.startsWith("#/account")){
