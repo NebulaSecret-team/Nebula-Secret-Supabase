@@ -5,10 +5,5 @@
       "path": "/api/keep-alive",
       "schedule": "0 12 * * *"
     }
-  ],
-  "functions": {
-    "api/*.js": {
-      "runtime": "edge"
-    }
-  }
+  ]
 }
