@@ -13,8 +13,11 @@ export const config = {
 };
 
 export default async function handler(req) {
+  console.log('[Edge Function] Request received:', req.method, req.url);
+  
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
+    console.log('[Edge Function] CORS preflight');
     return new Response(null, {
       status: 204,
       headers: getCorsHeaders(req),
@@ -23,6 +26,7 @@ export default async function handler(req) {
 
   // Only allow POST requests
   if (req.method !== 'POST') {
+    console.log('[Edge Function] Method not allowed:', req.method);
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
@@ -31,10 +35,13 @@ export default async function handler(req) {
 
   try {
     const body = await req.json();
+    console.log('[Edge Function] Request body:', JSON.stringify(body).substring(0, 500));
+    
     const { type, params } = body;
 
     // Validate request
     if (!type || !params) {
+      console.log('[Edge Function] Missing type or params');
       return new Response(JSON.stringify({ error: 'Missing type or params' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
@@ -53,47 +60,74 @@ export default async function handler(req) {
       templateId = process.env.EMAILJS_TEMPLATE_ID;
     }
 
+    console.log('[Edge Function] Config:', {
+      serviceId: serviceId ? 'set' : 'MISSING',
+      templateId: templateId ? 'set' : 'MISSING',
+      publicKey: publicKey ? 'set' : 'MISSING',
+      privateKey: privateKey ? 'set' : 'MISSING',
+      type: type
+    });
+
     // Validate configuration
     if (!serviceId || !templateId || !publicKey || !privateKey) {
-      console.error('EmailJS configuration missing');
-      return new Response(JSON.stringify({ error: 'Email service not configured' }), {
+      console.error('[Edge Function] EmailJS configuration missing');
+      return new Response(JSON.stringify({ 
+        ok: false, 
+        error: 'Email service not configured',
+        detail: 'Missing environment variables. Please configure EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY, EMAILJS_PRIVATE_KEY in Vercel dashboard.'
+      }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
       });
     }
 
     // Send email via EmailJS REST API
+    console.log('[Edge Function] Sending email via EmailJS REST API...');
+    
+    const emailjsPayload = {
+      service_id: serviceId,
+      template_id: templateId,
+      user_id: publicKey,
+      accessToken: privateKey,
+      template_params: params,
+    };
+
+    console.log('[Edge Function] EmailJS payload:', JSON.stringify(emailjsPayload).substring(0, 500));
+
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Origin': req.headers.get('origin') || 'https://nebula-secret-supabase.vercel.app',
       },
-      body: JSON.stringify({
-        service_id: serviceId,
-        template_id: templateId,
-        user_id: publicKey,
-        accessToken: privateKey,
-        template_params: params,
-      }),
+      body: JSON.stringify(emailjsPayload),
     });
 
+    console.log('[Edge Function] EmailJS response status:', response.status);
+
     if (response.ok) {
+      console.log('[Edge Function] Email sent successfully');
       return new Response(JSON.stringify({ ok: true, message: 'Email sent successfully' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
       });
     } else {
       const errorText = await response.text();
-      console.error('EmailJS error:', response.status, errorText);
-      return new Response(JSON.stringify({ ok: false, error: 'Failed to send email', detail: errorText }), {
+      console.error('[Edge Function] EmailJS error:', response.status, errorText);
+      return new Response(JSON.stringify({ 
+        ok: false, 
+        error: 'Failed to send email', 
+        detail: `EmailJS returned ${response.status}: ${errorText}`
+      }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
       });
     }
   } catch (error) {
-    console.error('Edge function error:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+    console.error('[Edge Function] Internal error:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Internal server error',
+      detail: error.message || String(error)
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
     });
@@ -101,8 +135,10 @@ export default async function handler(req) {
 }
 
 function getCorsHeaders(req) {
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://nebula-secret-supabase.vercel.app').split(',');
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://nebula-secret-supabase.vercel.app').split(',').map(s => s.trim());
   const origin = req.headers.get('origin');
+  
+  console.log('[Edge Function] CORS check:', { origin, allowedOrigins });
   
   if (origin && allowedOrigins.includes(origin)) {
     return {
@@ -113,8 +149,9 @@ function getCorsHeaders(req) {
     };
   }
   
+  // For development, allow all origins (but in production, restrict to your domain)
   return {
-    'Access-Control-Allow-Origin': allowedOrigins[0],
+    'Access-Control-Allow-Origin': origin || '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
