@@ -325,7 +325,7 @@ function viewAdminQuote(id){
       '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc(qCustAddr(q)) + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Status</div><div class="ov-v"><span class="pill ' + (q.status === "Pending" ? "yellow" : q.status === "Quoted" ? "blue" : q.status === "Accepted" ? "green" : "gray") + '">' + esc(isExpired && q.status === "Quoted" ? "Expired" : q.status) + '</span></div></div>' +
       '<div class="ov-box"><div class="ov-k">Est. Total</div><div class="ov-v">' + fmt(q.subtotal) + '</div></div>' +
-      (q.customerTargetPrice ? '<div class="ov-box" style="background:rgba(250,173,20,0.08);border:1px solid rgba(250,173,20,0.3)"><div class="ov-k">Customer Target Price</div><div class="ov-v" style="font-weight:800;color:#b8860b">' + fmt(q.customerTargetPrice) + '</div></div>' : '') +
+      (q.customerTargetPrice ? '<div class="ov-box" style="background:rgba(250,173,20,0.08);border:1px solid rgba(250,173,20,0.3)"><div class="ov-k">Customer Target Price</div><div class="ov-v" style="font-weight:800;color:#b8860b">' + fmtIn(q.customerTargetPrice, q.customerTargetCurrency || "EUR", rateOf(q.customerTargetCurrency || "EUR")) + '</div></div>' : '') +
       '<div class="ov-box"><div class="ov-k">Quoted Price</div><div class="ov-v" style="font-weight:800;color:var(--brand)">' + (q.quotedPrice ? fmt(q.quotedPrice) : "—") + '</div></div>' +
     '</div>' +
     '<table class="admin-table" style="margin-top:14px"><thead><tr><th>Product</th><th>Category</th><th>Qty</th><th>Unit (EUR)</th><th>Line (EUR)</th></tr></thead><tbody>' +
@@ -334,7 +334,7 @@ function viewAdminQuote(id){
     (q.notes ? '<div style="margin-top:14px;padding:12px;background:var(--card);border-radius:8px"><div style="font-weight:600;font-size:13px;margin-bottom:6px">Customer Notes</div><div style="font-size:13px;color:var(--ink)">' + esc(q.notes) + '</div></div>' : '') +
     (q.customerTargetPrice ? '<div style="margin-top:20px;padding:16px;background:rgba(250,173,20,0.06);border-radius:10px;border:1px solid rgba(250,173,20,0.3)">' +
       '<h4 style="font-size:15px;font-weight:600;margin-bottom:8px;color:#b8860b">Customer Has Proposed a Target Price</h4>' +
-      '<p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px">Customer requested <strong style="color:#b8860b;font-size:16px">' + fmt(q.customerTargetPrice) + ' EUR</strong>. You can accept this price or send your own quote.</p>' +
+      '<p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px">Customer requested <strong style="color:#b8860b;font-size:16px">' + fmtIn(q.customerTargetPrice, q.customerTargetCurrency || "EUR", rateOf(q.customerTargetCurrency || "EUR")) + '</strong> (' + fmt(q.customerTargetPrice) + ' EUR). You can accept this price or send your own quote.</p>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
         '<button class="btn" style="background:#22c55e" onclick="acceptCustomerTargetPrice(\'' + esc(q.id) + '\')">' + IC.sparkle + ' Accept Customer Price</button>' +
         '<button class="btn ghost" style="color:#ef4444;border-color:#ef4444" onclick="rejectCustomerTargetPrice(\'' + esc(q.id) + '\')">Reject Target Price</button>' +
