@@ -568,6 +568,7 @@ table.admin-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .acct-order .ao-date{font-size:12px;color:var(--ink-soft)}
 .acct-order .ao-items{font-size:13px;color:var(--ink-soft);line-height:1.6}
 .acct-order .ao-total{font-weight:700;margin-top:6px;font-size:14px}
+.acct-order .ao-top .badge{position:static;display:inline-block;font-size:11px;padding:4px 12px}
 .cat-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line)}
 .cat-row:last-child{border-bottom:none}
 .cat-row .c-info{display:flex;align-items:center;gap:12px}
@@ -3499,12 +3500,12 @@ function accountSignedIn(s){
   const quoteHtml = quotes.length
     ? quotes.map(q => {
         const isExpired = q.validUntil && new Date(q.validUntil) < new Date();
-        const statusDisplay = isExpired && q.status === "Quoted" ? "Expired" : q.status;
+        const statusDisplay = isExpired && q.status === "Quoted" ? "Expired" : (q.status || "Pending");
         return '<div class="acct-order" style="cursor:pointer" onclick="viewCustomerQuote(\'' + esc(q.id) + '\')">' +
           '<div class="ao-top"><span class="ao-id">' + esc(q.id) + '</span><span class="ao-date">' + fmtD(q.date) + '</span><span class="badge">' + esc(statusDisplay) + '</span></div>' +
-          '<div class="ao-items">' + q.items.map(it => esc(it.name) + ' × ' + it.qty).join(" · ") + '</div>' +
-          '<div class="ao-total">' + (q.quotedPrice ? fmt(q.quotedPrice) : "Pending") + (q.validUntil ? ' <span style="color:var(--ink-soft);font-weight:400;font-size:11px">valid until ' + fmtD(q.validUntil) + '</span>' : '') + '</div>' +
-          '<div style="font-size:12px;color:var(--brand);margin-top:6px;font-weight:600">Click to view details →</div>' +
+          '<div class="ao-items">' + q.items.map(it => esc(it.name || "Product") + ' × ' + (it.qty || 0)).join(" · ") + '</div>' +
+          '<div class="ao-total">' + (q.quotedPrice ? fmt(q.quotedPrice) : "Awaiting quote") + (q.validUntil ? ' <span style="color:var(--ink-soft);font-weight:400;font-size:11px">valid until ' + fmtD(q.validUntil) + '</span>' : '') + '</div>' +
+          '<button class="btn sm" style="margin-top:10px" onclick="event.stopPropagation();viewCustomerQuote(\'' + esc(q.id) + '\')">View Details →</button>' +
         '</div>';
       }).join("")
     : '<p style="color:var(--ink-soft);font-size:13.5px">You have no quote requests yet — <a href="#/shop" style="color:var(--brand-dark);font-weight:600">browse products</a> and request a quote from your cart.</p>';
@@ -3534,8 +3535,19 @@ function accountSignedIn(s){
 function viewCustomerQuote(id){
   const q = findQuoteById(id);
   const s = getSession();
-  if(!q || !s || String(qCustEmail(q)).toLowerCase() !== String(s.email).toLowerCase()){
-    showToast("Quote not found");
+  if(!q){
+    showToast("Quote not found — please refresh the page");
+    return;
+  }
+  if(!s){
+    showToast("Please sign in to view your quote");
+    location.hash = "#/account";
+    return;
+  }
+  const quoteEmail = String(qCustEmail(q)).toLowerCase();
+  const userEmail = String(s.email).toLowerCase();
+  if(quoteEmail && quoteEmail !== userEmail){
+    showToast("This quote belongs to another account");
     return;
   }
   const isExpired = q.validUntil && new Date(q.validUntil) < new Date();
