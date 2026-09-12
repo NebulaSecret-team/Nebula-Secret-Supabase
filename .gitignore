@@ -27,3 +27,5 @@ build/
 .idea/
 *.swp
 *.swo
+.vercel
+.env*
