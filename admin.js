@@ -343,7 +343,7 @@ function viewAdminQuote(id){
     '<div style="margin-top:20px;padding:16px;background:rgba(37,186,181,0.05);border-radius:10px;border:1px solid rgba(37,186,181,0.2)">' +
       '<h4 style="font-size:15px;font-weight:600;margin-bottom:12px;color:var(--ink)">Send Your Own Quote</h4>' +
       '<div class="form-grid">' +
-        '<div class="field"><label>Quoted Price (EUR) *</label><input id="qPrice" type="number" step="0.01" min="0" value="' + (q.quotedPrice || q.subtotal) + '"></div>' +
+        '<div class="field"><label>Quoted Price (' + getCur().code + ') *</label><input id="qPrice" type="number" step="0.01" min="0" value="' + (q.quotedPrice ? (q.quotedPrice * rateOf(getCur().code)).toFixed(2) : (q.subtotal * rateOf(getCur().code)).toFixed(2)) + '"></div>' +
         '<div class="field"><label>Valid Until *</label><input id="qValid" type="text" class="date-picker" placeholder="Select date" readonly value="' + (q.validUntil ? q.validUntil.substring(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10)) + '"></div>' +
         '<div class="field full"><label>Quote Notes / Terms</label><textarea id="qNotes" rows="3" placeholder="e.g. Prices include packaging, shipping quoted separately, MOQ applies...">' + (q.quoteNotes || "") + '</textarea></div>' +
       '</div>' +
@@ -379,11 +379,13 @@ function viewAdminQuote(id){
   }, 100);
 }
 function submitQuoteResponse(id){
-  const price = parseFloat($("#qPrice").value);
+  const priceInput = parseFloat($("#qPrice").value);
   const valid = $("#qValid").value;
   const notes = $("#qNotes").value.trim();
-  if(!price || price <= 0){ showToast("Please enter a valid quoted price"); return; }
+  if(!priceInput || priceInput <= 0){ showToast("Please enter a valid quoted price"); return; }
   if(!valid){ showToast("Please select a valid until date"); return; }
+  // Convert from selected currency back to EUR (base currency)
+  const price = priceInput / rateOf(getCur().code);
   const quotes = getQuotes();
   const q = quotes.find(x => x.id === id); if(!q) return;
   q.quotedPrice = price;
