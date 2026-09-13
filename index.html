@@ -1482,6 +1482,38 @@ function saveAccounts(a){
 function getSession(){ return lsGet(LS.session, null); }
 function setSession(s){ if(s) lsSet(LS.session, s); else try{ localStorage.removeItem(LS.session); }catch(e){} }
 
+/* Async session - syncs Supabase Auth session to localStorage */
+async function getSessionAsync(){
+  try {
+    if(!supabase) return getSession();
+    const { data: { session } } = await supabase.auth.getSession();
+    if(session && session.user){
+      const user = session.user;
+      const s = {
+        name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+        email: user.email,
+        supabaseAuth: true,
+        userId: user.id
+      };
+      setSession(s);
+      return s;
+    }
+  } catch(e) {
+    console.warn("Supabase Auth session check failed:", e);
+  }
+  return getSession();
+}
+
+/* Sync Supabase Auth session on page load */
+async function syncAuthSession(){
+  try {
+    await getSessionAsync();
+    if(typeof updateAcctLabel === 'function') updateAcctLabel();
+  } catch(e) {
+    console.warn("Auth session sync failed:", e);
+  }
+}
+
 /* ============ Quotes / Inquiries ============ */
 function getQuotes(){ return _cache.quotes || []; }
 function saveQuotes(q){ _cache.quotes = q; sbSave("quotes", q); }
@@ -3637,7 +3669,7 @@ function acctTab(which){
   l.classList.toggle("active", isLogin); r.classList.toggle("active", !isLogin);
   li.style.display = isLogin ? "" : "none"; ri.style.display = isLogin ? "none" : "";
 }
-function acctRegister(){
+async function acctRegister(){
   const name = $("#regName").value.trim();
   const email = $("#regEmail").value.trim().toLowerCase();
   const pass = $("#regPass").value;
@@ -3645,6 +3677,45 @@ function acctRegister(){
   if(!name){ err.textContent = "Please enter your name"; return; }
   if(!email || !/.+@.+\..+/.test(email)){ err.textContent = "Please enter a valid email"; return; }
   if(pass.length < 6){ err.textContent = "Password must be at least 6 characters"; return; }
+  
+  /* Method 1: Try Supabase Auth first */
+  try {
+    if(supabase){
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: pass,
+        options: {
+          data: { name, role: 'customer' }
+        }
+      });
+      if(!error && data && data.user){
+        /* Also save to legacy accounts for backward compatibility */
+        const accs = getAccounts();
+        if(!accs.some(a => a.email === email)){
+          return hashPass(pass).then(hash => {
+            accs.push({ name, email, pass: hash, created: new Date().toISOString() });
+            saveAccounts(accs);
+            setSession({ name, email, supabaseAuth: true, userId: data.user.id });
+            updateAcctLabel();
+            showToast("Welcome, " + name.split(" ")[0] + "!");
+            route();
+          });
+        }
+        setSession({ name, email, supabaseAuth: true, userId: data.user.id });
+        updateAcctLabel();
+        showToast("Welcome, " + name.split(" ")[0] + "!");
+        route();
+        return;
+      }
+      if(error && error.message !== "User already registered"){
+        console.log("Supabase Auth signup failed, trying legacy method:", error.message);
+      }
+    }
+  } catch(e) {
+    console.log("Supabase Auth signup exception, trying legacy method:", e.message);
+  }
+  
+  /* Method 2: Try legacy account system */
   const accs = getAccounts();
   if(accs.some(a => a.email === email)){ err.textContent = "An account with this email already exists — sign in instead"; return; }
   return hashPass(pass).then(hash => {
@@ -3656,11 +3727,30 @@ function acctRegister(){
     route();
   });
 }
-function acctLogin(){
+async function acctLogin(){
   const email = $("#acEmail").value.trim().toLowerCase();
   const pass = $("#acPass").value;
   const err = $("#acctErr");
   if(!email || !pass){ err.textContent = "Please enter your email and password"; return; }
+  
+  /* Method 1: Try Supabase Auth first */
+  try {
+    if(supabase){
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+      if(!error && data && data.user){
+        const name = data.user.user_metadata?.name || email.split('@')[0];
+        setSession({ name, email, supabaseAuth: true, userId: data.user.id });
+        updateAcctLabel();
+        showToast("Signed in as " + name.split(" ")[0]);
+        route();
+        return;
+      }
+    }
+  } catch(e) {
+    console.log("Supabase Auth login failed, trying legacy method:", e.message);
+  }
+  
+  /* Method 2: Try legacy account system */
   const acc = getAccounts().find(a => a.email === email);
   if(!acc){ err.textContent = "No account found with this email — create one above"; return; }
   return verifyPass(pass, acc.pass).then(valid => {
@@ -4039,10 +4129,50 @@ function submitCustomerOrderNote(id){
 function changePassOpen(){
   const b = $("#passBox"); if(b) b.style.display = "";
 }
-function changePassSave(){
+async function changePassSave(){
   const s = getSession(); if(!s) return;
   const oldP = $("#cpOld").value, newP = $("#cpNew").value;
   const err = $("#cpErr");
+  
+  /* Method 1: Try Supabase Auth first if logged in via Supabase */
+  if(s.supabaseAuth){
+    try {
+      if(supabase){
+        /* First verify old password by signing in */
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: s.email,
+          password: oldP
+        });
+        if(signInError){
+          err.textContent = "Current password is incorrect";
+          return;
+        }
+        if(newP.length < 6){ err.textContent = "New password must be at least 6 characters"; return; }
+        
+        /* Update password */
+        const { error: updateError } = await supabase.auth.updateUser({ password: newP });
+        if(!updateError){
+          /* Also update legacy account for backward compatibility */
+          const accs = getAccounts();
+          const acc = accs.find(a => a.email === s.email);
+          if(acc){
+            const nh = await hashPass(newP);
+            acc.pass = nh;
+            saveAccounts(accs);
+          }
+          showToast("Password updated");
+          const o1 = $("#cpOld"), o2 = $("#cpNew");
+          if(o1) o1.value = ""; if(o2) o2.value = "";
+          const b = $("#passBox"); if(b) b.style.display = "none";
+          return;
+        }
+      }
+    } catch(e) {
+      console.log("Supabase Auth password update failed, trying legacy method:", e.message);
+    }
+  }
+  
+  /* Method 2: Legacy account system */
   const accs = getAccounts();
   const acc = accs.find(a => a.email === s.email);
   if(!acc){ err.textContent = "Account not found"; return; }
@@ -4059,7 +4189,15 @@ function changePassSave(){
     });
   });
 }
-function acctLogout(){
+async function acctLogout(){
+  /* Sign out from Supabase Auth if logged in */
+  try {
+    if(supabase){
+      await supabase.auth.signOut();
+    }
+  } catch(e) {
+    console.warn("Supabase Auth signout error:", e);
+  }
   setSession(null);
   updateAcctLabel();
   showToast("Signed out");
@@ -4182,6 +4320,8 @@ sbLoadAll().then(() => {
   applyFooterContent();
   renderCatNav();
   buildCurSel();
+  /* Sync Supabase Auth session to localStorage */
+  if(typeof syncAuthSession === 'function') syncAuthSession();
   updateAcctLabel();
   if(typeof route === "function") route();
 });
