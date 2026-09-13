@@ -1132,55 +1132,28 @@ function toggleMailProvider(){
 }
 function saveMailForm(){
   const cfg = getMailCfg();
-  cfg.provider = $("#mailProvider").value;
-  cfg.mailTo = ($("#mailTo") ? $("#mailTo").value : "").trim();
-  cfg.serviceId = ($("#mailSvc") ? $("#mailSvc").value : "").trim();
-  cfg.templateId = ($("#mailTpl") ? $("#mailTpl").value : "").trim();
-  cfg.contactTemplateId = ($("#mailContactTpl") ? $("#mailContactTpl").value : "").trim();
-  cfg.publicKey = ($("#mailKey") ? $("#mailKey").value : "").trim();
-  const email = ($("#mailEmail") ? $("#mailEmail").value : "").trim();
-  if(email && !/.+@.+\..+/.test(email)){ showToast("Please enter a valid email address"); return; }
-  cfg.email = email;
   cfg.enabled = $("#mailEnabled").value === "1";
   saveMailCfg(cfg);
-  if(cfg.provider === "emailjs"){
-    const recipients = mailRecipients(cfg);
-    showToast(cfg.enabled && recipients.length ? "EmailJS saved — click Send Test Email to verify" : "Email settings saved");
-  }else{
-    showToast(cfg.enabled && cfg.email ? "Email service on — place a test order to activate FormSubmit" : "Email settings saved");
-  }
+  showToast(cfg.enabled ? "Auto email enabled" : "Auto email disabled");
 }
 async function sendTestOrderEmail(){
   const cfg = getMailCfg();
-  if(!cfg || !cfg.enabled){ showToast("Enable auto email first, then Save Email Settings"); return; }
-  const recipients = mailRecipients(cfg);
-  if(cfg.provider === "emailjs"){
-    if(!cfg.serviceId || !cfg.templateId || !cfg.publicKey){ showToast("Fill in EmailJS Service ID, Template ID and Public Key first"); return; }
-  }else{
-    if(!cfg.email){ showToast("Enter your FormSubmit inbox email first"); return; }
-  }
+  if(!cfg || !cfg.enabled){ showToast("Enable auto email first, then Save"); return; }
   const n = Math.floor(1000000 + Math.random() * 9000000);
   const test = {
-    id: "NS-" + n,
+    id: "TEST-" + n,
     date: new Date().toISOString(),
     cur: curCode, rate: rateOf(curCode),
-    customer: { first:"Test", last:"Order", email: cfg.provider === "emailjs" ? (recipients[0] || "") : cfg.email, address:"", country:"Hong Kong SAR", phone:"", contact:"" },
-    items: [{ id:"3", name:"Sample Product", cat:"other", price: 10, qty: 1 }],
+    customer: { first:"Test", last:"Order", email:"", address:"", country:"Hong Kong SAR", phone:"", contact:"" },
+    items: [{ id:"0", name:"Test Product", cat:"other", price: 10, qty: 1 }],
     total: 10, status:"New"
   };
-  showToast("Sending test order email…");
+  showToast("Sending test email…");
   const r = await sendOrderEmail(test, cfg);
   if(r.ok){
-    showToast(cfg.provider === "emailjs" ? "Test email sent to " + recipients.join(", ") : "Test email sent — confirm the FormSubmit activation link in your inbox");
+    showToast("Test email sent — check inbox");
   }else{
-    const errMap = {
-      "emailjs-config": "EmailJS keys incomplete — fill Service ID, Template ID and Public Key",
-      "emailjs-error": "EmailJS error: " + (r.detail || "check keys & template"),
-      "sdk-missing": "EmailJS library failed to load — check internet connection",
-      "not-configured": "Email not enabled — enable auto email and save first",
-      "network": "Network error — check your connection and try again"
-    };
-    showToast(errMap[r.reason] || ("Email failed — " + (r.reason || "unknown error")));
+    showToast("Failed: " + (r.detail || r.reason || "unknown error"));
   }
 }
 function saveThemeForm(){
