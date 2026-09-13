@@ -1385,7 +1385,14 @@ async function doLogin(){
       
       if(!profileError && profileData && (profileData.role === 'admin' || profileData.role === 'superadmin')){
         /* User is an admin, keep Supabase Auth session active */
-        showToast("Welcome, " + (profileData.name || data.user.email));
+        showToast("Welcome, " + (profileData.name || data.user.email) + " — loading admin data...");
+        /* Reload all data with admin permissions (orders, accounts, quotes, etc.) */
+        try {
+          _cache.loaded = false;
+          await sbLoadAll();
+        } catch(e) {
+          console.warn("Failed to reload admin data:", e);
+        }
         location.hash = "#/admin/dashboard";
         return;
       }else{
@@ -1412,7 +1419,14 @@ async function doLogin(){
       if(isValid){
         /* Set legacy admin session */
         setAdminSession(admin.user, admin.name || admin.user);
-        showToast("Welcome, " + (admin.name || admin.user));
+        showToast("Welcome, " + (admin.name || admin.user) + " — loading admin data...");
+        /* Reload all data with admin permissions */
+        try {
+          _cache.loaded = false;
+          await sbLoadAll();
+        } catch(e) {
+          console.warn("Failed to reload admin data:", e);
+        }
         location.hash = "#/admin/dashboard";
         return;
       }
