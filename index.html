@@ -2056,7 +2056,7 @@ function orderEmailText(o, storeName){
 async function mailOrder(o){
   const cfg = getMailCfg();
   const recipients = mailRecipients(cfg);
-  if(!cfg || !cfg.enabled || (cfg.provider === "emailjs" ? (!cfg.serviceId || !cfg.templateId || !cfg.publicKey) : !cfg.email)){
+  if(!cfg || !cfg.enabled){
     showToast("Order email not sent — set up Admin → Order Emails first");
     return;
   }
@@ -2547,7 +2547,7 @@ function placeOrder(){
   // auto-send email to store inbox when configured
   const cfg = getMailCfg();
   const recipients = mailRecipients(cfg);
-  const mailReady = cfg && cfg.enabled && (cfg.provider === "emailjs" ? (cfg.serviceId && cfg.templateId && cfg.publicKey) : !!cfg.email);
+  const mailReady = cfg && cfg.enabled;
   if(mailReady){
     const st = $("#ocEmailState");
     if(st) st.textContent = "Sending order email…";
