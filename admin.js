@@ -856,18 +856,33 @@ function adminTheme(){
 function adminEmails(){
   const mc = getMailCfg();
   const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Auto-send every new order to your inbox — EmailJS credentials are configured server-side as Vercel env vars.</div></div></div>' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Server-side email via Vercel Edge Function — API keys are managed in Vercel env vars</div></div></div>' +
     '<div class="panel-body">' +
       '<div class="form-grid">' +
-        '<div class="field full"><label>Email sending</label><select id="mailEnabled"><option value="1"' + (mc.enabled ? " selected" : "") + '>On — send order emails automatically</option><option value="0"' + (!mc.enabled ? " selected" : "") + '>Off — keep manual email button only</option></select></div>' +
-        '<div class="field full"><div class="form-hint">EmailJS service ID, template IDs and API keys are stored in Vercel environment variables (<code>EMAILJS_SERVICE_ID</code>, <code>EMAILJS_TEMPLATE_ID</code>, <code>EMAILJS_CONTACT_TEMPLATE_ID</code>, <code>EMAILJS_PUBLIC_KEY</code>, <code>EMAILJS_PRIVATE_KEY</code>). Recipients are also configured server-side. This toggle only controls whether emails are sent automatically.</div></div>' +
+        '<div class="field full" id="emailStatus"><label>Status</label><div style="padding:10px;border-radius:8px;background:#f0f0f0;color:#666" id="emailStatusText">Checking...</div></div>' +
+        '<div class="field full"><label>Enable auto email</label><select id="mailEnabled"><option value="1"' + (mc.enabled ? " selected" : "") + '>On — send order emails automatically</option><option value="0"' + (!mc.enabled ? " selected" : "") + '>Off — keep manual email button only</option></select></div>' +
+        '<div class="field full"><div class="form-hint">Email is sent server-side via Vercel Edge Function. API keys are stored in Vercel environment variables — not visible to clients. To change keys, update env vars in Vercel dashboard.</div></div>' +
       '</div>' +
-      '<button class="btn" style="margin-top:4px" onclick="saveMailForm()">Save Email Settings</button>' +
+      '<button class="btn" style="margin-top:4px" onclick="saveMailForm()">Save</button>' +
       '<button class="btn ghost" style="margin-top:4px;margin-left:8px" onclick="sendTestOrderEmail()">Send Test Email</button>' +
-      '<div class="form-hint" style="margin-top:10px"><b>Still not receiving order emails?</b> (1) Save settings with email enabled; (2) click <b>Send Test Email</b>; (3) check Vercel env vars are set correctly. Orders are always saved in Admin → Orders and downloadable as Excel/CSV regardless of email.</div>' +
     '</div></div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Order Emails";
+  /* Check server config status */
+  fetch("/api/email-config").then(r => r.json()).then(cfg => {
+    const el = $("#emailStatusText");
+    if(!el) return;
+    if(cfg.configured){
+      el.style.background = "#d4edda"; el.style.color = "#155724";
+      el.innerHTML = "<b>Email is configured and active.</b> Orders and contact forms are sent automatically via server.";
+    }else{
+      el.style.background = "#f8d7da"; el.style.color = "#721c24";
+      el.innerHTML = "<b>Email not configured.</b> Set EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, and EMAILJS_PUBLIC_KEY in Vercel env vars.";
+    }
+  }).catch(() => {
+    const el = $("#emailStatusText");
+    if(el){ el.style.background = "#f8d7da"; el.style.color = "#721c24"; el.innerHTML = "Could not check email config."; }
+  });
 }
 function adminContent(){
   const c = getContent();
