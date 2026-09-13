@@ -1092,9 +1092,25 @@ function shade(hex, pct, soft){
 }
 
 /* ---- Admin auth & route ---- */
-function viewAdminLogin(msg){
+async function viewAdminLogin(msg){
   const admins = getAdmins();
-  const hasAdmins = admins && admins.length > 0;
+  let hasAdmins = admins && admins.length > 0;
+  
+  /* Also check profiles table for admin accounts (Supabase Auth) */
+  if(!hasAdmins && typeof supabase !== 'undefined'){
+    try{
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .in('role', ['admin', 'superadmin'])
+        .limit(1);
+      if(!error && profileData && profileData.length > 0){
+        hasAdmins = true;
+      }
+    }catch(e){
+      console.log("Failed to check profiles for admins:", e.message);
+    }
+  }
   
   if(!hasAdmins){
     /* No admins exist — show initialization page */
