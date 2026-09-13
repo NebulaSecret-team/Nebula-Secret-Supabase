@@ -7,6 +7,7 @@
 // - EMAILJS_PUBLIC_KEY: Your EmailJS public key
 // - EMAILJS_PRIVATE_KEY: Your EmailJS private key (secret, never expose to client)
 // - ALLOWED_ORIGINS: Comma-separated list of allowed origins (CORS)
+// - MAIL_RECIPIENTS: Comma-separated list of email recipients (overrides client-provided to_email)
 
 export const config = {
   runtime: 'edge',
@@ -15,33 +16,48 @@ export const config = {
 // Best-effort per-instance rate limit (edge isolates don't share state:
 // 10 requests/min per IP here; pair with Vercel Firewall/WAF for strict limits)
 const _rl = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000;
+const RATE_LIMIT_MAX = 10;
+
 function checkRateLimit(ip) {
   const now = Date.now();
-  const win = 60 * 1000;
-  const max = 10;
-  let rec = _rl.get(ip);
-  if (!rec || now - rec.t > win) rec = { n: 0, t: now };
-  rec.n += 1;
-  _rl.set(ip, rec);
-  if (_rl.size > 5000) _rl.delete(_rl.keys().next().value);
-  return rec.n <= max ? 0 : Math.ceil((win - (now - rec.t)) / 1000);
-}
-
-function clientIp(req) {
-  const fwd = req.headers.get('x-forwarded-for');
-  return (fwd ? fwd.split(',')[0] : req.headers.get('x-real-ip') || 'unknown').trim();
-}
-
-// Allowlist + sanitize template params (max 30 fields, strings capped at 2000 chars)
-function cleanParams(params) {
-  if (!params || typeof params !== 'object' || Array.isArray(params)) return null;
-  const clean = {};
-  for (const [k, v] of Object.entries(params).slice(0, 30)) {
-    if (typeof k !== 'string' || k.length > 64) continue;
-    if (typeof v === 'string') clean[k] = v.slice(0, 2000);
-    else if (typeof v === 'number' || typeof v === 'boolean') clean[k] = v;
+  const windowStart = now - RATE_LIMIT_WINDOW;
+  for (const [key, value] of _rl.entries()) {
+    if (value.timestamp < windowStart) _rl.delete(key);
   }
-  return clean;
+  const key = ip || 'unknown';
+  const entry = _rl.get(key);
+  if (!entry) {
+    _rl.set(key, { count: 1, timestamp: now });
+    return { allowed: true, remaining: RATE_LIMIT_MAX - 1 };
+  }
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return { allowed: false, remaining: 0, retryAfter: Math.ceil((entry.timestamp + RATE_LIMIT_WINDOW - now) / 1000) };
+  }
+  entry.count++;
+  return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count };
+}
+
+// Whitelist of allowed template parameters
+// Prevents clients from controlling sensitive fields like to_email
+const ALLOWED_ORDER_PARAMS = [
+  'store_name', 'order_no', 'date', 'customer', 'email', 'phone',
+  'contact', 'address', 'items', 'total', 'currency', 'rate', 'status', 'message'
+];
+
+const ALLOWED_CONTACT_PARAMS = [
+  'from_name', 'from_email', 'company', 'inquiry_type', 'subject',
+  'message', 'reply_to', 'store_name', 'date'
+];
+
+function filterParams(params, allowedKeys) {
+  const filtered = {};
+  for (const key of allowedKeys) {
+    if (params[key] !== undefined) {
+      filtered[key] = params[key];
+    }
+  }
+  return filtered;
 }
 
 export default async function handler(req) {
@@ -62,11 +78,21 @@ export default async function handler(req) {
   }
 
   // Per-IP rate limit
-  const wait = checkRateLimit(clientIp(req));
-  if (wait > 0) {
-    return new Response(JSON.stringify({ error: 'Too many requests, try again later' }), {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+             req.headers.get('x-real-ip') || 'unknown';
+  const rateLimit = checkRateLimit(ip);
+  if (!rateLimit.allowed) {
+    return new Response(JSON.stringify({
+      ok: false,
+      error: 'Rate limit exceeded',
+      retryAfter: rateLimit.retryAfter
+    }), {
       status: 429,
-      headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
+      headers: {
+        'Content-Type': 'application/json',
+        'Retry-After': String(rateLimit.retryAfter),
+        ...getCorsHeaders(req)
+      },
     });
   }
 
@@ -74,16 +100,17 @@ export default async function handler(req) {
     const body = await req.json();
     const { type, params } = body;
 
-    // Strict allowlist validation
-    if (!['order', 'contact'].includes(type)) {
-      return new Response(JSON.stringify({ error: 'Invalid type' }), {
+    // Validate request structure
+    if (!type || !params || typeof params !== 'object') {
+      return new Response(JSON.stringify({ error: 'Missing or invalid type or params' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
       });
     }
-    const clean = cleanParams(params);
-    if (!clean) {
-      return new Response(JSON.stringify({ error: 'Invalid params' }), {
+
+    // Validate type allowlist
+    if (!['order', 'contact'].includes(type)) {
+      return new Response(JSON.stringify({ error: 'Invalid email type' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
       });
@@ -93,6 +120,7 @@ export default async function handler(req) {
     const serviceId = process.env.EMAILJS_SERVICE_ID;
     const publicKey = process.env.EMAILJS_PUBLIC_KEY;
     const privateKey = process.env.EMAILJS_PRIVATE_KEY;
+    const mailRecipients = process.env.MAIL_RECIPIENTS || '';
 
     let templateId;
     if (type === 'contact') {
@@ -104,10 +132,33 @@ export default async function handler(req) {
     // Validate configuration
     if (!serviceId || !templateId || !publicKey || !privateKey) {
       console.error('EmailJS configuration missing');
-      return new Response(JSON.stringify({ error: 'Email service not configured' }), {
+      return new Response(JSON.stringify({
+        ok: false,
+        error: 'Email service not configured'
+      }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
       });
+    }
+
+    // Filter params to whitelist (prevents client from controlling to_email etc.)
+    const allowedKeys = type === 'contact' ? ALLOWED_CONTACT_PARAMS : ALLOWED_ORDER_PARAMS;
+    const filteredParams = filterParams(params, allowedKeys);
+
+    // Override to_email with server-configured recipients (security)
+    if (mailRecipients) {
+      filteredParams.to_email = mailRecipients;
+    }
+
+    // Build EmailJS payload
+    const emailjsPayload = {
+      service_id: serviceId,
+      template_id: templateId,
+      user_id: publicKey,
+      template_params: filteredParams,
+    };
+    if (privateKey) {
+      emailjsPayload.accessToken = privateKey;
     }
 
     // Send email via EmailJS REST API
@@ -115,34 +166,36 @@ export default async function handler(req) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Origin': req.headers.get('origin') || 'https://nebula-secret-supabase.vercel.app',
       },
-      body: JSON.stringify({
-        service_id: serviceId,
-        template_id: templateId,
-        user_id: publicKey,
-        accessToken: privateKey,
-        template_params: clean,
-      }),
+      body: JSON.stringify(emailjsPayload),
     });
 
     if (response.ok) {
       return new Response(JSON.stringify({ ok: true, message: 'Email sent successfully' }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+          ...getCorsHeaders(req)
+        },
       });
     } else {
-      // Log upstream detail server-side only; never proxy it to the client
+      // Don't leak internal error details to client
       const errorText = await response.text();
-      console.error('EmailJS error:', response.status, errorText);
-      return new Response(JSON.stringify({ ok: false, error: 'Failed to send email' }), {
-        status: 500,
+      console.error('[Edge Function] EmailJS error:', response.status, errorText.substring(0, 500));
+      return new Response(JSON.stringify({
+        ok: false,
+        error: 'Failed to send email'
+      }), {
+        status: 502,
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
       });
     }
   } catch (error) {
-    console.error('Edge function error:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+    console.error('[Edge Function] Internal error:', error.message);
+    return new Response(JSON.stringify({
+      error: 'Internal server error'
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
     });
@@ -150,22 +203,20 @@ export default async function handler(req) {
 }
 
 function getCorsHeaders(req) {
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://nebula-secret-supabase.vercel.app').split(',');
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://nebula-secret-supabase.vercel.app').split(',').map(s => s.trim());
   const origin = req.headers.get('origin');
-  
+
   if (origin && allowedOrigins.includes(origin)) {
     return {
       'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Max-Age': '86400',
+      'Vary': 'Origin',
     };
   }
-  
+
   return {
-    'Access-Control-Allow-Origin': allowedOrigins[0],
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Max-Age': '86400',
+    'Content-Type': 'application/json',
   };
 }

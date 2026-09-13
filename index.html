@@ -37,17 +37,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nebula Secret — Wholesale Supplier &amp; OEM/ODM Manufacturer</title>
 <meta name="description" content="Nebula Secret is a wholesale supplier and OEM/ODM manufacturer of skincare, body care, home wellness and more — everyday products found in department stores, sourced globally and tailored to your requirements.">
+<meta name="keywords" content="wholesale skincare, OEM cosmetics, ODM beauty products, private label skincare, wholesale body care, home wellness products, bulk cosmetics, custom formulation">
+<meta name="author" content="Nebula Secret">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://nebula-secret-supabase.vercel.app/">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://nebula-secret-supabase.vercel.app/">
+<meta property="og:title" content="Nebula Secret — Wholesale Supplier & OEM/ODM Manufacturer">
+<meta property="og:description" content="Wholesale supplier and OEM/ODM manufacturer of skincare, body care, home wellness and more. Everyday products found in department stores, sourced globally and tailored to your requirements.">
+<meta property="og:image" content="https://nebula-secret-supabase.vercel.app/images/Neubla_logo_black_1729172124.png">
+<meta property="og:site_name" content="Nebula Secret">
+<meta property="og:locale" content="en_US">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:url" content="https://nebula-secret-supabase.vercel.app/">
+<meta name="twitter:title" content="Nebula Secret — Wholesale Supplier & OEM/ODM Manufacturer">
+<meta name="twitter:description" content="Wholesale supplier and OEM/ODM manufacturer of skincare, body care, home wellness and more.">
+<meta name="twitter:image" content="https://nebula-secret-supabase.vercel.app/images/Neubla_logo_black_1729172124.png">
+
 <link rel="icon" type="image/png" href="images/icon_512x512_android_ODEwMj.png">
+<link rel="apple-touch-icon" href="images/icon_512x512_android_ODEwMj.png">
+<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Comfortaa:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
 <style>
 /* ================= Design tokens ================= */
 :root{
-  --brand:#ff5983; --brand-dark:#e6436e; --brand-soft:#ffe3ec;
+  --brand:#ff5983; --brand-dark:#e6436e; --brand-soft:#ffe3ec; --brand-light:#ffe3ec;
   --accent:#25bab5; --accent-soft:#d9f4f2;
   --nav-bg:#232228; --nav-link:#e8e6ec;
   --bg:#f4f4f6; --card:#ffffff;
   --ink:#1f1e23; --ink-soft:#6f6a72;
-  --line:#e5e3e8; --line-dark:#d5d2da;
+  --line:#e5e3e8; --line-dark:#d5d2da; --border:#e5e3e8;
+  --danger:#c43a3a; --danger-soft:#fdecec;
+  --success:#1e8e3e; --success-soft:#e6f4ea;
+  --warning:#b96a00; --warning-soft:#fef4e2;
   --shadow:0 10px 30px rgba(31,30,35,.09);
   --shadow-sm:0 2px 8px rgba(31,30,35,.06);
   --radius:12px; --radius-sm:8px;
@@ -604,6 +630,7 @@ table.admin-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .acct-order .ao-items{font-size:13px;color:var(--ink-soft);line-height:1.6}
 .acct-order .ao-total{font-weight:700;margin-top:6px;font-size:14px}
 .acct-order .ao-top .badge{position:static;display:inline-block;font-size:11px;padding:4px 12px}
+.quote-view-btn:hover{background:var(--brand);transform:none;box-shadow:none}
 .status-badge{cursor:help;transition:all 0.2s ease;position:relative}
 .status-badge:hover{transform:scale(1.08);box-shadow:0 2px 8px rgba(0,0,0,0.15);filter:brightness(1.1)}
 .cat-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line)}
@@ -636,7 +663,7 @@ details.ct-block > .form-grid{padding:14px 16px}
   .topbar{display:none}
   .topbar-right .hide-m{display:none}
   .header-inner{padding:12px 16px;gap:10px;flex-wrap:wrap;align-items:center}
-  .menu-toggle{display:none}
+  .menu-toggle{display:grid}
   .brand{flex:0 0 auto;min-width:0;gap:8px}
   .brand img{width:34px;height:34px}
   .brand-name{font-size:15px;white-space:nowrap;min-width:0;line-height:1.2}
@@ -1477,10 +1504,43 @@ function setSession(s){
   }
 }
 
+/* Async session - syncs Supabase Auth session to localStorage */
+async function getSessionAsync(){
+  try {
+    if(!supabase) return getSession();
+    const { data: { session } } = await supabase.auth.getSession();
+    if(session && session.user){
+      const user = session.user;
+      const s = {
+        name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+        email: user.email,
+        supabaseAuth: true,
+        userId: user.id
+      };
+      setSession(s);
+      return s;
+    }
+  } catch(e) {
+    console.warn("Supabase Auth session check failed:", e);
+  }
+  return getSession();
+}
+
+/* Sync Supabase Auth session on page load */
+async function syncAuthSession(){
+  try {
+    await getSessionAsync();
+    if(typeof updateAcctLabel === 'function') updateAcctLabel();
+  } catch(e) {
+    console.warn("Auth session sync failed:", e);
+  }
+}
+
 /* ============ Quotes / Inquiries ============ */
 function getQuotes(){ return _cache.quotes || []; }
 function saveQuotes(q){ _cache.quotes = q; sbSave("quotes", q); }
 function findQuoteById(id){ return getQuotes().find(q => q.id === id); }
+function findOrderById(id){ return getOrders().find(o => o.id === id); }
 
 /* Status descriptions for tooltip */
 function statusDesc(status){
@@ -1553,6 +1613,7 @@ function myOrders(email){ return getOrders().filter(o => String(custEmail(o)).to
 function getAdmins(){
   const raw = _cache.admins;
   if(!raw || !Array.isArray(raw) || raw.length === 0){
+    /* Return empty array — no default admin for security */
     return [];
   }
   // Normalize: support both legacy {u,p} and current {user,pass} formats
@@ -1764,6 +1825,56 @@ async function sendViaEmailJS(o, cfg){
     return {ok:false, reason:"network", detail: String(e && e.message ? e.message : e)};
   }
 }
+
+/* Build contact form email template params */
+function contactTemplateParams(formData, cfg){
+  const recipients = (cfg.mailTo || "").split(",").map(s => s.trim()).filter(Boolean);
+  return {
+    from_name: formData.name,
+    from_email: formData.email,
+    to_email: recipients.join(", "),
+    company: formData.company || "Not provided",
+    inquiry_type: formData.type,
+    subject: "New " + formData.type + " Inquiry from " + formData.name + " — Nebula Secret",
+    message: formData.message,
+    reply_to: formData.email,
+    store_name: (getTheme() || {}).storeName || "Nebula Secret",
+    date: new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" })
+  };
+}
+
+/* Send email via Vercel Edge Function (private key stored server-side) */
+async function sendViaEdgeFunction(o, cfg, type){
+  try{
+    const edgeUrl = "/api/send-email";
+    const params = type === "order" ? emailTemplateParams(o, cfg) : contactTemplateParams(o, cfg);
+    
+    const response = await fetch(edgeUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: type, // "order" or "contact"
+        params: params,
+      }),
+    });
+    
+    if(!response.ok){
+      const errorText = await response.text();
+      return {ok:false, reason:"edge-function-error", detail:"Edge Function returned " + response.status + ": " + errorText};
+    }
+    
+    const result = await response.json();
+    if(result.ok){
+      return {ok:true, resp: result};
+    }else{
+      return {ok:false, reason: result.reason || "edge-function-failed", detail: result.detail || result.error || "Unknown error"};
+    }
+  }catch(e){
+    return {ok:false, reason:"edge-function-unavailable", detail: String(e && e.message ? e.message : e)};
+  }
+}
 async function sendViaFormSubmit(o, cfg){
   if(!cfg.email) return {ok:false, reason:"not-configured"};
   try{
@@ -1779,8 +1890,8 @@ async function sendViaFormSubmit(o, cfg){
       "Phone": o.customer.phone || "",
       "Preferred Contact": o.customer.contact || "",
       "Shipping Address": (o.customer.address || "Not provided") + (o.customer.country ? ", " + o.customer.country : ""),
-      "Items": o.items.map(it => it.name + " x" + it.qty + " @ " + fmtIn(it.price * r, cur) + " = " + fmtIn(it.price * it.qty * r, cur)).join("; "),
-      "Order Total": fmtIn(o.total * r, cur) + " (" + cur + ")",
+      "Items": o.items.map(it => it.name + " x" + it.qty + " @ " + fmtIn(it.price, cur, r) + " = " + fmtIn(it.price * it.qty, cur, r)).join("; "),
+      "Order Total": fmtIn(o.total, cur, r) + " (" + cur + ")",
       "Status": o.status,
       "Details": orderEmailText(o, getTheme().storeName)
     };
@@ -1860,10 +1971,10 @@ function orderEmailText(o, storeName){
   lines.push("");
   lines.push("Items:");
   o.items.forEach(it => {
-    lines.push("  - " + it.name + " x" + it.qty + "  @ " + fmtIn(it.price * r, cur) + "  = " + fmtIn(it.price * it.qty * r, cur));
+    lines.push("  - " + it.name + " x" + it.qty + "  @ " + fmtIn(it.price, cur, r) + "  = " + fmtIn(it.price * it.qty, cur, r));
   });
   lines.push("");
-  lines.push("Total: " + fmtIn(o.total * r, cur));
+  lines.push("Total: " + fmtIn(o.total, cur, r));
   lines.push("Shipping: Quoted by our sales team per order");
   lines.push("");
   lines.push("Thank you for shopping with " + (storeName || "Nebula Secret") + "!");
@@ -3421,7 +3532,7 @@ function viewAccount(){
 async function sbRefreshKey(key){
   try{
     const { data, error } = await supabase.from('site_settings').select('data').eq('id', key).single();
-    if(!error && data){ _cache[key] = data.data; if(key === "orders" || key === "quotes"){ if(location.hash.startsWith("#/account")) viewAccount(); } }
+    if(!error && data){ _cache[key] = data.data; }
   }catch(e){}
 }
 function accountSignIn(){
@@ -3452,7 +3563,7 @@ function acctTab(which){
   l.classList.toggle("active", isLogin); r.classList.toggle("active", !isLogin);
   li.style.display = isLogin ? "" : "none"; ri.style.display = isLogin ? "none" : "";
 }
-function acctRegister(){
+async function acctRegister(){
   const name = $("#regName").value.trim();
   const email = $("#regEmail").value.trim().toLowerCase();
   const pass = $("#regPass").value;
@@ -3460,6 +3571,45 @@ function acctRegister(){
   if(!name){ err.textContent = "Please enter your name"; return; }
   if(!email || !/.+@.+\..+/.test(email)){ err.textContent = "Please enter a valid email"; return; }
   if(pass.length < 6){ err.textContent = "Password must be at least 6 characters"; return; }
+  
+  /* Method 1: Try Supabase Auth first */
+  try {
+    if(supabase){
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: pass,
+        options: {
+          data: { name, role: 'customer' }
+        }
+      });
+      if(!error && data && data.user){
+        /* Also save to legacy accounts for backward compatibility */
+        const accs = getAccounts();
+        if(!accs.some(a => a.email === email)){
+          return hashPass(pass).then(hash => {
+            accs.push({ name, email, pass: hash, created: new Date().toISOString() });
+            saveAccounts(accs);
+            setSession({ name, email, supabaseAuth: true, userId: data.user.id });
+            updateAcctLabel();
+            showToast("Welcome, " + name.split(" ")[0] + "!");
+            route();
+          });
+        }
+        setSession({ name, email, supabaseAuth: true, userId: data.user.id });
+        updateAcctLabel();
+        showToast("Welcome, " + name.split(" ")[0] + "!");
+        route();
+        return;
+      }
+      if(error && error.message !== "User already registered"){
+        console.log("Supabase Auth signup failed, trying legacy method:", error.message);
+      }
+    }
+  } catch(e) {
+    console.log("Supabase Auth signup exception, trying legacy method:", e.message);
+  }
+  
+  /* Method 2: Try legacy account system */
   const accs = getAccounts();
   if(accs.some(a => a.email === email)){ err.textContent = "An account with this email already exists — sign in instead"; return; }
   return hashPass(pass).then(hash => {
@@ -3471,16 +3621,34 @@ function acctRegister(){
     route();
   });
 }
-function acctLogin(){
+async function acctLogin(){
   const email = $("#acEmail").value.trim().toLowerCase();
   const pass = $("#acPass").value;
   const err = $("#acctErr");
   if(!email || !pass){ err.textContent = "Please enter your email and password"; return; }
+  
+  /* Method 1: Try Supabase Auth first */
+  try {
+    if(supabase){
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+      if(!error && data && data.user){
+        const name = data.user.user_metadata?.name || email.split('@')[0];
+        setSession({ name, email, supabaseAuth: true, userId: data.user.id });
+        updateAcctLabel();
+        showToast("Signed in as " + name.split(" ")[0]);
+        route();
+        return;
+      }
+    }
+  } catch(e) {
+    console.warn("Supabase Auth login failed, trying legacy method");
+  }
+  
+  /* Method 2: Legacy account system with throttle + PBKDF2 upgrade */
   const wait = checkLoginThrottle("acct:" + email);
   if(wait > 0){ err.textContent = "Too many failed attempts. Try again in " + wait + "s."; return; }
   const acc = getAccounts().find(a => a.email === email);
   if(!acc){ recordLoginFail("acct:" + email); err.textContent = "No account found with this email — create one above"; return; }
-  /* verifyPass handles pbkdf2/sha256/plain formats (never compare fresh hashes with ===) */
   return verifyPass(pass, acc.pass).then(async valid => {
     if(!valid){ recordLoginFail("acct:" + email); err.textContent = "Incorrect password"; return; }
     clearLoginFails("acct:" + email);
@@ -3560,6 +3728,9 @@ function viewCustomerQuote(id){
   const q = findQuoteById(id);
   const s = getSession();
   if(!q){
+    /* Data may not be loaded yet on direct navigation — stay on this hash;
+       the post-load route() will retry. */
+    if(!_cache.loaded) return;
     showToast("Quote not found — please refresh the page");
     return;
   }
@@ -3585,7 +3756,7 @@ function viewCustomerQuote(id){
     '<div class="acct-card">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px">' +
         '<div><h2 style="margin:0">Quote ' + esc(q.id) + '</h2><p class="sub" style="margin:4px 0 0">' + fmtDT(q.date) + '</p></div>' +
-        '<span class="badge" style="font-size:14px;padding:8px 16px">' + esc(isExpired && q.status === "Quoted" ? "Expired" : q.status) + '</span>' +
+        '<span class="badge" style="font-size:14px;padding:8px 16px;position:static;display:inline-block">' + esc(isExpired && q.status === "Quoted" ? "Expired" : q.status) + '</span>' +
       '</div>' +
       '<div class="ov-grid" style="margin-bottom:20px">' +
         '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(qCustName(q)) + '</div></div>' +
@@ -3776,6 +3947,9 @@ function viewCustomerOrder(id){
   const o = findOrderById(id);
   const s = getSession();
   if(!o || !s || String(custEmail(o)).toLowerCase() !== String(s.email).toLowerCase()){
+    /* Data may not be loaded yet on direct navigation (boot route() runs before
+       sbLoadAll finishes) — stay on this hash; the post-load route() will retry. */
+    if(!_cache.loaded) return;
     showToast("Order not found");
     location.hash = "#/account";
     return;
@@ -3789,7 +3963,7 @@ function viewCustomerOrder(id){
     '<div class="acct-card">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px">' +
         '<div><h2 style="margin:0">Order ' + esc(o.id) + '</h2><p class="sub" style="margin:4px 0 0">' + fmtDT(o.date) + '</p></div>' +
-        '<span class="badge" style="font-size:14px;padding:8px 16px">' + esc(o.status) + '</span>' +
+        '<span class="badge" style="font-size:14px;padding:8px 16px;position:static;display:inline-block">' + esc(o.status) + '</span>' +
       '</div>' +
       '<div class="ov-grid" style="margin-bottom:20px">' +
         '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(custName(o)) + '</div></div>' +
@@ -3857,10 +4031,50 @@ function submitCustomerOrderNote(id){
 function changePassOpen(){
   const b = $("#passBox"); if(b) b.style.display = "";
 }
-function changePassSave(){
+async function changePassSave(){
   const s = getSession(); if(!s) return;
   const oldP = $("#cpOld").value, newP = $("#cpNew").value;
   const err = $("#cpErr");
+  
+  /* Method 1: Try Supabase Auth first if logged in via Supabase */
+  if(s.supabaseAuth){
+    try {
+      if(supabase){
+        /* First verify old password by signing in */
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: s.email,
+          password: oldP
+        });
+        if(signInError){
+          err.textContent = "Current password is incorrect";
+          return;
+        }
+        if(newP.length < 6){ err.textContent = "New password must be at least 6 characters"; return; }
+        
+        /* Update password */
+        const { error: updateError } = await supabase.auth.updateUser({ password: newP });
+        if(!updateError){
+          /* Also update legacy account for backward compatibility */
+          const accs = getAccounts();
+          const acc = accs.find(a => a.email === s.email);
+          if(acc){
+            const nh = await hashPass(newP);
+            acc.pass = nh;
+            saveAccounts(accs);
+          }
+          showToast("Password updated");
+          const o1 = $("#cpOld"), o2 = $("#cpNew");
+          if(o1) o1.value = ""; if(o2) o2.value = "";
+          const b = $("#passBox"); if(b) b.style.display = "none";
+          return;
+        }
+      }
+    } catch(e) {
+      console.log("Supabase Auth password update failed, trying legacy method:", e.message);
+    }
+  }
+  
+  /* Method 2: Legacy account system */
   const accs = getAccounts();
   const acc = accs.find(a => a.email === s.email);
   if(!acc){ err.textContent = "Account not found"; return; }
@@ -3877,7 +4091,15 @@ function changePassSave(){
     });
   });
 }
-function acctLogout(){
+async function acctLogout(){
+  /* Sign out from Supabase Auth if logged in */
+  try {
+    if(supabase){
+      await supabase.auth.signOut();
+    }
+  } catch(e) {
+    console.warn("Supabase Auth signout error:", e);
+  }
   setSession(null);
   updateAcctLabel();
   showToast("Signed out");
@@ -4000,6 +4222,8 @@ sbLoadAll().then(() => {
   applyFooterContent();
   renderCatNav();
   buildCurSel();
+  /* Sync Supabase Auth session to localStorage */
+  if(typeof syncAuthSession === 'function') syncAuthSession();
   updateAcctLabel();
   if(typeof route === "function") route();
 });
@@ -4018,6 +4242,15 @@ window.addEventListener("hashchange", () => {
   if(mm) mm.classList.remove("open");
 });
 window.addEventListener("resize", syncSticky);
+window.addEventListener("load", syncSticky);
+if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ syncSticky(); }); }
+/* Header height can change after first measure (webfonts, logo image, account
+   label) — keep the sticky category bar offset in sync so it never slides
+   under the header when scrolling. */
+if(typeof ResizeObserver !== "undefined"){
+  var _sh = document.getElementById("siteHeader");
+  if(_sh){ new ResizeObserver(function(){ syncSticky(); }).observe(_sh); }
+}
 route();
 
 /* ============ Supabase Keep-Alive (prevent 7-day pause) ============ */
