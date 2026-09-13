@@ -12,16 +12,20 @@ export default async function handler(req) {
     });
   }
 
-  const hasKeys = !!(
-    process.env.EMAILJS_SERVICE_ID &&
-    process.env.EMAILJS_TEMPLATE_ID &&
-    process.env.EMAILJS_PUBLIC_KEY
-  );
+  const params = {
+    EMAILJS_SERVICE_ID: !!process.env.EMAILJS_SERVICE_ID,
+    EMAILJS_TEMPLATE_ID: !!process.env.EMAILJS_TEMPLATE_ID,
+    EMAILJS_CONTACT_TEMPLATE_ID: !!process.env.EMAILJS_CONTACT_TEMPLATE_ID,
+    EMAILJS_PUBLIC_KEY: !!process.env.EMAILJS_PUBLIC_KEY,
+    EMAILJS_PRIVATE_KEY: !!process.env.EMAILJS_PRIVATE_KEY,
+    MAIL_RECIPIENTS: !!process.env.MAIL_RECIPIENTS,
+    MAIL_ENABLED: process.env.MAIL_ENABLED !== 'false',
+    ALLOWED_ORIGINS: !!process.env.ALLOWED_ORIGINS,
+  };
 
-  // MAIL_ENABLED defaults to true if not set; set to "false" to disable
-  const mailEnabled = process.env.MAIL_ENABLED !== 'false';
+  const hasKeys = params.EMAILJS_SERVICE_ID && params.EMAILJS_TEMPLATE_ID && params.EMAILJS_PUBLIC_KEY;
 
-  return new Response(JSON.stringify({ configured: hasKeys, enabled: mailEnabled && hasKeys }), {
+  return new Response(JSON.stringify({ configured: hasKeys, enabled: params.MAIL_ENABLED && hasKeys, params }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   });

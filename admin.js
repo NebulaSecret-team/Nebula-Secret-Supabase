@@ -859,7 +859,7 @@ function adminEmails(){
     '<div class="panel-body">' +
       '<div class="form-grid">' +
         '<div class="field full" id="emailStatus"><label>Status</label><div style="padding:10px;border-radius:8px;background:#f0f0f0;color:#666" id="emailStatusText">Checking...</div></div>' +
-        '<div class="field full"><div class="form-hint">Email is enabled/disabled via <code>MAIL_ENABLED</code> env var in Vercel. Set to <code>false</code> to disable. EmailJS keys are also in Vercel env vars — not visible to clients.</div></div>' +
+        '<div class="field full" id="emailParams"><label>Vercel Environment Variables</label><div style="padding:10px;border-radius:8px;background:#f8f9fa;font-family:monospace;font-size:12px" id="emailParamsList">Loading...</div></div>' +
       '</div>' +
       '<button class="btn ghost" style="margin-top:4px" onclick="sendTestOrderEmail()">Send Test Email</button>' +
     '</div></div>';
@@ -877,7 +877,17 @@ function adminEmails(){
       el.innerHTML = "<b>Email keys are set but MAIL_ENABLED is false.</b> Set MAIL_ENABLED=true in Vercel env vars to enable.";
     }else{
       el.style.background = "#f8d7da"; el.style.color = "#721c24";
-      el.innerHTML = "<b>Email not configured.</b> Set EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY, and MAIL_ENABLED in Vercel env vars.";
+      el.innerHTML = "<b>Email not configured.</b> Set the required env vars in Vercel dashboard.";
+    }
+    /* Show parameter status */
+    const pl = $("#emailParamsList");
+    if(pl && cfg.params){
+      const rows = Object.entries(cfg.params).map(([k,v]) => {
+        const icon = v ? "✅" : "❌";
+        const val = v ? "set" : "not set";
+        return '<div style="padding:3px 0;display:flex;align-items:center;gap:8px"><span>' + icon + '</span><code style="flex:1">' + k + '</code><span style="color:' + (v ? '#155724' : '#721c24') + '">' + val + '</span></div>';
+      });
+      pl.innerHTML = rows.join("");
     }
   }).catch(() => {
     const el = $("#emailStatusText");
