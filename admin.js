@@ -1215,10 +1215,16 @@ async function doLogin(){
       password: p
     });
     if(!error && data && data.user){
-      /* Check if user has admin role */
-      const role = data.user.app_metadata?.role || data.user.user_metadata?.role;
-      if(role === 'admin' || role === 'superadmin'){
-        showToast("Welcome, " + (data.user.user_metadata?.name || data.user.email));
+      /* Check if user has admin role in profiles table */
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role, name, email')
+        .eq('email', data.user.email)
+        .single();
+      
+      if(!profileError && profileData && (profileData.role === 'admin' || profileData.role === 'superadmin')){
+        /* User is an admin, keep Supabase Auth session active */
+        showToast("Welcome, " + (profileData.name || data.user.email));
         location.hash = "#/admin/dashboard";
         return;
       }else{
