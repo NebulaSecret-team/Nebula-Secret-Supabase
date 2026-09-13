@@ -871,9 +871,10 @@ function adminTheme(){
   $("#adminTitle").textContent = "Theme";
 }
 function adminEmails(){
+  /* Fetch config from server env vars first, then merge with localStorage overrides */
   const mc = getMailCfg();
   const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Auto-send every new order to your inbox — works on GitHub Pages (no server needed)</div></div></div>' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Auto-send every new order to your inbox — server-side via Vercel Edge Function</div></div></div>' +
     '<div class="panel-body">' +
       '<div class="form-grid">' +
         '<div class="field full"><label>Email provider</label><select id="mailProvider"><option value="emailjs"' + (mc.provider === "emailjs" ? " selected" : "") + '>EmailJS (recommended — reliable, no ads, multiple recipients)</option><option value="formsubmit"' + (mc.provider !== "emailjs" ? " selected" : "") + '>FormSubmit (free — single inbox, needs one-time activation)</option></select></div>' +
@@ -901,6 +902,14 @@ function adminEmails(){
   toggleMailProvider();
   const mp = $("#mailProvider");
   if(mp) mp.onchange = toggleMailProvider;
+  /* Fetch actual config from server env vars and fill in the form */
+  fetch("/api/email-config").then(r => r.json()).then(cfg => {
+    if(cfg.serviceId) { const el = $("#mailSvc"); if(el && !el.value) el.value = cfg.serviceId; }
+    if(cfg.templateId) { const el = $("#mailTpl"); if(el && !el.value) el.value = cfg.templateId; }
+    if(cfg.contactTemplateId) { const el = $("#mailContactTpl"); if(el && !el.value) el.value = cfg.contactTemplateId; }
+    if(cfg.publicKey) { const el = $("#mailKey"); if(el && !el.value) el.value = cfg.publicKey; }
+    if(cfg.mailTo) { const el = $("#mailTo"); if(el && !el.value) el.value = cfg.mailTo; }
+  }).catch(() => {});
 }
 function adminContent(){
   const c = getContent();

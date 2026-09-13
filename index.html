@@ -1886,35 +1886,16 @@ async function sendViaEmailJS(o, cfg){
       return {ok:false, reason:rateCheck.reason, detail:rateCheck.message};
     }
     
-    /* Try Edge Function first (more secure, private key not exposed)
-       Edge Function works without any client-side EmailJS configuration */
+    
+    /* Send via Edge Function (private key stored server-side) */
     const edgeResult = await sendViaEdgeFunction(o, cfg, "order");
     if(edgeResult.ok){
       recordEmailSend();
       return edgeResult;
     }
-    console.log("Edge Function failed, falling back to EmailJS SDK:", edgeResult.reason);
-    
-    /* Fallback to EmailJS SDK (requires client-side configuration) */
-    if(!window.emailjs) return {ok:false, reason:"sdk-missing", detail:"EmailJS library failed to load"};
-    if(!cfg.serviceId || !cfg.templateId || !cfg.publicKey) {
-      return {ok:false, reason:"emailjs-config", detail:"Edge Function failed and EmailJS keys not configured. Please configure EmailJS in Admin → Order Emails, or ensure Edge Function is working."};
-    }
-    
-    const params = emailTemplateParams(o, cfg);
-    const resp = await emailjs.send(cfg.serviceId, cfg.templateId, params, { publicKey: cfg.publicKey });
-    
-    /* Record successful send for rate limiting */
-    recordEmailSend();
-    
-    return {ok: true, resp: resp};
+    return edgeResult;
   }catch(e){
-    const errorDetail = String(e && e.text ? e.text : (e && e.message ? e.message : e));
-    /* Check if error is due to domain whitelist */
-    if(errorDetail.includes('domain') || errorDetail.includes('Domain') || errorDetail.includes('not allowed')){
-      return {ok:false, reason:"domain-not-whitelisted", detail:"EmailJS domain whitelist not configured. Please add your domain in EmailJS dashboard → Account Settings → Domains."};
-    }
-    return {ok:false, reason:"emailjs-error", detail: errorDetail};
+    return {ok:false, reason:"email-error", detail: String(e && e.message ? e.message : e)};
   }
 }
 
@@ -3375,7 +3356,7 @@ async function submitContactForm(ev){
       message: message
     };
     
-    // Try Edge Function first (more secure, private key not exposed)
+    // Try Edge Function (private key stored server-side)
     const edgeResult = await sendViaEdgeFunction(formData, cfg, "contact");
     if(edgeResult.ok){
       /* Record successful send for rate limiting */
@@ -3391,38 +3372,8 @@ async function submitContactForm(ev){
       document.getElementById("cfMessage").value = "";
       return;
     }
-    console.log("Edge Function failed for contact form, falling back to EmailJS SDK:", edgeResult.reason);
-    
-    // Fallback to EmailJS SDK
-    if(!window.emailjs) throw new Error("EmailJS library not loaded");
-
-    // Build email params — these map to your EmailJS template variables
-    const params = {
-      from_name: name,
-      from_email: email,
-      to_email: recipients.join(", "),
-      company: company || "Not provided",
-      inquiry_type: type,
-      subject: "New " + type + " Inquiry from " + name + " — Nebula Secret",
-      message: message,
-      reply_to: email,
-      store_name: (getTheme() || {}).storeName || "Nebula Secret",
-      date: new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" })
-    };
-
-    // Use contact form template if configured, otherwise fall back to order template
-    const contactTpl = cfg.contactTemplateId || cfg.templateId;
-    await emailjs.send(cfg.serviceId, contactTpl, params, { publicKey: cfg.publicKey });
-
-    /* Record successful send for rate limiting */
-    recordEmailSend();
-
-    // Success
-    showCfMsg(msgEl, "#2e7d32", "Thank you, " + name + "! Your message has been sent. Our team will get back to you within 24 hours.");
-    // Reset form
-    document.getElementById("cfName").value = "";
-    document.getElementById("cfEmail").value = "";
-    document.getElementById("cfCompany").value = "";
+    // Edge Function failed — show error
+    showCfMsg(msgEl, "#c62828", "Failed to send message: " + (edgeResult.detail || edgeResult.reason || "Unknown error") + ". Please try again or contact us directly.");
     document.getElementById("cfType").value = "Wholesale";
     document.getElementById("cfMessage").value = "";
   }catch(e){
