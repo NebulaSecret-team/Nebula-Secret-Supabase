@@ -1,5 +1,4 @@
-// Vercel Edge Function: Return non-sensitive email config for admin form
-// Private key is NEVER exposed to the client
+// Vercel Edge Function: Return only whether email is configured (no keys exposed)
 
 export const config = {
   runtime: 'edge',
@@ -13,17 +12,13 @@ export default async function handler(req) {
     });
   }
 
-  const config = {
-    provider: 'emailjs',
-    serviceId: process.env.EMAILJS_SERVICE_ID || '',
-    templateId: process.env.EMAILJS_TEMPLATE_ID || '',
-    contactTemplateId: process.env.EMAILJS_CONTACT_TEMPLATE_ID || '',
-    publicKey: process.env.EMAILJS_PUBLIC_KEY || '',
-    mailTo: process.env.MAIL_RECIPIENTS || '',
-    enabled: !!(process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_TEMPLATE_ID && process.env.EMAILJS_PUBLIC_KEY),
-  };
+  const configured = !!(
+    process.env.EMAILJS_SERVICE_ID &&
+    process.env.EMAILJS_TEMPLATE_ID &&
+    process.env.EMAILJS_PUBLIC_KEY
+  );
 
-  return new Response(JSON.stringify(config), {
+  return new Response(JSON.stringify({ configured }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   });

@@ -871,45 +871,35 @@ function adminTheme(){
   $("#adminTitle").textContent = "Theme";
 }
 function adminEmails(){
-  /* Fetch config from server env vars first, then merge with localStorage overrides */
   const mc = getMailCfg();
   const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Auto-send every new order to your inbox — server-side via Vercel Edge Function</div></div></div>' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Server-side email via Vercel Edge Function — API keys are managed in Vercel env vars</div></div></div>' +
     '<div class="panel-body">' +
       '<div class="form-grid">' +
-        '<div class="field full"><label>Email provider</label><select id="mailProvider"><option value="emailjs"' + (mc.provider === "emailjs" ? " selected" : "") + '>EmailJS (recommended — reliable, no ads, multiple recipients)</option><option value="formsubmit"' + (mc.provider !== "emailjs" ? " selected" : "") + '>FormSubmit (free — single inbox, needs one-time activation)</option></select></div>' +
-        '<div class="field full" id="mailToWrap"><label>Recipients (separate multiple emails with comma)</label><input id="mailTo" type="text" value="' + esc(mc.mailTo || "") + '" placeholder="sales@yourcompany.com, manager@yourcompany.com"></div>' +
-        '<div class="field full" id="emailjsWrap">' +
-          '<div class="form-hint" style="margin-bottom:8px"><b>EmailJS setup (5 min, free):</b> 1) Sign up at <b>emailjs.com</b> → 2) Add your email service → 3) Create an Email Template with To Email <code>{{to_email}}</code> → 4) Paste the three keys below.</div>' +
-          '<div class="form-hint" style="margin-bottom:12px;padding:12px;background:#fff3cd;border:1px solid #ffeaa7;border-radius:8px"><b>⚠️ SECURITY: Configure Domain Whitelist</b><br>To prevent others from abusing your EmailJS quota, you MUST add your domain to the whitelist:<br>1. Go to <a href="https://dashboard.emailjs.com/admin/account" target="_blank" style="color:#0066cc;text-decoration:underline">EmailJS Dashboard → Account Settings</a><br>2. Find <b>Domains</b> section → Click <b>Add Domain</b><br>3. Add: <code>nebula-secret-supabase.vercel.app</code> (and your custom domain if any)<br>4. Click <b>Save</b><br><b>Current domain:</b> <code>' + esc(window.location.hostname) + '</code></div>' +
-          '<div class="form-grid">' +
-            '<div class="field"><label>Service ID</label><input id="mailSvc" type="text" value="' + esc(mc.serviceId || "") + '" placeholder="service_xxxxxxx"></div>' +
-            '<div class="field"><label>Order Template ID</label><input id="mailTpl" type="text" value="' + esc(mc.templateId || "") + '" placeholder="template_xxxxxxx"></div>' +
-            '<div class="field"><label>Contact Form Template ID</label><input id="mailContactTpl" type="text" value="' + esc(mc.contactTemplateId || "") + '" placeholder="template_xxxxxxx (leave empty to use order template)"></div>' +
-            '<div class="field full"><label>Public Key</label><input id="mailKey" type="text" value="' + esc(mc.publicKey || "") + '" placeholder="xxxxxxx"></div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="field full" id="formsubmitWrap" style="display:none"><label>FormSubmit inbox (single email)</label><input id="mailEmail" type="email" value="' + esc(mc.email || "") + '" placeholder="you@yourstore.com"></div>' +
+        '<div class="field full" id="emailStatus"><label>Status</label><div style="padding:10px;border-radius:8px;background:#f0f0f0;color:#666" id="emailStatusText">Checking...</div></div>' +
         '<div class="field full"><label>Enable auto email</label><select id="mailEnabled"><option value="1"' + (mc.enabled ? " selected" : "") + '>On — send order emails automatically</option><option value="0"' + (!mc.enabled ? " selected" : "") + '>Off — keep manual email button only</option></select></div>' +
-        '<div class="field full"><div class="form-hint" id="mailHelp"><b>EmailJS:</b> after saving, click <b>Send Test Email</b> — it sends straight to the recipients above, no activation step. <b>FormSubmit:</b> you must first confirm the one-time verification email FormSubmit sends to your inbox (check spam).</div></div>' +
+        '<div class="field full"><div class="form-hint">Email is sent server-side via Vercel Edge Function. API keys are stored in Vercel environment variables — not visible to clients. To change keys, update env vars in Vercel dashboard.</div></div>' +
       '</div>' +
-      '<button class="btn" style="margin-top:4px" onclick="saveMailForm()">Save Email Settings</button>' +
+      '<button class="btn" style="margin-top:4px" onclick="saveMailForm()">Save</button>' +
       '<button class="btn ghost" style="margin-top:4px;margin-left:8px" onclick="sendTestOrderEmail()">Send Test Email</button>' +
-      '<div class="form-hint" style="margin-top:10px"><b>Still not receiving order emails?</b> (1) Save settings, keep <b>Enable auto email</b> On; (2) click <b>Send Test Email</b>; (3) EmailJS users: watch for the toast error message and check your template/service keys. FormSubmit users: check spam folder for the verification link and click it once. Orders are always saved in Admin → Orders and downloadable as Excel/CSV regardless of email.</div>' +
     '</div></div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Order Emails";
-  toggleMailProvider();
-  const mp = $("#mailProvider");
-  if(mp) mp.onchange = toggleMailProvider;
-  /* Fetch actual config from server env vars and fill in the form */
+  /* Check server config status */
   fetch("/api/email-config").then(r => r.json()).then(cfg => {
-    if(cfg.serviceId) { const el = $("#mailSvc"); if(el && !el.value) el.value = cfg.serviceId; }
-    if(cfg.templateId) { const el = $("#mailTpl"); if(el && !el.value) el.value = cfg.templateId; }
-    if(cfg.contactTemplateId) { const el = $("#mailContactTpl"); if(el && !el.value) el.value = cfg.contactTemplateId; }
-    if(cfg.publicKey) { const el = $("#mailKey"); if(el && !el.value) el.value = cfg.publicKey; }
-    if(cfg.mailTo) { const el = $("#mailTo"); if(el && !el.value) el.value = cfg.mailTo; }
-  }).catch(() => {});
+    const el = $("#emailStatusText");
+    if(!el) return;
+    if(cfg.configured){
+      el.style.background = "#d4edda"; el.style.color = "#155724";
+      el.innerHTML = "<b>Email is configured and active.</b> Orders and contact forms are sent automatically via server.";
+    }else{
+      el.style.background = "#f8d7da"; el.style.color = "#721c24";
+      el.innerHTML = "<b>Email not configured.</b> Set EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, and EMAILJS_PUBLIC_KEY in Vercel env vars.";
+    }
+  }).catch(() => {
+    const el = $("#emailStatusText");
+    if(el){ el.style.background = "#f8d7da"; el.style.color = "#721c24"; el.innerHTML = "Could not check email config."; }
+  });
 }
 function adminContent(){
   const c = getContent();
