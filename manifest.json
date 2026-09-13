@@ -1,0 +1,16 @@
+{
+  "name": "Nebula Secret Wholesale",
+  "short_name": "Nebula Secret",
+  "description": "Wholesale supplier and OEM/ODM manufacturer of skincare, body care, home wellness and more.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f4f6",
+  "theme_color": "#ff5983",
+  "icons": [
+    {
+      "src": "images/icon_512x512_android_ODEwMj.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

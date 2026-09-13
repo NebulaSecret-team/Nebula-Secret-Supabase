@@ -37,17 +37,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nebula Secret — Wholesale Supplier &amp; OEM/ODM Manufacturer</title>
 <meta name="description" content="Nebula Secret is a wholesale supplier and OEM/ODM manufacturer of skincare, body care, home wellness and more — everyday products found in department stores, sourced globally and tailored to your requirements.">
+<meta name="keywords" content="wholesale skincare, OEM cosmetics, ODM beauty products, private label skincare, wholesale body care, home wellness products, bulk cosmetics, custom formulation">
+<meta name="author" content="Nebula Secret">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://nebula-secret-supabase.vercel.app/">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://nebula-secret-supabase.vercel.app/">
+<meta property="og:title" content="Nebula Secret — Wholesale Supplier & OEM/ODM Manufacturer">
+<meta property="og:description" content="Wholesale supplier and OEM/ODM manufacturer of skincare, body care, home wellness and more. Everyday products found in department stores, sourced globally and tailored to your requirements.">
+<meta property="og:image" content="https://nebula-secret-supabase.vercel.app/images/Neubla_logo_black_1729172124.png">
+<meta property="og:site_name" content="Nebula Secret">
+<meta property="og:locale" content="en_US">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:url" content="https://nebula-secret-supabase.vercel.app/">
+<meta name="twitter:title" content="Nebula Secret — Wholesale Supplier & OEM/ODM Manufacturer">
+<meta name="twitter:description" content="Wholesale supplier and OEM/ODM manufacturer of skincare, body care, home wellness and more.">
+<meta name="twitter:image" content="https://nebula-secret-supabase.vercel.app/images/Neubla_logo_black_1729172124.png">
+
 <link rel="icon" type="image/png" href="images/icon_512x512_android_ODEwMj.png">
+<link rel="apple-touch-icon" href="images/icon_512x512_android_ODEwMj.png">
+<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Comfortaa:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
 <style>
 /* ================= Design tokens ================= */
 :root{
-  --brand:#ff5983; --brand-dark:#e6436e; --brand-soft:#ffe3ec;
+  --brand:#ff5983; --brand-dark:#e6436e; --brand-soft:#ffe3ec; --brand-light:#ffe3ec;
   --accent:#25bab5; --accent-soft:#d9f4f2;
   --nav-bg:#232228; --nav-link:#e8e6ec;
   --bg:#f4f4f6; --card:#ffffff;
   --ink:#1f1e23; --ink-soft:#6f6a72;
-  --line:#e5e3e8; --line-dark:#d5d2da;
+  --line:#e5e3e8; --line-dark:#d5d2da; --border:#e5e3e8;
+  --danger:#c43a3a; --danger-soft:#fdecec;
+  --success:#1e8e3e; --success-soft:#e6f4ea;
+  --warning:#b96a00; --warning-soft:#fef4e2;
   --shadow:0 10px 30px rgba(31,30,35,.09);
   --shadow-sm:0 2px 8px rgba(31,30,35,.06);
   --radius:12px; --radius-sm:8px;
@@ -637,7 +663,7 @@ details.ct-block > .form-grid{padding:14px 16px}
   .topbar{display:none}
   .topbar-right .hide-m{display:none}
   .header-inner{padding:12px 16px;gap:10px;flex-wrap:wrap;align-items:center}
-  .menu-toggle{display:none}
+  .menu-toggle{display:grid}
   .brand{flex:0 0 auto;min-width:0;gap:8px}
   .brand img{width:34px;height:34px}
   .brand-name{font-size:15px;white-space:nowrap;min-width:0;line-height:1.2}
@@ -1202,7 +1228,7 @@ function applyTheme(){
       if(promo){
         if(th.announce){
           promo.style.display = "block";
-          promo.innerHTML = th.announce;
+          promo.innerHTML = sanitizeHTML(th.announce);
         }else{
           promo.style.display = "none";
         }
@@ -1553,14 +1579,12 @@ function updateAcctLabel(){ const el = $("#acctLabel"); if(el) el.textContent = 
 function myOrders(email){ return getOrders().filter(o => String(custEmail(o)).toLowerCase() === String(email).toLowerCase()); }
 
 /* ============ Admin user accounts (multiple admins, change password) ============ */
-/* Default admin is only used when no admins exist in Supabase — user should change password immediately */
-const DEFAULT_ADMIN_USER = "admin";
-const DEFAULT_ADMIN_PASS = "abcd1234";
+/* No hardcoded default admin — first admin must be created via initialization page */
 function getAdmins(){
   const raw = _cache.admins;
   if(!raw || !Array.isArray(raw) || raw.length === 0){
-    /* Return default admin only if no admins configured — password will be hashed on first login */
-    return [{user: DEFAULT_ADMIN_USER, pass: DEFAULT_ADMIN_PASS, name: "Admin", role: "superadmin", isDefault: true}];
+    /* Return empty array — no default admin for security */
+    return [];
   }
   // Normalize: support both legacy {u,p} and current {user,pass} formats
   return raw.map(a => ({
@@ -1902,8 +1926,8 @@ async function sendViaFormSubmit(o, cfg){
       "Phone": o.customer.phone || "",
       "Preferred Contact": o.customer.contact || "",
       "Shipping Address": (o.customer.address || "Not provided") + (o.customer.country ? ", " + o.customer.country : ""),
-      "Items": o.items.map(it => it.name + " x" + it.qty + " @ " + fmtIn(it.price * r, cur) + " = " + fmtIn(it.price * it.qty * r, cur)).join("; "),
-      "Order Total": fmtIn(o.total * r, cur) + " (" + cur + ")",
+      "Items": o.items.map(it => it.name + " x" + it.qty + " @ " + fmtIn(it.price, cur, r) + " = " + fmtIn(it.price * it.qty, cur, r)).join("; "),
+      "Order Total": fmtIn(o.total, cur, r) + " (" + cur + ")",
       "Status": o.status,
       "Details": orderEmailText(o, getTheme().storeName)
     };
@@ -1983,10 +2007,10 @@ function orderEmailText(o, storeName){
   lines.push("");
   lines.push("Items:");
   o.items.forEach(it => {
-    lines.push("  - " + it.name + " x" + it.qty + "  @ " + fmtIn(it.price * r, cur) + "  = " + fmtIn(it.price * it.qty * r, cur));
+    lines.push("  - " + it.name + " x" + it.qty + "  @ " + fmtIn(it.price, cur, r) + "  = " + fmtIn(it.price * it.qty, cur, r));
   });
   lines.push("");
-  lines.push("Total: " + fmtIn(o.total * r, cur));
+  lines.push("Total: " + fmtIn(o.total, cur, r));
   lines.push("Shipping: Quoted by our sales team per order");
   lines.push("");
   lines.push("Thank you for shopping with " + (storeName || "Nebula Secret") + "!");
@@ -3582,7 +3606,7 @@ function viewAccount(){
 async function sbRefreshKey(key){
   try{
     const { data, error } = await supabase.from('site_settings').select('data').eq('id', key).single();
-    if(!error && data){ _cache[key] = data.data; if(key === "orders" || key === "quotes"){ if(location.hash.startsWith("#/account")) viewAccount(); } }
+    if(!error && data){ _cache[key] = data.data; }
   }catch(e){}
 }
 function accountSignIn(){
@@ -3639,8 +3663,8 @@ function acctLogin(){
   if(!email || !pass){ err.textContent = "Please enter your email and password"; return; }
   const acc = getAccounts().find(a => a.email === email);
   if(!acc){ err.textContent = "No account found with this email — create one above"; return; }
-  return hashPass(pass).then(hash => {
-    if(hash !== acc.pass){ err.textContent = "Incorrect password"; return; }
+  return verifyPass(pass, acc.pass).then(valid => {
+    if(!valid){ err.textContent = "Incorrect password"; return; }
     setSession({ name: acc.name, email: acc.email });
     updateAcctLabel();
     showToast("Signed in as " + acc.name.split(" ")[0]);
@@ -4022,8 +4046,8 @@ function changePassSave(){
   const accs = getAccounts();
   const acc = accs.find(a => a.email === s.email);
   if(!acc){ err.textContent = "Account not found"; return; }
-  return hashPass(oldP).then(hash => {
-    if(hash !== acc.pass){ err.textContent = "Current password is incorrect"; return; }
+  return verifyPass(oldP, acc.pass).then(valid => {
+    if(!valid){ err.textContent = "Current password is incorrect"; return; }
     if(newP.length < 6){ err.textContent = "New password must be at least 6 characters"; return; }
     return hashPass(newP).then(nh => {
       acc.pass = nh;

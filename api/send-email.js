@@ -7,17 +7,71 @@
 // - EMAILJS_PUBLIC_KEY: Your EmailJS public key
 // - EMAILJS_PRIVATE_KEY: Your EmailJS private key (secret, never expose to client)
 // - ALLOWED_ORIGINS: Comma-separated list of allowed origins (CORS)
+// - MAIL_RECIPIENTS: Comma-separated list of email recipients (overrides client-provided to_email)
 
 export const config = {
   runtime: 'edge',
 };
 
-export default async function handler(req) {
-  console.log('[Edge Function] Request received:', req.method, req.url);
+// Simple in-memory rate limiter (best-effort for edge runtime)
+// Note: Edge functions are stateless, so this is per-instance.
+// For production, use Vercel KV or Upstash Redis.
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 10; // 10 requests per minute per IP
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW;
   
+  // Clean old entries
+  for (const [key, value] of rateLimitMap.entries()) {
+    if (value.timestamp < windowStart) {
+      rateLimitMap.delete(key);
+    }
+  }
+  
+  const key = ip || 'unknown';
+  const entry = rateLimitMap.get(key);
+  
+  if (!entry) {
+    rateLimitMap.set(key, { count: 1, timestamp: now });
+    return { allowed: true, remaining: RATE_LIMIT_MAX - 1 };
+  }
+  
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return { allowed: false, remaining: 0, retryAfter: Math.ceil((entry.timestamp + RATE_LIMIT_WINDOW - now) / 1000) };
+  }
+  
+  entry.count++;
+  return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count };
+}
+
+// Whitelist of allowed template parameters
+// Prevents clients from controlling sensitive fields like to_email
+const ALLOWED_ORDER_PARAMS = [
+  'store_name', 'order_no', 'date', 'customer', 'email', 'phone',
+  'contact', 'address', 'items', 'total', 'currency', 'rate', 'status', 'message'
+];
+
+const ALLOWED_CONTACT_PARAMS = [
+  'from_name', 'from_email', 'company', 'inquiry_type', 'subject',
+  'message', 'reply_to', 'store_name', 'date'
+];
+
+function filterParams(params, allowedKeys) {
+  const filtered = {};
+  for (const key of allowedKeys) {
+    if (params[key] !== undefined) {
+      filtered[key] = params[key];
+    }
+  }
+  return filtered;
+}
+
+export default async function handler(req) {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    console.log('[Edge Function] CORS preflight');
     return new Response(null, {
       status: 204,
       headers: getCorsHeaders(req),
@@ -26,23 +80,48 @@ export default async function handler(req) {
 
   // Only allow POST requests
   if (req.method !== 'POST') {
-    console.log('[Edge Function] Method not allowed:', req.method);
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
     });
   }
 
+  // Get client IP for rate limiting
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+             req.headers.get('x-real-ip') || 'unknown';
+
+  // Rate limiting
+  const rateLimit = checkRateLimit(ip);
+  if (!rateLimit.allowed) {
+    return new Response(JSON.stringify({ 
+      ok: false, 
+      error: 'Rate limit exceeded',
+      retryAfter: rateLimit.retryAfter
+    }), {
+      status: 429,
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Retry-After': String(rateLimit.retryAfter),
+        ...getCorsHeaders(req) 
+      },
+    });
+  }
+
   try {
     const body = await req.json();
-    console.log('[Edge Function] Request body:', JSON.stringify(body).substring(0, 500));
-    
     const { type, params } = body;
 
     // Validate request
-    if (!type || !params) {
-      console.log('[Edge Function] Missing type or params');
-      return new Response(JSON.stringify({ error: 'Missing type or params' }), {
+    if (!type || !params || typeof params !== 'object') {
+      return new Response(JSON.stringify({ error: 'Missing or invalid type or params' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
+      });
+    }
+
+    // Validate type
+    if (!['order', 'contact'].includes(type)) {
+      return new Response(JSON.stringify({ error: 'Invalid email type' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
       });
@@ -52,6 +131,7 @@ export default async function handler(req) {
     const serviceId = process.env.EMAILJS_SERVICE_ID;
     const publicKey = process.env.EMAILJS_PUBLIC_KEY;
     const privateKey = process.env.EMAILJS_PRIVATE_KEY;
+    const mailRecipients = process.env.MAIL_RECIPIENTS || 'sales@nebulasecret.com,bong8686@gmail.com';
 
     let templateId;
     if (type === 'contact') {
@@ -60,47 +140,36 @@ export default async function handler(req) {
       templateId = process.env.EMAILJS_TEMPLATE_ID;
     }
 
-    console.log('[Edge Function] Config:', {
-      serviceId: serviceId ? 'set' : 'MISSING',
-      templateId: templateId ? 'set' : 'MISSING',
-      publicKey: publicKey ? 'set' : 'MISSING',
-      privateKey: privateKey ? 'set' : 'MISSING',
-      type: type
-    });
-
     // Validate configuration
     if (!serviceId || !templateId || !publicKey || !privateKey) {
-      console.error('[Edge Function] EmailJS configuration missing');
       return new Response(JSON.stringify({ 
         ok: false, 
-        error: 'Email service not configured',
-        detail: 'Missing environment variables. Please configure EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY, EMAILJS_PRIVATE_KEY in Vercel dashboard.'
+        error: 'Email service not configured'
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
       });
     }
 
+    // Filter params to whitelist (prevents client from controlling to_email etc.)
+    const allowedKeys = type === 'contact' ? ALLOWED_CONTACT_PARAMS : ALLOWED_ORDER_PARAMS;
+    const filteredParams = filterParams(params, allowedKeys);
+
+    // Override to_email with server-configured recipients (security)
+    filteredParams.to_email = mailRecipients;
+
     // Send email via EmailJS REST API
-    console.log('[Edge Function] Sending email via EmailJS REST API...');
-    
-    // 使用標準的 EmailJS REST API 認證方式（只使用 user_id，不使用 accessToken）
     const emailjsPayload = {
       service_id: serviceId,
       template_id: templateId,
       user_id: publicKey,
-      template_params: params,
+      template_params: filteredParams,
     };
     
-    // 如果有 Private Key，添加 accessToken 參數（可選，用於更高的安全性）
+    // Use accessToken for authentication (private key)
     if (privateKey) {
       emailjsPayload.accessToken = privateKey;
-      console.log('[Edge Function] Using accessToken for authentication');
-    } else {
-      console.log('[Edge Function] Using user_id only for authentication');
     }
-
-    console.log('[Edge Function] EmailJS payload:', JSON.stringify(emailjsPayload).substring(0, 500));
 
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
@@ -110,40 +179,33 @@ export default async function handler(req) {
       body: JSON.stringify(emailjsPayload),
     });
 
-    console.log('[Edge Function] EmailJS response status:', response.status);
-
     if (response.ok) {
-      console.log('[Edge Function] Email sent successfully');
       return new Response(JSON.stringify({ ok: true, message: 'Email sent successfully' }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+          ...getCorsHeaders(req) 
+        },
       });
     } else {
+      // Don't leak internal error details to client
       const errorText = await response.text();
-      console.error('[Edge Function] EmailJS error:', response.status, errorText);
-      console.error('[Edge Function] Request payload:', JSON.stringify(emailjsPayload).substring(0, 1000));
+      console.error('[Edge Function] EmailJS error:', response.status, errorText.substring(0, 500));
+      
       return new Response(JSON.stringify({ 
         ok: false, 
-        error: 'Failed to send email', 
-        detail: `EmailJS returned ${response.status}: ${errorText}`,
-        debug: {
-          serviceId: serviceId ? 'set' : 'missing',
-          templateId: templateId ? 'set' : 'missing',
-          publicKey: publicKey ? 'set' : 'missing',
-          privateKey: privateKey ? 'set' : 'missing',
-          emailjsStatus: response.status,
-          emailjsError: errorText
-        }
+        error: 'Failed to send email'
       }), {
-        status: 500,
+        status: 502,
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
       });
     }
   } catch (error) {
-    console.error('[Edge Function] Internal error:', error);
+    console.error('[Edge Function] Internal error:', error.message);
+    // Don't leak internal error details to client
     return new Response(JSON.stringify({ 
-      error: 'Internal server error',
-      detail: error.message || String(error)
+      error: 'Internal server error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
@@ -155,22 +217,19 @@ function getCorsHeaders(req) {
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://nebula-secret-supabase.vercel.app').split(',').map(s => s.trim());
   const origin = req.headers.get('origin');
   
-  console.log('[Edge Function] CORS check:', { origin, allowedOrigins });
-  
+  // Strict CORS: only allow configured origins
   if (origin && allowedOrigins.includes(origin)) {
     return {
       'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Max-Age': '86400',
+      'Vary': 'Origin',
     };
   }
   
-  // For development, allow all origins (but in production, restrict to your domain)
+  // For non-allowed origins, don't return CORS headers (request will be blocked by browser)
   return {
-    'Access-Control-Allow-Origin': origin || '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Max-Age': '86400',
+    'Content-Type': 'application/json',
   };
 }

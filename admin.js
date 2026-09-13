@@ -1238,6 +1238,29 @@ function shade(hex, pct, soft){
 
 /* ---- Admin auth & route ---- */
 function viewAdminLogin(msg){
+  const admins = getAdmins();
+  const hasAdmins = admins && admins.length > 0;
+  
+  if(!hasAdmins){
+    /* No admins exist — show initialization page */
+    $("#app").innerHTML =
+    '<div class="admin-login">' +
+      '<div class="login-card">' +
+        '<img class="l-logo" src="images/Neubla_logo_black_1729172124.png" alt="Nebula Secret">' +
+        '<h1>Initialize Admin</h1>' +
+        '<p class="l-sub">Create your first admin account to get started</p>' +
+        '<div class="login-err" id="initErr"></div>' +
+        '<div class="field"><label>Admin Name</label><input id="initName" type="text" placeholder="Admin User" autocomplete="off"></div>' +
+        '<div class="field"><label>Email</label><input id="initEmail" type="email" placeholder="admin@example.com" autocomplete="off"></div>' +
+        '<div class="field"><label>Password</label><input id="initPass" type="password" placeholder="Min 8 characters" autocomplete="new-password"></div>' +
+        '<div class="field"><label>Confirm Password</label><input id="initPass2" type="password" placeholder="Confirm password" autocomplete="new-password"></div>' +
+        '<button class="btn full" style="margin-top:8px" onclick="doInitAdmin()">Create Admin Account</button>' +
+        '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px">This account will have full admin access</p>' +
+      '</div>' +
+    '</div>';
+    return;
+  }
+  
   $("#app").innerHTML =
   '<div class="admin-login">' +
     '<div class="login-card">' +
@@ -1251,6 +1274,71 @@ function viewAdminLogin(msg){
       '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px">Secure login powered by Supabase Auth</p>' +
     '</div>' +
   '</div>';
+}
+
+/* Initialize first admin account */
+async function doInitAdmin(){
+  const name = $("#initName").value.trim();
+  const email = $("#initEmail").value.trim().toLowerCase();
+  const pass = $("#initPass").value;
+  const pass2 = $("#initPass2").value;
+  const err = $("#initErr");
+  
+  if(!name || !email || !pass){
+    err.textContent = "Please fill in all fields.";
+    err.classList.add("show");
+    return;
+  }
+  if(pass.length < 8){
+    err.textContent = "Password must be at least 8 characters.";
+    err.classList.add("show");
+    return;
+  }
+  if(pass !== pass2){
+    err.textContent = "Passwords do not match.";
+    err.classList.add("show");
+    return;
+  }
+  
+  const btn = document.querySelector(".admin-login .btn.full");
+  if(btn){ btn.disabled = true; btn.textContent = "Creating..."; }
+  
+  try{
+    /* Hash password */
+    const hashedPass = await hashPass(pass);
+    
+    /* Create admin account */
+    const newAdmin = {
+      user: email,
+      pass: hashedPass,
+      name: name,
+      email: email,
+      role: "superadmin",
+      created: new Date().toISOString()
+    };
+    
+    saveAdmins([newAdmin]);
+    
+    /* Also try to create Supabase Auth user */
+    try{
+      await supabase.auth.signUp({
+        email: email,
+        password: pass,
+        options: {
+          data: { name: name, role: "superadmin" }
+        }
+      });
+    }catch(e){
+      console.log("Supabase Auth signup failed, using legacy admin only:", e.message);
+    }
+    
+    showToast("Admin account created successfully");
+    viewAdminLogin("Account created. Please sign in.");
+  }catch(e){
+    err.textContent = "Failed to create admin account: " + e.message;
+    err.classList.add("show");
+    if(btn){ btn.disabled = false; btn.textContent = "Create Admin Account"; }
+  }
 }
 
 async function doLogin(){
