@@ -1670,9 +1670,11 @@ function validateAdminSession(){
   return true;
 }
 
-/* ============ Email delivery (EmailJS or FormSubmit) ============ */
-function getMailCfg(){ return lsGet(LS.mail, { email: "", enabled: false, provider: "emailjs", serviceId: "", templateId: "", contactTemplateId: "", publicKey: "", mailTo: "" }); }
-function saveMailCfg(m){ lsSet(LS.mail, m); }
+/* ============ Email delivery (server-side via Edge Function) ============ */
+async function getEmailConfig(){
+  try{ const r = await fetch("/api/email-config"); return await r.json(); }
+  catch(e){ return { configured: false, enabled: false }; }
+}
 
 /* ============ EmailJS Security: Rate Limiting & Domain Validation ============ */
 const EMAILJS_RATE_LIMIT = {
@@ -1817,46 +1819,16 @@ async function cloudPullAll(){
   }
   return {ok:true};
 }
-function mailRecipients(cfg){
-  const list = [];
-  if(cfg.mailTo){
-    String(cfg.mailTo).split(/[;,]/).map(s => s.trim()).filter(Boolean).forEach(e => { if(!list.includes(e)) list.push(e); });
-  }
-  if(!list.length && cfg.email) list.push(cfg.email);
-  return list;
+async function sendOrderEmail(o){
+  const cfg = await getEmailConfig();
+  if(!cfg.enabled) return {ok:false, reason:"not-configured"};
+  return sendViaEdgeFunction(o, null, "order");
 }
-async function sendOrderEmail(o, cfg){
-  // If email is not explicitly enabled, still try Edge Function first
-  // Edge Function works without any client-side EmailJS configuration
-  if(!cfg){
-    cfg = getMailCfg();
-  }
-  
-  // Try Edge Function first (works without client-side EmailJS keys)
-  if(cfg.provider === "emailjs" || !cfg.provider){
-    const edgeResult = await sendViaEdgeFunction(o, cfg, "order");
-    if(edgeResult.ok){
-      recordEmailSend();
-      return edgeResult;
-    }
-    console.log("Edge Function failed, trying other methods:", edgeResult.reason);
-  }
-  
-  // If email is not enabled and Edge Function failed, return error
-  if(!cfg.enabled){
-    return {ok:false, reason:"not-configured", detail:"Email not enabled and Edge Function failed: " + (edgeResult?.reason || "unknown")};
-  }
-  
-  // Fallback to other methods
-  if(cfg.provider === "emailjs") return sendViaEmailJS(o, cfg);
-  return sendViaFormSubmit(o, cfg);
-}
-function emailTemplateParams(o, cfg){
+function emailTemplateParams(o){
   const cur = o.cur || "EUR"; const r = orate(o);
   const storeName = getTheme().storeName || "Nebula Secret";
   const itemsLines = o.items.map(it => "• " + it.name + "  x" + it.qty + "  = " + fmtIn(it.price * it.qty, cur, r)).join("\n");
   return {
-    to_email: mailRecipients(cfg).join(", "),
     store_name: storeName,
     order_no: o.id,
     date: fmtDT(o.date),
@@ -1900,12 +1872,10 @@ async function sendViaEmailJS(o, cfg){
 }
 
 /* Build contact form email template params */
-function contactTemplateParams(formData, cfg){
-  const recipients = (cfg.mailTo || "").split(",").map(s => s.trim()).filter(Boolean);
+function contactTemplateParams(formData){
   return {
     from_name: formData.name,
     from_email: formData.email,
-    to_email: recipients.join(", "),
     company: formData.company || "Not provided",
     inquiry_type: formData.type,
     subject: "New " + formData.type + " Inquiry from " + formData.name + " — Nebula Secret",
@@ -1920,7 +1890,7 @@ function contactTemplateParams(formData, cfg){
 async function sendViaEdgeFunction(o, cfg, type){
   try{
     const edgeUrl = "/api/send-email";
-    const params = type === "order" ? emailTemplateParams(o, cfg) : contactTemplateParams(o, cfg);
+    const params = type === "order" ? emailTemplateParams(o) : contactTemplateParams(o);
     
     const response = await fetch(edgeUrl, {
       method: "POST",
@@ -2054,16 +2024,15 @@ function orderEmailText(o, storeName){
   return lines.join("\n");
 }
 async function mailOrder(o){
-  const cfg = getMailCfg();
-  const recipients = mailRecipients(cfg);
-  if(!cfg || !cfg.enabled){
-    showToast("Order email not sent — set up Admin → Order Emails first");
+  const cfg = await getEmailConfig();
+  if(!cfg.enabled){
+    showToast("Order email not configured — set MAIL_ENABLED and EmailJS env vars in Vercel");
     return;
   }
   const st = $("#ocEmailState");
   if(st) st.textContent = "Sending order email…";
-  const r = await sendOrderEmail(o, cfg);
-  if(st) st.textContent = r.ok ? "Order email sent to " + recipients.join(", ") : "Email send failed — check Admin → Order Emails";
+  const r = await sendOrderEmail(o);
+  if(st) st.textContent = r.ok ? "Order email sent" : "Email send failed — " + (r.detail || r.reason);
   showToast(r.ok ? "Order email sent" : "Email send failed");
 }
 function continueShopping(){
@@ -2545,19 +2514,18 @@ function placeOrder(){
     o.items.map(it => '<div class="o-line"><span>' + esc(it.name) + ' <span class="q">× ' + it.qty + '</span></span><span>' + fmt(it.price * it.qty) + '</span></div>').join("") +
     '<div class="o-total"><span>Total</span><span>' + fmt(o.total) + '</span></div>';
   // auto-send email to store inbox when configured
-  const cfg = getMailCfg();
-  const recipients = mailRecipients(cfg);
-  const mailReady = cfg && cfg.enabled;
-  if(mailReady){
-    const st = $("#ocEmailState");
-    if(st) st.textContent = "Sending order email…";
-    sendOrderEmail(o, cfg).then(r => {
-      if(st) st.textContent = r.ok ? "Order email sent to " + recipients.join(", ") : "Email not sent — check Admin → Order Emails for details.";
-    });
-  }else{
-    const st = $("#ocEmailState");
-    if(st) st.textContent = "Order saved. To receive order emails automatically, set up Admin → Order Emails, then click Send Order Email.";
-  }
+  getEmailConfig().then(cfg => {
+    if(cfg.enabled){
+      const st = $("#ocEmailState");
+      if(st) st.textContent = "Sending order email…";
+      sendOrderEmail(o).then(r => {
+        if(st) st.textContent = r.ok ? "Order email sent" : "Email not sent — " + (r.detail || r.reason);
+      });
+    }else{
+      const st = $("#ocEmailState");
+      if(st) st.textContent = "Order saved. Email not configured — set MAIL_ENABLED and EmailJS env vars in Vercel.";
+    }
+  });
   $("#orderModal").classList.add("open");
 }
 
@@ -3318,8 +3286,8 @@ async function submitContactForm(ev){
   if(!email || !/.+@.+\..+/.test(email)){ showCfMsg(msgEl, "#c0392b", "Please enter a valid email address."); return; }
   if(!message){ showCfMsg(msgEl, "#c0392b", "Please enter your message."); return; }
 
-  // Get email configuration
-  const cfg = getMailCfg();
+  // Get email configuration from server
+  const cfg = await getEmailConfig();
   
   /* Security check 1: Validate domain */
   if(!validateEmailDomain()){
@@ -3331,13 +3299,6 @@ async function submitContactForm(ev){
   const rateCheck = checkEmailRateLimit();
   if(!rateCheck.allowed){
     showCfMsg(msgEl, "#c0392b", rateCheck.message);
-    return;
-  }
-
-  // Get recipients (use default if not configured)
-  const recipients = (cfg.mailTo || "sales@nebulasecret.com,bong8686@gmail.com").split(",").map(s => s.trim()).filter(Boolean);
-  if(!recipients.length){
-    showCfMsg(msgEl, "#c0392b", "No recipient email configured. Please contact the site administrator.");
     return;
   }
 
@@ -3356,8 +3317,8 @@ async function submitContactForm(ev){
       message: message
     };
     
-    // Try Edge Function (private key stored server-side)
-    const edgeResult = await sendViaEdgeFunction(formData, cfg, "contact");
+    // Send via Edge Function (private key stored server-side)
+    const edgeResult = await sendViaEdgeFunction(formData, null, "contact");
     if(edgeResult.ok){
       /* Record successful send for rate limiting */
       recordEmailSend();

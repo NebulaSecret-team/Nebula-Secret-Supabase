@@ -871,17 +871,14 @@ function adminTheme(){
   $("#adminTitle").textContent = "Theme";
 }
 function adminEmails(){
-  const mc = getMailCfg();
   const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Server-side email via Vercel Edge Function — API keys are managed in Vercel env vars</div></div></div>' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Server-side email via Vercel Edge Function — managed entirely by env vars</div></div></div>' +
     '<div class="panel-body">' +
       '<div class="form-grid">' +
         '<div class="field full" id="emailStatus"><label>Status</label><div style="padding:10px;border-radius:8px;background:#f0f0f0;color:#666" id="emailStatusText">Checking...</div></div>' +
-        '<div class="field full"><label>Enable auto email</label><select id="mailEnabled"><option value="1"' + (mc.enabled ? " selected" : "") + '>On — send order emails automatically</option><option value="0"' + (!mc.enabled ? " selected" : "") + '>Off — keep manual email button only</option></select></div>' +
-        '<div class="field full"><div class="form-hint">Email is sent server-side via Vercel Edge Function. API keys are stored in Vercel environment variables — not visible to clients. To change keys, update env vars in Vercel dashboard.</div></div>' +
+        '<div class="field full"><div class="form-hint">Email is enabled/disabled via <code>MAIL_ENABLED</code> env var in Vercel. Set to <code>false</code> to disable. EmailJS keys are also in Vercel env vars — not visible to clients.</div></div>' +
       '</div>' +
-      '<button class="btn" style="margin-top:4px" onclick="saveMailForm()">Save</button>' +
-      '<button class="btn ghost" style="margin-top:4px;margin-left:8px" onclick="sendTestOrderEmail()">Send Test Email</button>' +
+      '<button class="btn ghost" style="margin-top:4px" onclick="sendTestOrderEmail()">Send Test Email</button>' +
     '</div></div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Order Emails";
@@ -889,12 +886,15 @@ function adminEmails(){
   fetch("/api/email-config").then(r => r.json()).then(cfg => {
     const el = $("#emailStatusText");
     if(!el) return;
-    if(cfg.configured){
+    if(cfg.enabled){
       el.style.background = "#d4edda"; el.style.color = "#155724";
-      el.innerHTML = "<b>Email is configured and active.</b> Orders and contact forms are sent automatically via server.";
+      el.innerHTML = "<b>Email is enabled.</b> Orders and contact forms are sent automatically.";
+    }else if(cfg.configured){
+      el.style.background = "#fff3cd"; el.style.color = "#856404";
+      el.innerHTML = "<b>Email keys are set but MAIL_ENABLED is false.</b> Set MAIL_ENABLED=true in Vercel env vars to enable.";
     }else{
       el.style.background = "#f8d7da"; el.style.color = "#721c24";
-      el.innerHTML = "<b>Email not configured.</b> Set EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, and EMAILJS_PUBLIC_KEY in Vercel env vars.";
+      el.innerHTML = "<b>Email not configured.</b> Set EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY, and MAIL_ENABLED in Vercel env vars.";
     }
   }).catch(() => {
     const el = $("#emailStatusText");
@@ -1119,26 +1119,9 @@ function applyPreset(i){
   $("#thBrand").value = p.brand;
   $("#thAccent").value = p.accent;
 }
-function toggleMailProvider(){
-  const p = ($("#mailProvider") || {}).value || "emailjs";
-  const ejw = $("#emailjsWrap"), fsw = $("#formsubmitWrap"), mtw = $("#mailToWrap");
-  if(ejw) ejw.style.display = p === "emailjs" ? "" : "none";
-  if(fsw) fsw.style.display = p === "formsubmit" ? "" : "none";
-  if(mtw) mtw.style.display = p === "emailjs" ? "" : "none";
-  const help = $("#mailHelp");
-  if(help) help.innerHTML = p === "emailjs"
-    ? "<b>EmailJS:</b> after saving, click <b>Send Test Email</b> — it sends straight to the recipients above, no activation step needed."
-    : "<b>FormSubmit:</b> you must first click the one-time verification link FormSubmit emails to your inbox (check spam).";
-}
-function saveMailForm(){
-  const cfg = getMailCfg();
-  cfg.enabled = $("#mailEnabled").value === "1";
-  saveMailCfg(cfg);
-  showToast(cfg.enabled ? "Auto email enabled" : "Auto email disabled");
-}
 async function sendTestOrderEmail(){
-  const cfg = getMailCfg();
-  if(!cfg || !cfg.enabled){ showToast("Enable auto email first, then Save"); return; }
+  const cfg = await fetch("/api/email-config").then(r => r.json()).catch(() => ({}));
+  if(!cfg.enabled){ showToast("Email not enabled — set MAIL_ENABLED=true and EmailJS env vars in Vercel"); return; }
   const n = Math.floor(1000000 + Math.random() * 9000000);
   const test = {
     id: "TEST-" + n,
@@ -1149,7 +1132,7 @@ async function sendTestOrderEmail(){
     total: 10, status:"New"
   };
   showToast("Sending test email…");
-  const r = await sendOrderEmail(test, cfg);
+  const r = await sendOrderEmail(test);
   if(r.ok){
     showToast("Test email sent — check inbox");
   }else{
