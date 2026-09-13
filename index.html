@@ -1826,7 +1826,28 @@ function mailRecipients(cfg){
   return list;
 }
 async function sendOrderEmail(o, cfg){
-  if(!cfg || !cfg.enabled) return {ok:false, reason:"not-configured"};
+  // If email is not explicitly enabled, still try Edge Function first
+  // Edge Function works without any client-side EmailJS configuration
+  if(!cfg){
+    cfg = getMailCfg();
+  }
+  
+  // Try Edge Function first (works without client-side EmailJS keys)
+  if(cfg.provider === "emailjs" || !cfg.provider){
+    const edgeResult = await sendViaEdgeFunction(o, cfg, "order");
+    if(edgeResult.ok){
+      recordEmailSend();
+      return edgeResult;
+    }
+    console.log("Edge Function failed, trying other methods:", edgeResult.reason);
+  }
+  
+  // If email is not enabled and Edge Function failed, return error
+  if(!cfg.enabled){
+    return {ok:false, reason:"not-configured", detail:"Email not enabled and Edge Function failed: " + (edgeResult?.reason || "unknown")};
+  }
+  
+  // Fallback to other methods
   if(cfg.provider === "emailjs") return sendViaEmailJS(o, cfg);
   return sendViaFormSubmit(o, cfg);
 }
@@ -1865,7 +1886,8 @@ async function sendViaEmailJS(o, cfg){
       return {ok:false, reason:rateCheck.reason, detail:rateCheck.message};
     }
     
-    /* Try Edge Function first (more secure, private key not exposed) */
+    /* Try Edge Function first (more secure, private key not exposed)
+       Edge Function works without any client-side EmailJS configuration */
     const edgeResult = await sendViaEdgeFunction(o, cfg, "order");
     if(edgeResult.ok){
       recordEmailSend();
@@ -1873,9 +1895,11 @@ async function sendViaEmailJS(o, cfg){
     }
     console.log("Edge Function failed, falling back to EmailJS SDK:", edgeResult.reason);
     
-    /* Fallback to EmailJS SDK */
-    if(!window.emailjs) return {ok:false, reason:"sdk-missing"};
-    if(!cfg.serviceId || !cfg.templateId || !cfg.publicKey) return {ok:false, reason:"emailjs-config"};
+    /* Fallback to EmailJS SDK (requires client-side configuration) */
+    if(!window.emailjs) return {ok:false, reason:"sdk-missing", detail:"EmailJS library failed to load"};
+    if(!cfg.serviceId || !cfg.templateId || !cfg.publicKey) {
+      return {ok:false, reason:"emailjs-config", detail:"Edge Function failed and EmailJS keys not configured. Please configure EmailJS in Admin → Order Emails, or ensure Edge Function is working."};
+    }
     
     const params = emailTemplateParams(o, cfg);
     const resp = await emailjs.send(cfg.serviceId, cfg.templateId, params, { publicKey: cfg.publicKey });
@@ -3313,14 +3337,9 @@ async function submitContactForm(ev){
   if(!email || !/.+@.+\..+/.test(email)){ showCfMsg(msgEl, "#c0392b", "Please enter a valid email address."); return; }
   if(!message){ showCfMsg(msgEl, "#c0392b", "Please enter your message."); return; }
 
-  // Check EmailJS config (need at least one template ID: order or contact)
+  // Get email configuration
   const cfg = getMailCfg();
-  const hasTpl = (cfg.templateId || cfg.contactTemplateId);
-  if(!cfg || !cfg.enabled || cfg.provider !== "emailjs" || !cfg.serviceId || !hasTpl || !cfg.publicKey){
-    showCfMsg(msgEl, "#c0392b", "Email service not configured. Please contact us directly at " + (cfg.mailTo || "sales@nebulasecret.com") + ".");
-    return;
-  }
-
+  
   /* Security check 1: Validate domain */
   if(!validateEmailDomain()){
     showCfMsg(msgEl, "#c0392b", "Email sending is not allowed from this domain. Please contact the site administrator.");
@@ -3334,8 +3353,8 @@ async function submitContactForm(ev){
     return;
   }
 
-  // Get recipients
-  const recipients = (cfg.mailTo || "").split(",").map(s => s.trim()).filter(Boolean);
+  // Get recipients (use default if not configured)
+  const recipients = (cfg.mailTo || "sales@nebulasecret.com,bong8686@gmail.com").split(",").map(s => s.trim()).filter(Boolean);
   if(!recipients.length){
     showCfMsg(msgEl, "#c0392b", "No recipient email configured. Please contact the site administrator.");
     return;

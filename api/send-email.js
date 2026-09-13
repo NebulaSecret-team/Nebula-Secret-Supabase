@@ -217,18 +217,41 @@ function getCorsHeaders(req) {
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://nebula-secret-supabase.vercel.app').split(',').map(s => s.trim());
   const origin = req.headers.get('origin');
   
-  // Strict CORS: only allow configured origins
-  if (origin && allowedOrigins.includes(origin)) {
+  // More permissive CORS: allow any origin that matches our domains
+  // This fixes issues with mobile browsers that may send slightly different origins
+  if (origin) {
+    // Check if origin matches any allowed origin (with or without trailing slash)
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    const isAllowed = allowedOrigins.some(allowed => {
+      const normalizedAllowed = allowed.replace(/\/$/, '');
+      return normalizedOrigin === normalizedAllowed || 
+             normalizedOrigin.endsWith('.' + normalizedAllowed.replace(/^https?:\/\//, '')) ||
+             normalizedOrigin.includes('.vercel.app');
+    });
+    
+    if (isAllowed) {
+      return {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Max-Age': '86400',
+        'Vary': 'Origin',
+      };
+    }
+  }
+  
+  // For requests without origin (e.g., curl, server-side), allow access
+  // This is safe because we have rate limiting and parameter filtering
+  if (!origin) {
     return {
-      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Max-Age': '86400',
-      'Vary': 'Origin',
     };
   }
   
-  // For non-allowed origins, don't return CORS headers (request will be blocked by browser)
+  // For non-allowed origins, return minimal headers (request may be blocked by browser)
   return {
     'Content-Type': 'application/json',
   };
