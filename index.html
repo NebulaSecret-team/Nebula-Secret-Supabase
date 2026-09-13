@@ -1874,35 +1874,6 @@ async function sendViaEdgeFunction(o, cfg, type){
     return {ok:false, reason:"edge-function-unavailable", detail: String(e && e.message ? e.message : e)};
   }
 }
-async function sendViaFormSubmit(o, cfg){
-  if(!cfg.email) return {ok:false, reason:"not-configured"};
-  try{
-    const cur = o.cur || "EUR"; const r = orate(o);
-    const payload = {
-      _subject: "New order " + o.id + " — " + getTheme().storeName,
-      _template: "table",
-      _captcha: "false",
-      "Order No": o.id,
-      "Date": fmtDT(o.date),
-      "Customer": o.customer.first + " " + o.customer.last,
-      "Email": o.customer.email,
-      "Phone": o.customer.phone || "",
-      "Preferred Contact": o.customer.contact || "",
-      "Shipping Address": (o.customer.address || "Not provided") + (o.customer.country ? ", " + o.customer.country : ""),
-      "Items": o.items.map(it => it.name + " x" + it.qty + " @ " + fmtIn(it.price, cur, r) + " = " + fmtIn(it.price * it.qty, cur, r)).join("; "),
-      "Order Total": fmtIn(o.total, cur, r) + " (" + cur + ")",
-      "Status": o.status,
-      "Details": orderEmailText(o, getTheme().storeName)
-    };
-    const res = await fetch("https://formsubmit.co/ajax/" + encodeURIComponent(cfg.email), {
-      method: "POST",
-      headers: {"Content-Type": "application/json", "Accept": "application/json"},
-      body: JSON.stringify(payload)
-    });
-    const j = await res.json();
-    return {ok: true, resp: j};
-  }catch(e){ return {ok:false, reason:"network"}; }
-}
 /* Local image upload -> compressed data URL for product/category forms */
 function uploadImageTo(inputId, targetId, maxW){
   const inp = document.getElementById(inputId);

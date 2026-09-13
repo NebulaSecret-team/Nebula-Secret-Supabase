@@ -6,8 +6,8 @@
  * 
  * Dependencies (global variables from index.html):
  * - $, $$, esc, escJs, slugify, fmt, fmtD, imgUrl, imgFallback
- * - getProducts, getCats, getOrders, getAccounts, getAdmins, getTheme, getContent, getMailCfg
- * - saveProducts, saveCats, saveOrders, saveAccounts, saveAdmins, saveTheme, saveContent, saveMailCfg
+ * - getProducts, getCats, getOrders, getAccounts, getAdmins, getTheme, getContent
+ * - saveProducts, saveCats, saveOrders, saveAccounts, saveAdmins, saveTheme, saveContent
  * - supabase, _cache, sbSave, sbLoadAll
  * - IC (icons), LS (localStorage keys), PLACEHOLDER, CURRENCIES
  * - showToast, closeCart, closeCheckout, closeAdminModal, closeMegaMenu
@@ -1018,17 +1018,6 @@ function applyPreset(i){
   const p = THEME_PRESETS[i];
   $("#thBrand").value = p.brand;
   $("#thAccent").value = p.accent;
-}
-function toggleMailProvider(){
-  const p = ($("#mailProvider") || {}).value || "emailjs";
-  const ejw = $("#emailjsWrap"), fsw = $("#formsubmitWrap"), mtw = $("#mailToWrap");
-  if(ejw) ejw.style.display = p === "emailjs" ? "" : "none";
-  if(fsw) fsw.style.display = p === "formsubmit" ? "" : "none";
-  if(mtw) mtw.style.display = p === "emailjs" ? "" : "none";
-  const help = $("#mailHelp");
-  if(help) help.innerHTML = p === "emailjs"
-    ? "<b>EmailJS:</b> after saving, click <b>Send Test Email</b> — it sends straight to the recipients above, no activation step needed."
-    : "<b>FormSubmit:</b> you must first click the one-time verification link FormSubmit emails to your inbox (check spam).";
 }
 async function sendTestOrderEmail(){
   const cfg = await fetch("/api/email-config").then(r => r.json()).catch(() => ({}));
