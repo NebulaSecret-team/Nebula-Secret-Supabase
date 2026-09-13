@@ -962,7 +962,7 @@ details.ct-block > .form-grid{padding:14px 16px}
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js" integrity="sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous"></script>
 <script>
 
 /* ============ Supabase Backend ============ */
@@ -985,7 +985,7 @@ try {
 function sanitizeHTML(html) {
   if(!html) return "";
   const allowedTags = ['B','I','EM','STRONG','A','P','BR','UL','OL','LI','H1','H2','H3','H4','H5','H6','SPAN','DIV','HR','BLOCKQUOTE','CODE','PRE'];
-  const allowedAttrs = ['href','title','class','style','target','rel'];
+  const allowedAttrs = ['href','title','class','target','rel'];
   const allowedProtocols = ['http:','https:','mailto:','tel:'];
   try {
     const parser = new DOMParser();
@@ -1125,12 +1125,11 @@ const LS = {
   currency: "ns_currency_v3",
   accounts: "ns_accounts_v3",
   session: "ns_session_v3",
-  mail: "ns_mail_v3",
   admins: "ns_admins_v3",
   asession: "ns_asession_v3",
   subscribers: "ns_subscribers_v3",
   content: "ns_content_v3",
-  cloudsync: "ns_cloudsync_v3"
+  mail: "ns_mail_v3"
 };
 /* Migrate: drop legacy v2 data that may carry broken images/categories from earlier testing */
 function cleanupOldData(){
@@ -1382,7 +1381,7 @@ function esc(s){ return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;
 function escJs(s){ return String(s ?? "").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;"); }
 function fmt(n){ return fmtIn(n, curCode); }
 function slugify(s){ return String(s).toLowerCase().replace(/&/g,"and").replace(/[^a-z0-9\u4e00-\u9fff]+/g,"-").replace(/^-+|-+$/g,""); }
-function imgUrl(url, w){ if(!url) return PLACEHOLDER; if(String(url).indexOf("data:") === 0) return url; return url + (url.indexOf("?") === -1 ? "?width=" + w : "&width=" + w); }
+function imgUrl(url, w){ if(!url) return PLACEHOLDER; var u = String(url); if(u.indexOf("data:") === 0) return (/^data:image\/(png|jpeg|gif|webp);base64,/i.test(u) ? u : PLACEHOLDER); return u + (u.indexOf("?") === -1 ? "?width=" + w : "&width=" + w); }
 /* Image error fallback chain: product image -> category image -> neutral placeholder */
 function imgFallback(el){
   const prod = el.dataset.pid;
@@ -1479,8 +1478,31 @@ function saveAccounts(a){
     if(!res.ok){ console.warn("Failed to save accounts to Supabase:", res.error); showToast("Warning: account may not have saved to cloud"); }
   }).catch(e => { console.warn("Error saving accounts:", e); showToast("Error saving account to cloud"); });
 }
-function getSession(){ return lsGet(LS.session, null); }
-function setSession(s){ if(s) lsSet(LS.session, s); else try{ localStorage.removeItem(LS.session); }catch(e){} }
+/* ============ Session validation (M-3) ============ */
+const _SESS_SALT = "ns_s7k9x2";
+function _sessHash(str){
+  let h = 0x811c9dc5;
+  for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0).toString(36);
+}
+function getSession(){
+  var s = lsGet(LS.session, null);
+  if(!s || typeof s !== "object") return null;
+  if(typeof s.exp === "number" && s.exp < Date.now()){ try{ localStorage.removeItem(LS.session); }catch(e){} return null; }
+  if(s.sig && s.email){ var expected = _sessHash(String(s.email).toLowerCase() + _SESS_SALT); if(s.sig !== expected) return null; }
+  return s;
+}
+function setSession(s){
+  if(s && typeof s === "object"){
+    var now = Date.now();
+    s.ts = s.ts || now;
+    s.exp = now + 24*60*60*1000;
+    s.sig = _sessHash(String(s.email).toLowerCase() + _SESS_SALT);
+    lsSet(LS.session, s);
+  } else {
+    try{ localStorage.removeItem(LS.session); }catch(e){}
+  }
+}
 
 /* Async session - syncs Supabase Auth session to localStorage */
 async function getSessionAsync(){
@@ -1551,67 +1573,43 @@ function qCustAddr(q){ const c = q.customer || {}; const addr = c.address || "No
 function qCustCountry(q){ const c = q.customer || {}; return c.country || ""; }
 /* Secure password hashing using PBKDF2 with random salt */
 /* Format: pbkdf2::<iterations>::<salt_hex>::<hash_hex> */
-/* Legacy format: sha256::<hash> (for backward compatibility) */
 async function hashPass(pw){
-  try{
-    /* Generate random salt */
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const iterations = 100000;
-    const enc = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
-    const hashBuffer = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" }, keyMaterial, 256);
-    const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("");
-    const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
-    return "pbkdf2::" + iterations + "::" + saltHex + "::" + hashHex;
-  }catch(e){
-    /* Fallback to legacy SHA-256 if Web Crypto not available */
-    try{
-      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("ns-salt::" + pw));
-      return "sha256::" + Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-    }catch(e2){ return "plain::" + pw; }
-  }
+  /* Generate random salt */
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iterations = 100000;
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
+  const hashBuffer = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" }, keyMaterial, 256);
+  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("");
+  const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+  return "pbkdf2::" + iterations + "::" + saltHex + "::" + hashHex;
 }
 
-/* Verify password against stored hash (supports pbkdf2, sha256, and plain formats) */
+/* Verify password against stored hash */
 async function verifyPass(pw, storedHash){
   if(!storedHash) return false;
   const str = String(storedHash);
-  /* PBKDF2 format */
-  if(str.indexOf("pbkdf2::") === 0){
-    try{
-      const parts = str.split("::");
-      const iterations = parseInt(parts[1], 10);
-      const saltHex = parts[2];
-      const expectedHash = parts[3];
-      const salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-      const enc = new TextEncoder();
-      const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
-      const hashBuffer = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" }, keyMaterial, 256);
-      const actualHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
-      return actualHash === expectedHash;
-    }catch(e){ return false; }
-  }
-  /* Legacy SHA-256 format */
-  if(str.indexOf("sha256::") === 0){
-    try{
-      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("ns-salt::" + pw));
-      const actualHash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-      return actualHash === str.substring(8);
-    }catch(e){ return false; }
-  }
-  /* Legacy plain format (for backward compatibility with old data) */
-  if(str.indexOf("plain::") === 0){
-    return pw === str.substring(7);
-  }
-  /* Old format: plain text password (very old data) */
-  return pw === str;
+  if(str.indexOf("pbkdf2::") !== 0) return false;
+  try{
+    const parts = str.split("::");
+    const iterations = parseInt(parts[1], 10);
+    const saltHex = parts[2];
+    const expectedHash = parts[3];
+    const salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
+    const hashBuffer = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" }, keyMaterial, 256);
+    const actualHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+    return actualHash === expectedHash;
+  }catch(e){ return false; }
 }
 function acctLabel(){ const s = getSession(); return s ? (s.name || s.email).split(" ")[0] : "Account"; }
 function updateAcctLabel(){ const el = $("#acctLabel"); if(el) el.textContent = acctLabel(); }
 function myOrders(email){ return getOrders().filter(o => String(custEmail(o)).toLowerCase() === String(email).toLowerCase()); }
 
 /* ============ Admin user accounts (multiple admins, change password) ============ */
-/* No hardcoded default admin — first admin must be created via initialization page */
+/* No hardcoded default credentials: with no admins in Supabase, legacy login is
+   disabled — provision the first admin via Supabase Auth instead. */
 function getAdmins(){
   const raw = _cache.admins;
   if(!raw || !Array.isArray(raw) || raw.length === 0){
@@ -1628,13 +1626,38 @@ function getAdmins(){
   }));
 }
 function saveAdmins(list){ _cache.admins = list; sbSave("admins", list); }
+/* Login brute-force throttle (client-side defense in depth: 5 fails = 5-min lockout.
+   A cleared localStorage resets it — server-side limits remain Supabase Auth's.) */
+function _throttleKey(k){ return "ns_login_fail_" + k; }
+function checkLoginThrottle(k){
+  try{
+    const rec = JSON.parse(localStorage.getItem(_throttleKey(k)) || '{"n":0,"t":0}');
+    if(rec.n >= 5 && Date.now() - rec.t < 5*60*1000) return Math.ceil((5*60*1000 - (Date.now() - rec.t))/1000);
+  }catch(e){}
+  return 0;
+}
+function recordLoginFail(k){
+  try{
+    const sk = _throttleKey(k);
+    const rec = JSON.parse(localStorage.getItem(sk) || '{"n":0,"t":0}');
+    const now = Date.now();
+    rec.n = (now - rec.t > 5*60*1000) ? 1 : (rec.n || 0) + 1;
+    rec.t = now;
+    localStorage.setItem(sk, JSON.stringify(rec));
+  }catch(e){}
+}
+function clearLoginFails(k){ try{ localStorage.removeItem(_throttleKey(k)); }catch(e){} }
 async function adminLoginUser(u, p){
+  const user = String(u).trim();
+  const wait = checkLoginThrottle("admin:" + user);
+  if(wait > 0){ showToast("Too many failed attempts. Try again in " + wait + "s."); return null; }
   const list = getAdmins();
-  const hit = list.find(a => a.user === String(u).trim());
-  if(!hit) return null;
+  const hit = list.find(a => a.user === user);
+  if(!hit){ recordLoginFail("admin:" + user); return null; }
   /* Verify password using secure hash comparison */
   const valid = await verifyPass(p, hit.pass);
   if(valid){
+    clearLoginFails("admin:" + user);
     /* If password is still plaintext or legacy format, upgrade to PBKDF2 */
     if(String(hit.pass).indexOf("pbkdf2::") !== 0){
       try{
@@ -1649,6 +1672,7 @@ async function adminLoginUser(u, p){
     }
     return hit;
   }
+  recordLoginFail("admin:" + user);
   return null;
 }
 /* Secure admin session with random token (prevents simple localStorage bypass) */
@@ -1663,8 +1687,9 @@ function setAdminSession(user, name){
 function validateAdminSession(){
   const sess = getAdminSession();
   if(!sess || !sess.token) return false;
-  /* Validate that session token matches in-memory token (prevents simple localStorage injection) */
-  if(window._adminToken && sess.token !== window._adminToken) return false;
+  /* Token must match the in-memory token: after a page reload there is no
+     in-memory token, so forged localStorage sessions are rejected (re-login required) */
+  if(!window._adminToken || sess.token !== window._adminToken) return false;
   /* Session expires after 24 hours */
   if(sess.ts && Date.now() - sess.ts > 24 * 60 * 60 * 1000) return false;
   return true;
@@ -1742,87 +1767,11 @@ function validateEmailDomain(){
   return allowedDomains.includes(currentDomain) || currentDomain.endsWith('.vercel.app');
 }
 
-/* ============ Cloud Sync (GitHub repo as shared store) ============ */
-const CLOUD_FILES = {
-  products: "data/products.json",
-  cats: "data/cats.json",
-  theme: "data/theme.json",
-  orders: "data/orders.json",
-  accounts: "data/accounts.json",
-  admins: "data/admins.json",
-  content: "data/content.json"
-};
-function getCloudCfg(){ return lsGet(LS.cloudsync, { owner: "", repo: "", token: "", enabled: false }); }
-function saveCloudCfg(c){ lsSet(LS.cloudsync, c); }
-function cloudReady(){ return false; /* GitHub cloud sync deprecated, using Supabase */ }
-function ghHeaders(c){ return { "Authorization": "Bearer " + c.token, "Accept": "application/vnd.github+json" }; }
-function cloudPath(c, file){ return "https://api.github.com/repos/" + encodeURIComponent(c.owner) + "/" + encodeURIComponent(c.repo) + "/contents/" + file; }
-function b64u(str){ return btoa(unescape(encodeURIComponent(str))); }
-function unb64u(b64){ try{ return new TextDecoder().decode(Uint8Array.from(atob(b64), c => c.charCodeAt(0))); }catch(e){ return ""; } }
-async function ghGetFile(c, file){
-  const r = await fetch(cloudPath(c, file), { headers: ghHeaders(c) });
-  if(r.status === 404) return null;
-  if(!r.ok) throw new Error("GH_GET_" + r.status);
-  const j = await r.json();
-  return { sha: j.sha, data: JSON.parse(unb64u(j.content)) };
-}
-async function ghPutFile(c, file, data){
-  const content = b64u(JSON.stringify(data, null, 2));
-  let sha = null;
-  const existing = await fetch(cloudPath(c, file), { headers: ghHeaders(c) });
-  if(existing.status === 200){ const ej = await existing.json(); sha = ej.sha; }
-  else if(existing.status !== 404) throw new Error("GH_GET_" + existing.status);
-  const body = { message: "sync " + file + " via Nebula Secret", content: content };
-  if(sha) body.sha = sha;
-  const r = await fetch(cloudPath(c, file), { method: "PUT", headers: Object.assign({}, ghHeaders(c), { "Content-Type": "application/json" }), body: JSON.stringify(body) });
-  if(!r.ok) throw new Error("GH_PUT_" + r.status);
-}
-function cloudDataFor(key){
-  if(key === "products") return getProducts();
-  if(key === "cats") return getCats();
-  if(key === "theme") return getTheme();
-  if(key === "orders") return getOrders();
-  if(key === "accounts") return getAccounts();
-  if(key === "admins") return getAdmins();
-  if(key === "content") return getContent();
-  return null;
-}
-function cloudApply(key, data){
-  if(key === "products") saveProducts(data);
-  else if(key === "cats") saveCats(data);
-  else if(key === "theme") saveTheme(Object.assign(defaultTheme(), data));
-  else if(key === "orders") saveOrders(data);
-  else if(key === "accounts") saveAccounts(data);
-  else if(key === "admins") saveAdmins(data);
-  else if(key === "content") saveContent(data);
-}
-async function cloudPushKey(key, data){ /* Deprecated: data now saved to Supabase via sbSave() */ return {ok:true, deprecated:true}; }
-async function cloudPushAll(){
-  if(!cloudReady()) return {ok:false, reason:"not-configured"};
-  for(const key of Object.keys(CLOUD_FILES)){
-    const d = cloudDataFor(key); if(d == null) continue;
-    await ghPutFile(getCloudCfg(), CLOUD_FILES[key], d);
-  }
-  return {ok:true};
-}
-async function cloudPullAll(){
-  if(!cloudReady()) return {ok:false, reason:"not-configured"};
-  for(const key of Object.keys(CLOUD_FILES)){
-    try{
-      const got = await ghGetFile(getCloudCfg(), CLOUD_FILES[key]);
-      if(got){ cloudApply(key, got.data); }
-      else {
-        const d = cloudDataFor(key); if(d == null) continue;
-        await ghPutFile(getCloudCfg(), CLOUD_FILES[key], d);
-      }
-    }catch(e){ console.warn("cloud pull failed:", key, String(e && e.message || e)); }
-  }
-  return {ok:true};
-}
+
 async function sendOrderEmail(o){
   const cfg = await getEmailConfig();
   if(!cfg.enabled) return {ok:false, reason:"not-configured"};
-  return sendViaEdgeFunction(o, null, "order");
+  return sendViaEmailJS(o);
 }
 function emailTemplateParams(o){
   const cur = o.cur || "EUR"; const r = orate(o);
@@ -1845,7 +1794,7 @@ function emailTemplateParams(o){
     message: orderEmailText(o, storeName)
   };
 }
-async function sendViaEmailJS(o, cfg){
+async function sendViaEmailJS(o){
   try{
     /* Security check 1: Validate domain */
     if(!validateEmailDomain()){
@@ -1858,16 +1807,21 @@ async function sendViaEmailJS(o, cfg){
       return {ok:false, reason:rateCheck.reason, detail:rateCheck.message};
     }
     
+    const params = emailTemplateParams(o);
+    const resp = await fetch("/api/send-email", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ type: "order", params })
+    });
+    const j = await resp.json();
+    if(!resp.ok || j.error) return {ok:false, reason:"emailjs-error", detail: j.error || ("HTTP " + resp.status)};
     
-    /* Send via Edge Function (private key stored server-side) */
-    const edgeResult = await sendViaEdgeFunction(o, cfg, "order");
-    if(edgeResult.ok){
-      recordEmailSend();
-      return edgeResult;
-    }
-    return edgeResult;
+    /* Record successful send for rate limiting */
+    recordEmailSend();
+    
+    return {ok: true, resp: j};
   }catch(e){
-    return {ok:false, reason:"email-error", detail: String(e && e.message ? e.message : e)};
+    return {ok:false, reason:"network", detail: String(e && e.message ? e.message : e)};
   }
 }
 
@@ -1917,35 +1871,6 @@ async function sendViaEdgeFunction(o, cfg, type){
   }catch(e){
     return {ok:false, reason:"edge-function-unavailable", detail: String(e && e.message ? e.message : e)};
   }
-}
-async function sendViaFormSubmit(o, cfg){
-  if(!cfg.email) return {ok:false, reason:"not-configured"};
-  try{
-    const cur = o.cur || "EUR"; const r = orate(o);
-    const payload = {
-      _subject: "New order " + o.id + " — " + getTheme().storeName,
-      _template: "table",
-      _captcha: "false",
-      "Order No": o.id,
-      "Date": fmtDT(o.date),
-      "Customer": o.customer.first + " " + o.customer.last,
-      "Email": o.customer.email,
-      "Phone": o.customer.phone || "",
-      "Preferred Contact": o.customer.contact || "",
-      "Shipping Address": (o.customer.address || "Not provided") + (o.customer.country ? ", " + o.customer.country : ""),
-      "Items": o.items.map(it => it.name + " x" + it.qty + " @ " + fmtIn(it.price, cur, r) + " = " + fmtIn(it.price * it.qty, cur, r)).join("; "),
-      "Order Total": fmtIn(o.total, cur, r) + " (" + cur + ")",
-      "Status": o.status,
-      "Details": orderEmailText(o, getTheme().storeName)
-    };
-    const res = await fetch("https://formsubmit.co/ajax/" + encodeURIComponent(cfg.email), {
-      method: "POST",
-      headers: {"Content-Type": "application/json", "Accept": "application/json"},
-      body: JSON.stringify(payload)
-    });
-    const j = await res.json();
-    return {ok: true, resp: j};
-  }catch(e){ return {ok:false, reason:"network"}; }
 }
 /* Local image upload -> compressed data URL for product/category forms */
 function uploadImageTo(inputId, targetId, maxW){
@@ -2305,10 +2230,10 @@ function renderCart(){
     const unitPrice = getPriceForQty(p, i.q);
     const hasTierDiscount = p.priceTiers && p.priceTiers.length > 1 && unitPrice < p.p;
     return '<div class="cart-item">' +
-      '<a href="#/product/' + p.id + '" onclick="closeCart()"><img src="' + imgUrl(p.i, 200) + '" alt="' + esc(p.n) + '" loading="lazy" data-pid="' + p.id + '" onerror="imgFallback(this)"></a>' +
+      '<a href="#/product/' + esc(p.id) + '" onclick="closeCart()"><img src="' + esc(imgUrl(p.i, 200)) + '" alt="' + esc(p.n) + '" loading="lazy" data-pid="' + esc(p.id) + '" onerror="imgFallback(this)"></a>' +
       '<div><a class="ci-name" href="#/product/' + p.id + '" onclick="closeCart()">' + esc(p.n) + '</a>' +
       '<div class="ci-price">' + fmt(unitPrice) + ' each' + (hasTierDiscount ? ' <span style="color:var(--brand);font-size:11px;font-weight:600">Bulk discount!</span>' : '') + '</div>' +
-      '<div class="ci-qty"><button onclick="setQty(\'' + p.id + '\',' + (i.q - 1) + ')">−</button><input type="number" min="1" value="' + i.q + '" onchange="setCartQty(\'' + p.id + '\',this.value)"><button onclick="setQty(\'' + p.id + '\',' + (i.q + 1) + ')">+</button></div>' +
+      '<div class="ci-qty"><button onclick="setQty(\'' + escJs(p.id) + '\',' + (i.q - 1) + ')">−</button><input type="number" min="1" value="' + i.q + '" onchange="setCartQty(\'' + escJs(p.id) + '\',this.value)"><button onclick="setQty(\'' + escJs(p.id) + '\',' + (i.q + 1) + ')">+</button></div>' +
       '<button class="ci-remove" onclick="removeItem(\'' + p.id + '\')">Remove</button></div>' +
       '<div class="ci-total">' + fmt(i.q * unitPrice) + '</div></div>';
   }).join("");
@@ -2589,7 +2514,7 @@ function cardHTML(p, opts){
   const rt = productRating(p); const sold = productSold(p);
   return '<article class="product-card">' +
     '<div class="ph">' +
-      '<a href="#/product/' + p.id + '"><img src="' + imgUrl(p.i, 700) + '" alt="' + esc(p.n) + '" loading="lazy" data-pid="' + p.id + '" onerror="imgFallback(this)"></a>' +
+      '<a href="#/product/' + esc(p.id) + '"><img src="' + esc(imgUrl(p.i, 700)) + '" alt="' + esc(p.n) + '" loading="lazy" data-pid="' + esc(p.id) + '" onerror="imgFallback(this)"></a>' +
       '<button class="quick-add" onclick="addToCart(\'' + p.id + '\',1)">Add to cart</button>' +
     '</div>' +
     '<div class="info">' +
@@ -2639,19 +2564,19 @@ function viewAbout(){
   '</section>' +
 
   '<section class="about-section" id="ab-story">' +
-    '<h2><span class="bar"></span>' + abStoryT + '</h2>' +
-    '<div class="about-prose">' + abStoryB + '</div>' +
+    '<h2><span class="bar"></span>' + esc(abStoryT) + '</h2>' +
+    '<div class="about-prose">' + sanitizeHTML(abStoryB) + '</div>' +
   '</section>' +
 
   '<section class="about-section" id="ab-mission">' +
-    '<h2><span class="bar"></span>' + abMissionT + '</h2>' +
-    '<p class="lead">' + abMissionLead + '</p>' +
-    '<div class="about-prose">' + abMissionB + '</div>' +
+    '<h2><span class="bar"></span>' + esc(abMissionT) + '</h2>' +
+    '<p class="lead">' + esc(abMissionLead) + '</p>' +
+    '<div class="about-prose">' + sanitizeHTML(abMissionB) + '</div>' +
   '</section>' +
 
   '<section class="about-section" id="ab-promise">' +
-    '<h2><span class="bar"></span>' + abPromiseT + '</h2>' +
-    '<p class="lead">' + abPromiseLead + '</p>' +
+    '<h2><span class="bar"></span>' + esc(abPromiseT) + '</h2>' +
+    '<p class="lead">' + esc(abPromiseLead) + '</p>' +
     '<div class="value-grid">' +
       values.map(v => '<div class="value-card"><div class="v-icon">' + v.icon + '</div><h3>' + v.t + '</h3><p>' + v.p + '</p></div>').join("") +
     '</div>' +
@@ -3087,8 +3012,8 @@ function viewInfo(page){
   if(infoOv.body) body = infoOv.body;
 
   $("#app").innerHTML =
-  '<section class="info-hero"><div><h1>' + title + '</h1>' + (subtitle ? '<p>' + subtitle + '</p>' : '') + '</div></section>' +
-  '<section class="info-section">' + back + body + '</section>';
+  '<section class="info-hero"><div><h1>' + esc(title) + '</h1>' + (subtitle ? '<p>' + esc(subtitle) + '</p>' : '') + '</div></section>' +
+  '<section class="info-section">' + back + sanitizeHTML(body) + '</section>';
 }
 
 function trackOrderLookup(){
@@ -3103,7 +3028,7 @@ function trackOrderLookup(){
   result.style.display = "block";
   result.innerHTML =
   '<div class="track-result">' +
-    '<div class="tr-row"><span class="tr-label">Order Number</span><span class="tr-val">' + o.id + '</span></div>' +
+    '<div class="tr-row"><span class="tr-label">Order Number</span><span class="tr-val">' + esc(o.id) + '</span></div>' +
     '<div class="tr-row"><span class="tr-label">Date</span><span class="tr-val">' + fmtDT(o.date) + '</span></div>' +
     '<div class="tr-row"><span class="tr-label">Customer</span><span class="tr-val">' + esc(o.customer.first + " " + o.customer.last) + '</span></div>' +
     '<div class="tr-row"><span class="tr-label">Email</span><span class="tr-val">' + esc(o.customer.email) + '</span></div>' +
@@ -3213,7 +3138,8 @@ function showPopupIfNeeded(){
     const b = document.getElementById("popupBodyText"); if(b) b.innerHTML = sanitizeHTML(th.popupBody || "");
     const btn = document.getElementById("popupBtn");
     if(btn){
-      if(th.popupBtnText && th.popupBtnLink){
+      /* Scheme allowlist: blocks javascript:/data: URLs from popup config (XSS) */
+      if(th.popupBtnText && th.popupBtnLink && /^(https?:|mailto:|#\/)/i.test(th.popupBtnLink)){
         btn.style.display = "inline-flex";
         btn.textContent = th.popupBtnText;
         btn.href = th.popupBtnLink;
@@ -3286,9 +3212,13 @@ async function submitContactForm(ev){
   if(!email || !/.+@.+\..+/.test(email)){ showCfMsg(msgEl, "#c0392b", "Please enter a valid email address."); return; }
   if(!message){ showCfMsg(msgEl, "#c0392b", "Please enter your message."); return; }
 
-  // Get email configuration from server
+  // Check email config from server
   const cfg = await getEmailConfig();
-  
+  if(!cfg.enabled){
+    showCfMsg(msgEl, "#c0392b", "Email service not configured. Please contact us directly at sales@nebulasecret.com.");
+    return;
+  }
+
   /* Security check 1: Validate domain */
   if(!validateEmailDomain()){
     showCfMsg(msgEl, "#c0392b", "Email sending is not allowed from this domain. Please contact the site administrator.");
@@ -3308,43 +3238,42 @@ async function submitContactForm(ev){
   showCfMsg(msgEl, "#666", "Sending your message...");
 
   try{
-    // Build form data object for Edge Function
-    const formData = {
-      name: name,
-      email: email,
+    // Build email params — server handles recipient routing
+    const params = {
+      from_name: name,
+      from_email: email,
       company: company || "Not provided",
-      type: type,
-      message: message
+      inquiry_type: type,
+      subject: "New " + type + " Inquiry from " + name + " — Nebula Secret",
+      message: message,
+      reply_to: email,
+      store_name: (getTheme() || {}).storeName || "Nebula Secret",
+      date: new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" })
     };
-    
-    // Send via Edge Function (private key stored server-side)
-    const edgeResult = await sendViaEdgeFunction(formData, null, "contact");
-    if(edgeResult.ok){
-      /* Record successful send for rate limiting */
-      recordEmailSend();
-      
-      // Success
-      showCfMsg(msgEl, "#2e7d32", "Thank you, " + name + "! Your message has been sent. Our team will get back to you within 24 hours.");
-      // Reset form
-      document.getElementById("cfName").value = "";
-      document.getElementById("cfEmail").value = "";
-      document.getElementById("cfCompany").value = "";
-      document.getElementById("cfType").value = "Wholesale";
-      document.getElementById("cfMessage").value = "";
-      return;
-    }
-    // Edge Function failed — show error
-    showCfMsg(msgEl, "#c62828", "Failed to send message: " + (edgeResult.detail || edgeResult.reason || "Unknown error") + ". Please try again or contact us directly.");
+
+    // Route through server-side /api/send-email (EmailJS secrets stay server-side)
+    const resp = await fetch("/api/send-email", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ type: "contact", params })
+    });
+    const j = await resp.json();
+    if(!resp.ok || j.error) throw new Error(j.error || ("HTTP " + resp.status));
+
+    /* Record successful send for rate limiting */
+    recordEmailSend();
+
+    // Success
+    showCfMsg(msgEl, "#2e7d32", "Thank you, " + name + "! Your message has been sent. Our team will get back to you within 24 hours.");
+    // Reset form
+    document.getElementById("cfName").value = "";
+    document.getElementById("cfEmail").value = "";
+    document.getElementById("cfCompany").value = "";
     document.getElementById("cfType").value = "Wholesale";
     document.getElementById("cfMessage").value = "";
   }catch(e){
     const errMsg = e && e.text ? e.text : (e && e.message ? e.message : String(e));
-    /* Check if error is due to domain whitelist */
-    if(errMsg.includes('domain') || errMsg.includes('Domain') || errMsg.includes('not allowed')){
-      showCfMsg(msgEl, "#c0392b", "EmailJS domain whitelist not configured. The site administrator needs to add this domain in EmailJS dashboard → Account Settings → Domains.");
-    }else{
-      showCfMsg(msgEl, "#c0392b", "Sorry, we couldn't send your message. Please try again or email us directly at " + recipients[0] + ". Error: " + errMsg);
-    }
+    showCfMsg(msgEl, "#c0392b", "Sorry, we couldn't send your message. Please try again or email us directly at sales@nebulasecret.com. Error: " + errMsg);
   }finally{
     btn.disabled = false;
     btn.textContent = "Send Message";
@@ -3502,7 +3431,7 @@ function viewProduct(id){
     '<div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<a href="#/shop">Shop</a>' + IC.chev + '<a href="#/shop?cat=' + p.cs + '">' + esc(catName(p.cs)) + '</a>' + IC.chev + '<span class="cur">' + esc(p.n) + '</span></div>' +
     '<div class="detail-wrap">' +
       '<div class="detail-gallery">' +
-        '<div class="detail-main-img"><img src="' + imgUrl(p.i, 1000) + '" alt="' + esc(p.n) + '" data-pid="' + p.id + '" onerror="imgFallback(this)"></div>' +
+        '<div class="detail-main-img"><img src="' + esc(imgUrl(p.i, 1000)) + '" alt="' + esc(p.n) + '" data-pid="' + esc(p.id) + '" onerror="imgFallback(this)"></div>' +
         '<div class="detail-badges"><span class="badge">' + esc(catName(p.cs)) + '</span><span class="badge tag-new">In Stock</span></div>' +
       '</div>' +
       '<div class="detail-info">' +
@@ -3678,15 +3607,26 @@ async function acctLogin(){
       }
     }
   } catch(e) {
-    console.log("Supabase Auth login failed, trying legacy method:", e.message);
+    console.warn("Supabase Auth login failed, trying legacy method");
   }
   
-  /* Method 2: Try legacy account system */
+  /* Method 2: Legacy account system with throttle + PBKDF2 upgrade */
+  const wait = checkLoginThrottle("acct:" + email);
+  if(wait > 0){ err.textContent = "Too many failed attempts. Try again in " + wait + "s."; return; }
   const acc = getAccounts().find(a => a.email === email);
-  if(!acc){ err.textContent = "No account found with this email — create one above"; return; }
-  return verifyPass(pass, acc.pass).then(valid => {
-    if(!valid){ err.textContent = "Incorrect password"; return; }
-    setSession({ name: acc.name, email: acc.email });
+  if(!acc){ recordLoginFail("acct:" + email); err.textContent = "No account found with this email — create one above"; return; }
+  return verifyPass(pass, acc.pass).then(async valid => {
+    if(!valid){ recordLoginFail("acct:" + email); err.textContent = "Incorrect password"; return; }
+    clearLoginFails("acct:" + email);
+    /* Upgrade legacy password hashes to PBKDF2 on successful login */
+    try{
+      if(String(acc.pass).indexOf("pbkdf2::") !== 0){
+        const all = getAccounts();
+        const i = all.findIndex(a => a.email === email);
+        if(i >= 0){ all[i].pass = await hashPass(pass); saveAccounts(all); }
+      }
+    }catch(e){ /* Ignore upgrade errors */ }
+    setSession({ name: acc.name, email: acc.email, ts: Date.now() });
     updateAcctLabel();
     showToast("Signed in as " + acc.name.split(" ")[0]);
     route();
@@ -3806,7 +3746,7 @@ function viewCustomerQuote(id){
       (q.quoteNotes ? '<div style="margin-bottom:20px;padding:14px;background:rgba(37,186,181,0.05);border-radius:10px;border-left:3px solid var(--brand)"><div style="font-weight:600;font-size:13px;margin-bottom:6px">Quote Notes</div><div style="font-size:13px;color:var(--ink);line-height:1.6">' + esc(q.quoteNotes) + '</div></div>' : '') +
       (q.notes ? '<div style="margin-bottom:20px;padding:14px;background:var(--card);border-radius:10px"><div style="font-weight:600;font-size:13px;margin-bottom:6px">Your Notes</div><div style="font-size:13px;color:var(--ink);line-height:1.6">' + esc(q.notes) + '</div></div>' : '') +
       '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
-        (canAccept ? '<button class="btn" onclick="acceptQuote(\'' + esc(q.id) + '\')">Accept Quote & Create Order</button>' : '') +
+        (canAccept ? '<button class="btn" onclick="acceptQuote(\'' + escJs(q.id) + '\')">Accept Quote & Create Order</button>' : '') +
         '<button class="btn ghost" onclick="downloadQuotePDF(\'' + esc(q.id) + '\')">' + IC.down + ' Download Quote PDF</button>' +
         '<a class="btn ghost" href="#/account">Back to Account</a>' +
       '</div>' +
@@ -4052,9 +3992,6 @@ function submitCustomerOrderNote(id){
   });
   saveOrders(orders);
   showToast("Note added");
-  if(typeof cloudReady === 'function' && cloudReady()){
-    cloudPushKey("orders", orders).catch(() => {});
-  }
   viewCustomerOrder(id);
 }
 function changePassOpen(){
@@ -4281,10 +4218,6 @@ if(typeof ResizeObserver !== "undefined"){
   if(_sh){ new ResizeObserver(function(){ syncSticky(); }).observe(_sh); }
 }
 route();
-/* Cloud sync: pull the latest from GitHub in the background after first render */
-cloudPullAll().then(() => { try{ route(); }catch(e){} });
-/* Cloud catalog deprecated — using Supabase for all dynamic data */
-/* loadCloudCatalog(); */
 
 /* ============ Supabase Keep-Alive (prevent 7-day pause) ============ */
 /* Supabase Free plan pauses after 7 days of inactivity.

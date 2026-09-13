@@ -13,36 +13,27 @@ export const config = {
   runtime: 'edge',
 };
 
-// Simple in-memory rate limiter (best-effort for edge runtime)
-// Note: Edge functions are stateless, so this is per-instance.
-// For production, use Vercel KV or Upstash Redis.
-const rateLimitMap = new Map();
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 10; // 10 requests per minute per IP
+// Best-effort per-instance rate limit (edge isolates don't share state:
+// 10 requests/min per IP here; pair with Vercel Firewall/WAF for strict limits)
+const _rl = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000;
+const RATE_LIMIT_MAX = 10;
 
 function checkRateLimit(ip) {
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW;
-  
-  // Clean old entries
-  for (const [key, value] of rateLimitMap.entries()) {
-    if (value.timestamp < windowStart) {
-      rateLimitMap.delete(key);
-    }
+  for (const [key, value] of _rl.entries()) {
+    if (value.timestamp < windowStart) _rl.delete(key);
   }
-  
   const key = ip || 'unknown';
-  const entry = rateLimitMap.get(key);
-  
+  const entry = _rl.get(key);
   if (!entry) {
-    rateLimitMap.set(key, { count: 1, timestamp: now });
+    _rl.set(key, { count: 1, timestamp: now });
     return { allowed: true, remaining: RATE_LIMIT_MAX - 1 };
   }
-  
   if (entry.count >= RATE_LIMIT_MAX) {
     return { allowed: false, remaining: 0, retryAfter: Math.ceil((entry.timestamp + RATE_LIMIT_WINDOW - now) / 1000) };
   }
-  
   entry.count++;
   return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count };
 }
@@ -86,23 +77,21 @@ export default async function handler(req) {
     });
   }
 
-  // Get client IP for rate limiting
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+  // Per-IP rate limit
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
              req.headers.get('x-real-ip') || 'unknown';
-
-  // Rate limiting
   const rateLimit = checkRateLimit(ip);
   if (!rateLimit.allowed) {
-    return new Response(JSON.stringify({ 
-      ok: false, 
+    return new Response(JSON.stringify({
+      ok: false,
       error: 'Rate limit exceeded',
       retryAfter: rateLimit.retryAfter
     }), {
       status: 429,
-      headers: { 
-        'Content-Type': 'application/json', 
+      headers: {
+        'Content-Type': 'application/json',
         'Retry-After': String(rateLimit.retryAfter),
-        ...getCorsHeaders(req) 
+        ...getCorsHeaders(req)
       },
     });
   }
@@ -111,7 +100,7 @@ export default async function handler(req) {
     const body = await req.json();
     const { type, params } = body;
 
-    // Validate request
+    // Validate request structure
     if (!type || !params || typeof params !== 'object') {
       return new Response(JSON.stringify({ error: 'Missing or invalid type or params' }), {
         status: 400,
@@ -119,7 +108,7 @@ export default async function handler(req) {
       });
     }
 
-    // Validate type
+    // Validate type allowlist
     if (!['order', 'contact'].includes(type)) {
       return new Response(JSON.stringify({ error: 'Invalid email type' }), {
         status: 400,
@@ -131,7 +120,7 @@ export default async function handler(req) {
     const serviceId = process.env.EMAILJS_SERVICE_ID;
     const publicKey = process.env.EMAILJS_PUBLIC_KEY;
     const privateKey = process.env.EMAILJS_PRIVATE_KEY;
-    const mailRecipients = process.env.MAIL_RECIPIENTS || 'sales@nebulasecret.com,bong8686@gmail.com';
+    const mailRecipients = process.env.MAIL_RECIPIENTS || '';
 
     let templateId;
     if (type === 'contact') {
@@ -142,8 +131,9 @@ export default async function handler(req) {
 
     // Validate configuration
     if (!serviceId || !templateId || !publicKey || !privateKey) {
-      return new Response(JSON.stringify({ 
-        ok: false, 
+      console.error('EmailJS configuration missing');
+      return new Response(JSON.stringify({
+        ok: false,
         error: 'Email service not configured'
       }), {
         status: 500,
@@ -156,21 +146,22 @@ export default async function handler(req) {
     const filteredParams = filterParams(params, allowedKeys);
 
     // Override to_email with server-configured recipients (security)
-    filteredParams.to_email = mailRecipients;
+    if (mailRecipients) {
+      filteredParams.to_email = mailRecipients;
+    }
 
-    // Send email via EmailJS REST API
+    // Build EmailJS payload
     const emailjsPayload = {
       service_id: serviceId,
       template_id: templateId,
       user_id: publicKey,
       template_params: filteredParams,
     };
-    
-    // Use accessToken for authentication (private key)
     if (privateKey) {
       emailjsPayload.accessToken = privateKey;
     }
 
+    // Send email via EmailJS REST API
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: {
@@ -182,19 +173,18 @@ export default async function handler(req) {
     if (response.ok) {
       return new Response(JSON.stringify({ ok: true, message: 'Email sent successfully' }), {
         status: 200,
-        headers: { 
-          'Content-Type': 'application/json', 
+        headers: {
+          'Content-Type': 'application/json',
           'X-RateLimit-Remaining': String(rateLimit.remaining),
-          ...getCorsHeaders(req) 
+          ...getCorsHeaders(req)
         },
       });
     } else {
       // Don't leak internal error details to client
       const errorText = await response.text();
       console.error('[Edge Function] EmailJS error:', response.status, errorText.substring(0, 500));
-      
-      return new Response(JSON.stringify({ 
-        ok: false, 
+      return new Response(JSON.stringify({
+        ok: false,
         error: 'Failed to send email'
       }), {
         status: 502,
@@ -203,8 +193,7 @@ export default async function handler(req) {
     }
   } catch (error) {
     console.error('[Edge Function] Internal error:', error.message);
-    // Don't leak internal error details to client
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: 'Internal server error'
     }), {
       status: 500,
@@ -216,33 +205,8 @@ export default async function handler(req) {
 function getCorsHeaders(req) {
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://nebula-secret-supabase.vercel.app').split(',').map(s => s.trim());
   const origin = req.headers.get('origin');
-  
-  // More permissive CORS: allow any origin that matches our domains
-  // This fixes issues with mobile browsers that may send slightly different origins
-  if (origin) {
-    // Check if origin matches any allowed origin (with or without trailing slash)
-    const normalizedOrigin = origin.replace(/\/$/, '');
-    const isAllowed = allowedOrigins.some(allowed => {
-      const normalizedAllowed = allowed.replace(/\/$/, '');
-      return normalizedOrigin === normalizedAllowed || 
-             normalizedOrigin.endsWith('.' + normalizedAllowed.replace(/^https?:\/\//, '')) ||
-             normalizedOrigin.includes('.vercel.app');
-    });
-    
-    if (isAllowed) {
-      return {
-        'Access-Control-Allow-Origin': origin,
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Max-Age': '86400',
-        'Vary': 'Origin',
-      };
-    }
-  }
-  
-  // For requests without origin (e.g., curl, server-side), allow access
-  // This is safe because we have rate limiting and parameter filtering
-  if (!origin) {
+
+  if (origin && allowedOrigins.includes(origin)) {
     return {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -250,8 +214,7 @@ function getCorsHeaders(req) {
       'Access-Control-Max-Age': '86400',
     };
   }
-  
-  // For non-allowed origins, return minimal headers (request may be blocked by browser)
+
   return {
     'Content-Type': 'application/json',
   };

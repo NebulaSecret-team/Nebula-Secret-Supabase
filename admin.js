@@ -6,8 +6,8 @@
  * 
  * Dependencies (global variables from index.html):
  * - $, $$, esc, escJs, slugify, fmt, fmtD, imgUrl, imgFallback
- * - getProducts, getCats, getOrders, getAccounts, getAdmins, getTheme, getContent, getMailCfg
- * - saveProducts, saveCats, saveOrders, saveAccounts, saveAdmins, saveTheme, saveContent, saveMailCfg
+ * - getProducts, getCats, getOrders, getAccounts, getAdmins, getTheme, getContent
+ * - saveProducts, saveCats, saveOrders, saveAccounts, saveAdmins, saveTheme, saveContent
  * - supabase, _cache, sbSave, sbLoadAll
  * - IC (icons), LS (localStorage keys), PLACEHOLDER, CURRENCIES
  * - showToast, closeCart, closeCheckout, closeAdminModal, closeMegaMenu
@@ -155,9 +155,9 @@ function adminOrders(){
             ORDER_STATUSES.map(s => '<option ' + (o.status === s ? "selected" : "") + '>' + s + '</option>').join("") +
           '</select></td>' +
           '<td><div class="table-actions">' +
-            '<button onclick="viewOrder(\'' + esc(o.id) + '\')" title="View">' + IC.search + '</button>' +
-            '<button onclick="mailOrder(lastOrderById(\'' + esc(o.id) + '\'))" title="Email">' + IC.mail + '</button>' +
-            '<button class="del" onclick="deleteOrder(\'' + esc(o.id) + '\')" title="Delete">' + IC.del + '</button>' +
+            '<button onclick="viewOrder(\'' + escJs(o.id) + '\')" title="View">' + IC.search + '</button>' +
+            '<button onclick="mailOrder(lastOrderById(\'' + escJs(o.id) + '\'))" title="Email">' + IC.mail + '</button>' +
+            '<button class="del" onclick="deleteOrder(\'' + escJs(o.id) + '\')" title="Delete">' + IC.del + '</button>' +
           '</div></td></tr>'; }).join("") +
         '</tbody></table></div>'
       : '<div class="panel-body"><div style="font-size:13.5px;color:var(--ink-soft);padding:10px 0">No orders yet. When a customer places an order on the storefront it is saved here automatically and can be exported to Excel.</div></div>') +
@@ -189,9 +189,6 @@ function setOrderStatus(id, status, note){
   o.statusHistory.push({ status: status, date: new Date().toISOString(), note: note || "Status updated by admin" });
   saveOrders(orders);
   showToast("Order " + id + " → " + status);
-  if(cloudReady()){
-    cloudPushKey("orders", orders).catch(() => {});
-  }
 }
 function addOrderNote(id, note, author){
   const orders = getOrders();
@@ -206,9 +203,6 @@ function addOrderNote(id, note, author){
   });
   saveOrders(orders);
   showToast("Note added to order " + id);
-  if(cloudReady()){
-    cloudPushKey("orders", orders).catch(() => {});
-  }
 }
 function deleteOrder(id){
   if(!confirm("Delete order " + id + "?")) return;
@@ -262,13 +256,13 @@ function viewOrder(id){
       '</div>').join("") : '<p style="font-size:13px;color:var(--ink-soft)">No notes yet.</p>') +
       '<div style="margin-top:12px;display:flex;gap:8px">' +
         '<input type="text" id="orderNoteInput" placeholder="Add a note..." style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px" onkeypress="if(event.key===\'Enter\') submitOrderNote(\'' + esc(o.id) + '\')">' +
-        '<button class="btn sm" onclick="submitOrderNote(\'' + esc(o.id) + '\')">Add Note</button>' +
+        '<button class="btn sm" onclick="submitOrderNote(\'' + escJs(o.id) + '\')">Add Note</button>' +
       '</div>' +
     '</div>' +
     '<div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">' +
       '<button class="btn sm" onclick="mailOrder(lastOrder)">' + IC.mail + ' Email Order</button>' +
       '<button class="btn sm ghost" onclick="copyOrderSummary(lastOrder)">Copy Summary</button>' +
-      '<button class="btn sm ghost" onclick="downloadOrderPDF(\'' + esc(o.id) + '\')">' + IC.down + ' Download PDF</button>' +
+      '<button class="btn sm ghost" onclick="downloadOrderPDF(\'' + escJs(o.id) + '\')">' + IC.down + ' Download PDF</button>' +
     '</div>';
   $("#adminModal").classList.add("open");
 }
@@ -301,9 +295,9 @@ function adminQuotes(){
           '<td><span class="pill ' + (q.status === "Pending" ? "yellow" : q.status === "Quoted" ? "blue" : q.status === "Accepted" ? "green" : "gray") + '">' + esc(statusDisplay) + '</span></td>' +
           '<td style="white-space:nowrap">' + (q.validUntil ? fmtD(q.validUntil) : "—") + '</td>' +
           '<td><div class="table-actions">' +
-            '<button onclick="viewAdminQuote(\'' + esc(q.id) + '\')" title="View">' + IC.search + '</button>' +
-            '<button onclick="downloadQuotePDF(\'' + esc(q.id) + '\')" title="Download PDF">' + IC.down + '</button>' +
-            '<button class="del" onclick="deleteQuote(\'' + esc(q.id) + '\')" title="Delete">' + IC.del + '</button>' +
+            '<button onclick="viewAdminQuote(\'' + escJs(q.id) + '\')" title="View">' + IC.search + '</button>' +
+            '<button onclick="downloadQuotePDF(\'' + escJs(q.id) + '\')" title="Download PDF">' + IC.down + '</button>' +
+            '<button class="del" onclick="deleteQuote(\'' + escJs(q.id) + '\')" title="Delete">' + IC.del + '</button>' +
           '</div></td></tr>'; }).join("") +
         '</tbody></table></div>'
       : '<div class="panel-body"><div style="font-size:13.5px;color:var(--ink-soft);padding:10px 0">No quote requests yet. When a customer requests a quote from their cart it will appear here.</div></div>') +
@@ -336,8 +330,8 @@ function viewAdminQuote(id){
       '<h4 style="font-size:15px;font-weight:600;margin-bottom:8px;color:#b8860b">Customer Has Proposed a Target Price</h4>' +
       '<p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px">Customer requested <strong style="color:#b8860b;font-size:16px">' + fmt(q.customerTargetPrice) + '</strong> (€' + Number(q.customerTargetPrice).toFixed(2) + ' EUR base). You can accept this price or send your own quote.</p>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-        '<button class="btn" style="background:#22c55e" onclick="acceptCustomerTargetPrice(\'' + esc(q.id) + '\')">' + IC.sparkle + ' Accept Customer Price</button>' +
-        '<button class="btn ghost" style="color:#ef4444;border-color:#ef4444" onclick="rejectCustomerTargetPrice(\'' + esc(q.id) + '\')">Reject Target Price</button>' +
+        '<button class="btn" style="background:#22c55e" onclick="acceptCustomerTargetPrice(\'' + escJs(q.id) + '\')">' + IC.sparkle + ' Accept Customer Price</button>' +
+        '<button class="btn ghost" style="color:#ef4444;border-color:#ef4444" onclick="rejectCustomerTargetPrice(\'' + escJs(q.id) + '\')">Reject Target Price</button>' +
       '</div>' +
     '</div>' : '') +
     '<div style="margin-top:20px;padding:16px;background:rgba(37,186,181,0.05);border-radius:10px;border:1px solid rgba(37,186,181,0.2)">' +
@@ -345,16 +339,16 @@ function viewAdminQuote(id){
       '<div class="form-grid">' +
         '<div class="field"><label>Quoted Price (' + getCur().code + ') *</label><input id="qPrice" type="number" step="0.01" min="0" value="' + (q.quotedPrice ? (q.quotedPrice * rateOf(getCur().code)).toFixed(2) : (q.subtotal * rateOf(getCur().code)).toFixed(2)) + '"></div>' +
         '<div class="field"><label>Valid Until *</label><input id="qValid" type="text" class="date-picker" placeholder="Select date" readonly value="' + (q.validUntil ? q.validUntil.substring(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10)) + '"></div>' +
-        '<div class="field full"><label>Quote Notes / Terms</label><textarea id="qNotes" rows="3" placeholder="e.g. Prices include packaging, shipping quoted separately, MOQ applies...">' + (q.quoteNotes || "") + '</textarea></div>' +
+        '<div class="field full"><label>Quote Notes / Terms</label><textarea id="qNotes" rows="3" placeholder="e.g. Prices include packaging, shipping quoted separately, MOQ applies...">' + esc(q.quoteNotes || "") + '</textarea></div>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:12px">' +
-        '<button class="btn" onclick="submitQuoteResponse(\'' + esc(q.id) + '\')">' + IC.mail + ' Send Quote</button>' +
-        '<button class="btn ghost" onclick="setQuoteStatus(\'' + esc(q.id) + '\', \'Rejected\')">Reject Request</button>' +
+        '<button class="btn" onclick="submitQuoteResponse(\'' + escJs(q.id) + '\')">' + IC.mail + ' Send Quote</button>' +
+        '<button class="btn ghost" onclick="setQuoteStatus(\'' + escJs(q.id) + '\', \'Rejected\')">Reject Request</button>' +
       '</div>' +
     '</div>' +
     '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">' +
-      '<button class="btn sm ghost" onclick="downloadQuotePDF(\'' + esc(q.id) + '\')">' + IC.down + ' Download Quote PDF</button>' +
-      '<button class="btn sm ghost" onclick="mailQuote(\'' + esc(q.id) + '\')">' + IC.mail + ' Email Customer</button>' +
+      '<button class="btn sm ghost" onclick="downloadQuotePDF(\'' + escJs(q.id) + '\')">' + IC.down + ' Download Quote PDF</button>' +
+      '<button class="btn sm ghost" onclick="mailQuote(\'' + escJs(q.id) + '\')">' + IC.mail + ' Email Customer</button>' +
     '</div>';
   $("#adminModal").classList.add("open");
   /* Initialize flatpickr date picker */
@@ -396,7 +390,6 @@ function submitQuoteResponse(id){
   q.history.push({ status: "Quoted", date: new Date().toISOString(), note: "Quote sent by admin: " + fmt(price) + " EUR, valid until " + valid });
   saveQuotes(quotes);
   showToast("Quote " + id + " sent!");
-  if(cloudReady()){ cloudPushKey("quotes", quotes).catch(() => {}); }
   $("#adminModal").classList.remove("open");
   adminQuotes();
 }
@@ -409,7 +402,6 @@ function setQuoteStatus(id, status){
   q.history.push({ status: status, date: new Date().toISOString(), note: "Status updated by admin" });
   saveQuotes(quotes);
   showToast("Quote status updated to " + status);
-  if(cloudReady()){ cloudPushKey("quotes", quotes).catch(() => {}); }
   adminQuotes();
 }
 function acceptCustomerTargetPrice(id){
@@ -425,7 +417,6 @@ function acceptCustomerTargetPrice(id){
   q.history.push({ status: "Quoted", date: new Date().toISOString(), note: "Admin accepted customer target price: " + fmt(q.customerTargetPrice) + " EUR" });
   saveQuotes(quotes);
   showToast("Customer target price accepted! Quote sent.");
-  if(cloudReady()){ cloudPushKey("quotes", quotes).catch(() => {}); }
   $("#adminModal").classList.remove("open");
   adminQuotes();
 }
@@ -438,7 +429,6 @@ function rejectCustomerTargetPrice(id){
   q.history.push({ status: "Rejected", date: new Date().toISOString(), note: "Admin rejected customer target price of " + (q.customerTargetPrice ? fmt(q.customerTargetPrice) : "N/A") + " EUR" });
   saveQuotes(quotes);
   showToast("Customer target price rejected.");
-  if(cloudReady()){ cloudPushKey("quotes", quotes).catch(() => {}); }
   $("#adminModal").classList.remove("open");
   adminQuotes();
 }
@@ -614,14 +604,7 @@ function saveProductForm(id){
   saveProducts(products);
   closeAdminModal();
   adminProducts();
-  if(cloudReady()){
-    showToast("Saving & syncing to cloud…");
-    cloudPushKey("products", products).then(r => {
-      showToast(r && r.ok ? ((existing ? "Product updated" : "Product added") + " & synced to cloud") : ((existing ? "Product updated" : "Product added") + " locally — cloud sync failed: " + (r && r.reason || "unknown")));
-    });
-  } else {
-    showToast(existing ? "Product updated" : "Product added");
-  }
+  showToast(existing ? "Product updated" : "Product added");
 }
 
 function deleteProduct(id){
@@ -967,12 +950,6 @@ function saveContentForm(){
   saveContent(c);
   applyFooterContent();
   showToast("Site content saved");
-  if(cloudReady()){
-    cloudPushKey("content", c).then(r => {
-      if(r && r.ok) showToast("Site content saved & synced to cloud");
-      else showToast("Saved locally — cloud sync failed: " + (r && r.reason || "unknown"));
-    });
-  }
 }
 function cleanContentObj(obj){
   Object.keys(obj).forEach(k => {
@@ -985,85 +962,8 @@ function cleanContentObj(obj){
     }
   });
 }
-function adminCloudSync(){
-  const cc = getCloudCfg();
-  const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Cloud Sync</h3><div class="ph-sub">Use your GitHub repo as a shared store — orders, accounts, products, categories, theme and admins stay in sync across all your devices</div></div></div>' +
-    '<div class="panel-body">' +
-      '<div class="form-hint" style="margin-bottom:12px"><b>How it works:</b> once enabled, every change is saved locally <b>and</b> pushed to <code>data/*.json</code> in your repo. On startup, this browser pulls the latest from the repo. Sign in on another device and enable the same settings there to keep everything in sync.<br><b>Your token stays in this browser only</b> — it is never written into the repo or the website source.</div>' +
-      '<div class="form-grid">' +
-        '<div class="field"><label>GitHub username (owner)</label><input id="csOwner" value="' + esc(cc.owner || "") + '" placeholder="your-github-name"></div>' +
-        '<div class="field"><label>Repository name</label><input id="csRepo" value="' + esc(cc.repo || "") + '" placeholder="nebula-secret"></div>' +
-        '<div class="field full"><label>Fine-grained token (Contents: read &amp; write)</label><input id="csToken" type="password" value="' + esc(cc.token || "") + '" placeholder="github_pat_..."><button type="button" class="btn sm ghost" style="margin-top:6px" onclick="toggleCsToken()">Show / Hide token</button></div>' +
-        '<div class="field full"><label>Enable cloud sync</label><select id="csEnabled"><option value="1"' + (cc.enabled ? " selected" : "") + '>On — sync to GitHub on every change</option><option value="0"' + (!cc.enabled ? " selected" : "") + '>Off — local-only mode</option></select></div>' +
-      '</div>' +
-      '<div style="margin-top:6px"><button class="btn" onclick="saveCloudForm()">Save Cloud Settings</button>' +
-      '<button class="btn ghost" style="margin-left:8px" onclick="testCloudConn()">Test Connection</button>' +
-      '<button class="btn ghost" style="margin-left:8px" onclick="pushCloudNow()">Push All Now</button>' +
-      '<button class="btn ghost" style="margin-left:8px" onclick="pullCloudNow()">Pull All Now</button></div>' +
-      '<div id="csStatus" style="margin-top:12px"></div>' +
-    '</div></div>';
-  renderAdminShell(content);
-  $("#adminTitle").textContent = "Cloud Sync";
-}
-function toggleCsToken(){
-  const inp = $("#csToken"); if(!inp) return;
-  inp.type = inp.type === "password" ? "text" : "password";
-}
-function csStatus(html, ok){
-  const el = $("#csStatus"); if(!el) return;
-  el.innerHTML = '<div class="form-hint" style="padding:10px 12px;border-radius:10px;background:' + (ok === false ? 'rgba(234,102,104,.12)' : 'rgba(82,196,26,.10)') + '">' + html + '</div>';
-}
-function readCloudForm(){
-  return { owner: $("#csOwner").value.trim(), repo: $("#csRepo").value.trim(), token: $("#csToken").value.trim(), enabled: $("#csEnabled").value === "1" };
-}
-async function saveCloudForm(){
-  const cfg = readCloudForm();
-  if(cfg.enabled && (!cfg.owner || !cfg.repo || !cfg.token)){ showToast("Please fill GitHub username, repo and token first"); return; }
-  saveCloudCfg(cfg);
-  if(cfg.enabled){
-    csStatus("Saving and pushing all data to GitHub…");
-    try{
-      await cloudPushAll();
-      csStatus("Cloud sync enabled and all data pushed to <code>data/*.json</code> in <b>" + esc(cfg.owner) + "/" + esc(cfg.repo) + "</b>. Now enable the same settings on your other devices (same username, repo and token) and they will share everything.");
-    }catch(e){ csStatus("Push failed: " + esc(String(e && e.message || e)), false); }
-  } else {
-    csStatus("Cloud sync is off. Your data stays local to this browser only.");
-  }
-  showToast("Cloud settings saved");
-}
-async function testCloudConn(){
-  const cfg = readCloudForm();
-  if(!cfg.owner || !cfg.repo || !cfg.token){ csStatus("Fill in username, repo and token first.", false); return; }
-  saveCloudCfg(cfg);
-  csStatus("Testing connection to <b>" + esc(cfg.owner) + "/" + esc(cfg.repo) + "</b>…");
-  try{
-    const got = await ghGetFile(cfg, "data/products.json");
-    csStatus("Connection OK. " + (got ? "Found existing cloud data." : "Connected — no cloud data yet. Press <b>Push All Now</b> or <b>Save Cloud Settings</b> to upload."));
-  }catch(e){
-    const msg = String(e && e.message || e);
-    if(msg.indexOf("401") >= 0) csStatus("401 — token is invalid or expired. Check the token in GitHub → Settings → Developer settings.", false);
-    else if(msg.indexOf("403") >= 0) csStatus("403 — token lacks access to this repo, or rate limit reached. Make sure the token grants <b>Contents: read and write</b> on this repository.", false);
-    else if(msg.indexOf("404") >= 0) csStatus("404 — repo not found, or token cannot see it. Check owner/repo and that the token is scoped to this repo.", false);
-    else csStatus("Connection failed: " + esc(msg), false);
-  }
-}
-async function pushCloudNow(){
-  const cfg = readCloudForm();
-  if(!cfg.enabled || !cfg.owner || !cfg.repo || !cfg.token){ csStatus("Enable cloud sync and fill in the settings first.", false); return; }
-  saveCloudCfg(cfg);
-  csStatus("Pushing all data to GitHub…");
-  try{ await cloudPushAll(); csStatus("All data pushed to GitHub successfully."); }
-  catch(e){ csStatus("Push failed: " + esc(String(e && e.message || e)), false); }
-}
-async function pullCloudNow(){
-  const cfg = readCloudForm();
-  if(!cfg.enabled || !cfg.owner || !cfg.repo || !cfg.token){ csStatus("Enable cloud sync and fill in the settings first.", false); return; }
-  saveCloudCfg(cfg);
-  csStatus("Pulling data from GitHub…");
-  try{ await cloudPullAll(); csStatus("Data pulled from GitHub and applied to this browser."); route(); }
-  catch(e){ csStatus("Pull failed: " + esc(String(e && e.message || e)), false); }
-}
+
+
 function handleBannerUpload(input){
   const file = input.files[0];
   if(!file) return;
@@ -1356,7 +1256,7 @@ async function doLogin(){
       }
     }
   } catch(e) {
-    console.log("Supabase Auth login failed, trying legacy method:", e.message);
+    console.warn("Admin login failed, trying legacy method");
   }
 
   /* Method 2: Try legacy admin system (stored in site_settings) */
@@ -1427,7 +1327,7 @@ function adminRoute(){
     else if(page === "theme") adminTheme();
     else if(page === "emails") adminEmails();
     else if(page === "content") adminContent();
-    else if(page === "cloudsync") adminCloudSync();
+
     else {
       /* Unknown page - show friendly 404 instead of login screen */
       const content = '<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px">' +
