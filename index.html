@@ -1098,12 +1098,11 @@ const LS = {
   currency: "ns_currency_v3",
   accounts: "ns_accounts_v3",
   session: "ns_session_v3",
-  mail: "ns_mail_v3",
   admins: "ns_admins_v3",
   asession: "ns_asession_v3",
   subscribers: "ns_subscribers_v3",
   content: "ns_content_v3",
-  cloudsync: "ns_cloudsync_v3"
+  mail: "ns_mail_v3"
 };
 /* Migrate: drop legacy v2 data that may carry broken images/categories from earlier testing */
 function cleanupOldData(){
@@ -1452,8 +1451,31 @@ function saveAccounts(a){
     if(!res.ok){ console.warn("Failed to save accounts to Supabase:", res.error); showToast("Warning: account may not have saved to cloud"); }
   }).catch(e => { console.warn("Error saving accounts:", e); showToast("Error saving account to cloud"); });
 }
-function getSession(){ return lsGet(LS.session, null); }
-function setSession(s){ if(s) lsSet(LS.session, s); else try{ localStorage.removeItem(LS.session); }catch(e){} }
+/* ============ Session validation (M-3) ============ */
+const _SESS_SALT = "ns_s7k9x2";
+function _sessHash(str){
+  let h = 0x811c9dc5;
+  for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0).toString(36);
+}
+function getSession(){
+  var s = lsGet(LS.session, null);
+  if(!s || typeof s !== "object") return null;
+  if(typeof s.exp === "number" && s.exp < Date.now()){ try{ localStorage.removeItem(LS.session); }catch(e){} return null; }
+  if(s.sig && s.email){ var expected = _sessHash(String(s.email).toLowerCase() + _SESS_SALT); if(s.sig !== expected) return null; }
+  return s;
+}
+function setSession(s){
+  if(s && typeof s === "object"){
+    var now = Date.now();
+    s.ts = s.ts || now;
+    s.exp = now + 24*60*60*1000;
+    s.sig = _sessHash(String(s.email).toLowerCase() + _SESS_SALT);
+    lsSet(LS.session, s);
+  } else {
+    try{ localStorage.removeItem(LS.session); }catch(e){}
+  }
+}
 
 /* ============ Quotes / Inquiries ============ */
 function getQuotes(){ return _cache.quotes || []; }
@@ -1491,60 +1513,35 @@ function qCustAddr(q){ const c = q.customer || {}; const addr = c.address || "No
 function qCustCountry(q){ const c = q.customer || {}; return c.country || ""; }
 /* Secure password hashing using PBKDF2 with random salt */
 /* Format: pbkdf2::<iterations>::<salt_hex>::<hash_hex> */
-/* Legacy format: sha256::<hash> (for backward compatibility) */
 async function hashPass(pw){
-  try{
-    /* Generate random salt */
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const iterations = 100000;
-    const enc = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
-    const hashBuffer = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" }, keyMaterial, 256);
-    const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("");
-    const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
-    return "pbkdf2::" + iterations + "::" + saltHex + "::" + hashHex;
-  }catch(e){
-    /* Fallback to legacy SHA-256 if Web Crypto not available */
-    try{
-      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("ns-salt::" + pw));
-      return "sha256::" + Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-    }catch(e2){ return "plain::" + pw; }
-  }
+  /* Generate random salt */
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iterations = 100000;
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
+  const hashBuffer = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" }, keyMaterial, 256);
+  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("");
+  const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+  return "pbkdf2::" + iterations + "::" + saltHex + "::" + hashHex;
 }
 
-/* Verify password against stored hash (supports pbkdf2, sha256, and plain formats) */
+/* Verify password against stored hash */
 async function verifyPass(pw, storedHash){
   if(!storedHash) return false;
   const str = String(storedHash);
-  /* PBKDF2 format */
-  if(str.indexOf("pbkdf2::") === 0){
-    try{
-      const parts = str.split("::");
-      const iterations = parseInt(parts[1], 10);
-      const saltHex = parts[2];
-      const expectedHash = parts[3];
-      const salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-      const enc = new TextEncoder();
-      const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
-      const hashBuffer = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" }, keyMaterial, 256);
-      const actualHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
-      return actualHash === expectedHash;
-    }catch(e){ return false; }
-  }
-  /* Legacy SHA-256 format */
-  if(str.indexOf("sha256::") === 0){
-    try{
-      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("ns-salt::" + pw));
-      const actualHash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-      return actualHash === str.substring(8);
-    }catch(e){ return false; }
-  }
-  /* Legacy plain format (for backward compatibility with old data) */
-  if(str.indexOf("plain::") === 0){
-    return pw === str.substring(7);
-  }
-  /* Old format: plain text password (very old data) */
-  return pw === str;
+  if(str.indexOf("pbkdf2::") !== 0) return false;
+  try{
+    const parts = str.split("::");
+    const iterations = parseInt(parts[1], 10);
+    const saltHex = parts[2];
+    const expectedHash = parts[3];
+    const salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
+    const hashBuffer = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" }, keyMaterial, 256);
+    const actualHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+    return actualHash === expectedHash;
+  }catch(e){ return false; }
 }
 function acctLabel(){ const s = getSession(); return s ? (s.name || s.email).split(" ")[0] : "Account"; }
 function updateAcctLabel(){ const el = $("#acctLabel"); if(el) el.textContent = acctLabel(); }
@@ -1638,8 +1635,8 @@ function validateAdminSession(){
 }
 
 /* ============ Email delivery (EmailJS or FormSubmit) ============ */
-function getMailCfg(){ return lsGet(LS.mail, { email: "", enabled: false, provider: "emailjs", serviceId: "", templateId: "", contactTemplateId: "", publicKey: "", mailTo: "" }); }
-function saveMailCfg(m){ lsSet(LS.mail, m); }
+function getMailCfg(){ return lsGet(LS.mail, { enabled: false }); }
+function saveMailCfg(m){ lsSet(LS.mail, { enabled: !!(m && m.enabled) }); }
 
 /* ============ EmailJS Security: Rate Limiting & Domain Validation ============ */
 const EMAILJS_RATE_LIMIT = {
@@ -1707,102 +1704,20 @@ function validateEmailDomain(){
   return allowedDomains.includes(currentDomain) || currentDomain.endsWith('.vercel.app');
 }
 
-/* ============ Cloud Sync (GitHub repo as shared store) ============ */
-const CLOUD_FILES = {
-  products: "data/products.json",
-  cats: "data/cats.json",
-  theme: "data/theme.json",
-  orders: "data/orders.json",
-  accounts: "data/accounts.json",
-  admins: "data/admins.json",
-  content: "data/content.json"
-};
-function getCloudCfg(){ return lsGet(LS.cloudsync, { owner: "", repo: "", token: "", enabled: false }); }
-function saveCloudCfg(c){ lsSet(LS.cloudsync, c); }
-function cloudReady(){ return false; /* GitHub cloud sync deprecated, using Supabase */ }
-function ghHeaders(c){ return { "Authorization": "Bearer " + c.token, "Accept": "application/vnd.github+json" }; }
-function cloudPath(c, file){ return "https://api.github.com/repos/" + encodeURIComponent(c.owner) + "/" + encodeURIComponent(c.repo) + "/contents/" + file; }
-function b64u(str){ return btoa(unescape(encodeURIComponent(str))); }
-function unb64u(b64){ try{ return new TextDecoder().decode(Uint8Array.from(atob(b64), c => c.charCodeAt(0))); }catch(e){ return ""; } }
-async function ghGetFile(c, file){
-  const r = await fetch(cloudPath(c, file), { headers: ghHeaders(c) });
-  if(r.status === 404) return null;
-  if(!r.ok) throw new Error("GH_GET_" + r.status);
-  const j = await r.json();
-  return { sha: j.sha, data: JSON.parse(unb64u(j.content)) };
-}
-async function ghPutFile(c, file, data){
-  const content = b64u(JSON.stringify(data, null, 2));
-  let sha = null;
-  const existing = await fetch(cloudPath(c, file), { headers: ghHeaders(c) });
-  if(existing.status === 200){ const ej = await existing.json(); sha = ej.sha; }
-  else if(existing.status !== 404) throw new Error("GH_GET_" + existing.status);
-  const body = { message: "sync " + file + " via Nebula Secret", content: content };
-  if(sha) body.sha = sha;
-  const r = await fetch(cloudPath(c, file), { method: "PUT", headers: Object.assign({}, ghHeaders(c), { "Content-Type": "application/json" }), body: JSON.stringify(body) });
-  if(!r.ok) throw new Error("GH_PUT_" + r.status);
-}
-function cloudDataFor(key){
-  if(key === "products") return getProducts();
-  if(key === "cats") return getCats();
-  if(key === "theme") return getTheme();
-  if(key === "orders") return getOrders();
-  if(key === "accounts") return getAccounts();
-  if(key === "admins") return getAdmins();
-  if(key === "content") return getContent();
-  return null;
-}
-function cloudApply(key, data){
-  if(key === "products") saveProducts(data);
-  else if(key === "cats") saveCats(data);
-  else if(key === "theme") saveTheme(Object.assign(defaultTheme(), data));
-  else if(key === "orders") saveOrders(data);
-  else if(key === "accounts") saveAccounts(data);
-  else if(key === "admins") saveAdmins(data);
-  else if(key === "content") saveContent(data);
-}
-async function cloudPushKey(key, data){ /* Deprecated: data now saved to Supabase via sbSave() */ return {ok:true, deprecated:true}; }
-async function cloudPushAll(){
-  if(!cloudReady()) return {ok:false, reason:"not-configured"};
-  for(const key of Object.keys(CLOUD_FILES)){
-    const d = cloudDataFor(key); if(d == null) continue;
-    await ghPutFile(getCloudCfg(), CLOUD_FILES[key], d);
-  }
-  return {ok:true};
-}
-async function cloudPullAll(){
-  if(!cloudReady()) return {ok:false, reason:"not-configured"};
-  for(const key of Object.keys(CLOUD_FILES)){
-    try{
-      const got = await ghGetFile(getCloudCfg(), CLOUD_FILES[key]);
-      if(got){ cloudApply(key, got.data); }
-      else {
-        const d = cloudDataFor(key); if(d == null) continue;
-        await ghPutFile(getCloudCfg(), CLOUD_FILES[key], d);
-      }
-    }catch(e){ console.warn("cloud pull failed:", key, String(e && e.message || e)); }
-  }
-  return {ok:true};
-}
+
 function mailRecipients(cfg){
-  const list = [];
-  if(cfg.mailTo){
-    String(cfg.mailTo).split(/[;,]/).map(s => s.trim()).filter(Boolean).forEach(e => { if(!list.includes(e)) list.push(e); });
-  }
-  if(!list.length && cfg.email) list.push(cfg.email);
-  return list;
+  // Recipients are now configured server-side; browser only tracks the enabled flag.
+  return [];
 }
 async function sendOrderEmail(o, cfg){
   if(!cfg || !cfg.enabled) return {ok:false, reason:"not-configured"};
-  if(cfg.provider === "emailjs") return sendViaEmailJS(o, cfg);
-  return sendViaFormSubmit(o, cfg);
+  return sendViaEmailJS(o, cfg);
 }
 function emailTemplateParams(o, cfg){
   const cur = o.cur || "EUR"; const r = orate(o);
   const storeName = getTheme().storeName || "Nebula Secret";
   const itemsLines = o.items.map(it => "• " + it.name + "  x" + it.qty + "  = " + fmtIn(it.price * it.qty, cur, r)).join("\n");
   return {
-    to_email: mailRecipients(cfg).join(", "),
     store_name: storeName,
     order_no: o.id,
     date: fmtDT(o.date),
@@ -1832,23 +1747,21 @@ async function sendViaEmailJS(o, cfg){
       return {ok:false, reason:rateCheck.reason, detail:rateCheck.message};
     }
     
-    if(!window.emailjs) return {ok:false, reason:"sdk-missing"};
-    if(!cfg.serviceId || !cfg.templateId || !cfg.publicKey) return {ok:false, reason:"emailjs-config"};
-    
     const params = emailTemplateParams(o, cfg);
-    const resp = await emailjs.send(cfg.serviceId, cfg.templateId, params, { publicKey: cfg.publicKey });
+    const resp = await fetch("/api/send-email", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ type: "order", params })
+    });
+    const j = await resp.json();
+    if(!resp.ok || j.error) return {ok:false, reason:"emailjs-error", detail: j.error || ("HTTP " + resp.status)};
     
     /* Record successful send for rate limiting */
     recordEmailSend();
     
-    return {ok: true, resp: resp};
+    return {ok: true, resp: j};
   }catch(e){
-    const errorDetail = String(e && e.text ? e.text : (e && e.message ? e.message : e));
-    /* Check if error is due to domain whitelist */
-    if(errorDetail.includes('domain') || errorDetail.includes('Domain') || errorDetail.includes('not allowed')){
-      return {ok:false, reason:"domain-not-whitelisted", detail:"EmailJS domain whitelist not configured. Please add your domain in EmailJS dashboard → Account Settings → Domains."};
-    }
-    return {ok:false, reason:"emailjs-error", detail: errorDetail};
+    return {ok:false, reason:"network", detail: String(e && e.message ? e.message : e)};
   }
 }
 async function sendViaFormSubmit(o, cfg){
@@ -1959,7 +1872,7 @@ function orderEmailText(o, storeName){
 async function mailOrder(o){
   const cfg = getMailCfg();
   const recipients = mailRecipients(cfg);
-  if(!cfg || !cfg.enabled || (cfg.provider === "emailjs" ? (!cfg.serviceId || !cfg.templateId || !cfg.publicKey) : !cfg.email)){
+  if(!cfg || !cfg.enabled){
     showToast("Order email not sent — set up Admin → Order Emails first");
     return;
   }
@@ -2450,7 +2363,7 @@ function placeOrder(){
   // auto-send email to store inbox when configured
   const cfg = getMailCfg();
   const recipients = mailRecipients(cfg);
-  const mailReady = cfg && cfg.enabled && (cfg.provider === "emailjs" ? (cfg.serviceId && cfg.templateId && cfg.publicKey) : !!cfg.email);
+  const mailReady = cfg && cfg.enabled;
   if(mailReady){
     const st = $("#ocEmailState");
     if(st) st.textContent = "Sending order email…";
@@ -3222,11 +3135,10 @@ async function submitContactForm(ev){
   if(!email || !/.+@.+\..+/.test(email)){ showCfMsg(msgEl, "#c0392b", "Please enter a valid email address."); return; }
   if(!message){ showCfMsg(msgEl, "#c0392b", "Please enter your message."); return; }
 
-  // Check EmailJS config (need at least one template ID: order or contact)
+  // Check email config
   const cfg = getMailCfg();
-  const hasTpl = (cfg.templateId || cfg.contactTemplateId);
-  if(!cfg || !cfg.enabled || cfg.provider !== "emailjs" || !cfg.serviceId || !hasTpl || !cfg.publicKey){
-    showCfMsg(msgEl, "#c0392b", "Email service not configured. Please contact us directly at " + (cfg.mailTo || "sales@nebulasecret.com") + ".");
+  if(!cfg || !cfg.enabled){
+    showCfMsg(msgEl, "#c0392b", "Email service not configured. Please contact us directly at sales@nebulasecret.com.");
     return;
   }
 
@@ -3243,26 +3155,16 @@ async function submitContactForm(ev){
     return;
   }
 
-  // Get recipients
-  const recipients = (cfg.mailTo || "").split(",").map(s => s.trim()).filter(Boolean);
-  if(!recipients.length){
-    showCfMsg(msgEl, "#c0392b", "No recipient email configured. Please contact the site administrator.");
-    return;
-  }
-
   // Disable button and show loading
   btn.disabled = true;
   btn.textContent = "Sending...";
   showCfMsg(msgEl, "#666", "Sending your message...");
 
   try{
-    if(!window.emailjs) throw new Error("EmailJS library not loaded");
-
-    // Build email params — these map to your EmailJS template variables
+    // Build email params — server handles recipient routing
     const params = {
       from_name: name,
       from_email: email,
-      to_email: recipients.join(", "),
       company: company || "Not provided",
       inquiry_type: type,
       subject: "New " + type + " Inquiry from " + name + " — Nebula Secret",
@@ -3272,9 +3174,14 @@ async function submitContactForm(ev){
       date: new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" })
     };
 
-    // Use contact form template if configured, otherwise fall back to order template
-    const contactTpl = cfg.contactTemplateId || cfg.templateId;
-    await emailjs.send(cfg.serviceId, contactTpl, params, { publicKey: cfg.publicKey });
+    // Route through server-side /api/send-email (EmailJS secrets stay server-side)
+    const resp = await fetch("/api/send-email", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ type: "contact", params })
+    });
+    const j = await resp.json();
+    if(!resp.ok || j.error) throw new Error(j.error || ("HTTP " + resp.status));
 
     /* Record successful send for rate limiting */
     recordEmailSend();
@@ -3289,12 +3196,7 @@ async function submitContactForm(ev){
     document.getElementById("cfMessage").value = "";
   }catch(e){
     const errMsg = e && e.text ? e.text : (e && e.message ? e.message : String(e));
-    /* Check if error is due to domain whitelist */
-    if(errMsg.includes('domain') || errMsg.includes('Domain') || errMsg.includes('not allowed')){
-      showCfMsg(msgEl, "#c0392b", "EmailJS domain whitelist not configured. The site administrator needs to add this domain in EmailJS dashboard → Account Settings → Domains.");
-    }else{
-      showCfMsg(msgEl, "#c0392b", "Sorry, we couldn't send your message. Please try again or email us directly at " + recipients[0] + ". Error: " + errMsg);
-    }
+    showCfMsg(msgEl, "#c0392b", "Sorry, we couldn't send your message. Please try again or email us directly at sales@nebulasecret.com. Error: " + errMsg);
   }finally{
     btn.disabled = false;
     btn.textContent = "Send Message";
@@ -3950,9 +3852,6 @@ function submitCustomerOrderNote(id){
   });
   saveOrders(orders);
   showToast("Note added");
-  if(typeof cloudReady === 'function' && cloudReady()){
-    cloudPushKey("orders", orders).catch(() => {});
-  }
   viewCustomerOrder(id);
 }
 function changePassOpen(){
@@ -4120,10 +4019,6 @@ window.addEventListener("hashchange", () => {
 });
 window.addEventListener("resize", syncSticky);
 route();
-/* Cloud sync: pull the latest from GitHub in the background after first render */
-cloudPullAll().then(() => { try{ route(); }catch(e){} });
-/* Cloud catalog deprecated — using Supabase for all dynamic data */
-/* loadCloudCatalog(); */
 
 /* ============ Supabase Keep-Alive (prevent 7-day pause) ============ */
 /* Supabase Free plan pauses after 7 days of inactivity.

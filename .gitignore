@@ -5,7 +5,6 @@
 *.sql
 migrate.html
 DEPLOYMENT_GUIDE.md
-README.md
 
 # 臨時文件
 *.tmp
@@ -21,6 +20,12 @@ node_modules/
 dist/
 build/
 .next/
+
+# Secrets / keys
+*.pem
+*.key
+*.p12
+secrets*.json
 
 # 編輯器配置
 .vscode/

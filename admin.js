@@ -189,9 +189,6 @@ function setOrderStatus(id, status, note){
   o.statusHistory.push({ status: status, date: new Date().toISOString(), note: note || "Status updated by admin" });
   saveOrders(orders);
   showToast("Order " + id + " → " + status);
-  if(cloudReady()){
-    cloudPushKey("orders", orders).catch(() => {});
-  }
 }
 function addOrderNote(id, note, author){
   const orders = getOrders();
@@ -206,9 +203,6 @@ function addOrderNote(id, note, author){
   });
   saveOrders(orders);
   showToast("Note added to order " + id);
-  if(cloudReady()){
-    cloudPushKey("orders", orders).catch(() => {});
-  }
 }
 function deleteOrder(id){
   if(!confirm("Delete order " + id + "?")) return;
@@ -396,7 +390,6 @@ function submitQuoteResponse(id){
   q.history.push({ status: "Quoted", date: new Date().toISOString(), note: "Quote sent by admin: " + fmt(price) + " EUR, valid until " + valid });
   saveQuotes(quotes);
   showToast("Quote " + id + " sent!");
-  if(cloudReady()){ cloudPushKey("quotes", quotes).catch(() => {}); }
   $("#adminModal").classList.remove("open");
   adminQuotes();
 }
@@ -409,7 +402,6 @@ function setQuoteStatus(id, status){
   q.history.push({ status: status, date: new Date().toISOString(), note: "Status updated by admin" });
   saveQuotes(quotes);
   showToast("Quote status updated to " + status);
-  if(cloudReady()){ cloudPushKey("quotes", quotes).catch(() => {}); }
   adminQuotes();
 }
 function acceptCustomerTargetPrice(id){
@@ -425,7 +417,6 @@ function acceptCustomerTargetPrice(id){
   q.history.push({ status: "Quoted", date: new Date().toISOString(), note: "Admin accepted customer target price: " + fmt(q.customerTargetPrice) + " EUR" });
   saveQuotes(quotes);
   showToast("Customer target price accepted! Quote sent.");
-  if(cloudReady()){ cloudPushKey("quotes", quotes).catch(() => {}); }
   $("#adminModal").classList.remove("open");
   adminQuotes();
 }
@@ -438,7 +429,6 @@ function rejectCustomerTargetPrice(id){
   q.history.push({ status: "Rejected", date: new Date().toISOString(), note: "Admin rejected customer target price of " + (q.customerTargetPrice ? fmt(q.customerTargetPrice) : "N/A") + " EUR" });
   saveQuotes(quotes);
   showToast("Customer target price rejected.");
-  if(cloudReady()){ cloudPushKey("quotes", quotes).catch(() => {}); }
   $("#adminModal").classList.remove("open");
   adminQuotes();
 }
@@ -614,14 +604,7 @@ function saveProductForm(id){
   saveProducts(products);
   closeAdminModal();
   adminProducts();
-  if(cloudReady()){
-    showToast("Saving & syncing to cloud…");
-    cloudPushKey("products", products).then(r => {
-      showToast(r && r.ok ? ((existing ? "Product updated" : "Product added") + " & synced to cloud") : ((existing ? "Product updated" : "Product added") + " locally — cloud sync failed: " + (r && r.reason || "unknown")));
-    });
-  } else {
-    showToast(existing ? "Product updated" : "Product added");
-  }
+  showToast(existing ? "Product updated" : "Product added");
 }
 
 function deleteProduct(id){
@@ -873,34 +856,18 @@ function adminTheme(){
 function adminEmails(){
   const mc = getMailCfg();
   const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Auto-send every new order to your inbox — works on GitHub Pages (no server needed)</div></div></div>' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Auto-send every new order to your inbox — EmailJS credentials are configured server-side as Vercel env vars.</div></div></div>' +
     '<div class="panel-body">' +
       '<div class="form-grid">' +
-        '<div class="field full"><label>Email provider</label><select id="mailProvider"><option value="emailjs"' + (mc.provider === "emailjs" ? " selected" : "") + '>EmailJS (recommended — reliable, no ads, multiple recipients)</option><option value="formsubmit"' + (mc.provider !== "emailjs" ? " selected" : "") + '>FormSubmit (free — single inbox, needs one-time activation)</option></select></div>' +
-        '<div class="field full" id="mailToWrap"><label>Recipients (separate multiple emails with comma)</label><input id="mailTo" type="text" value="' + esc(mc.mailTo || "") + '" placeholder="sales@yourcompany.com, manager@yourcompany.com"></div>' +
-        '<div class="field full" id="emailjsWrap">' +
-          '<div class="form-hint" style="margin-bottom:8px"><b>EmailJS setup (5 min, free):</b> 1) Sign up at <b>emailjs.com</b> → 2) Add your email service → 3) Create an Email Template with To Email <code>{{to_email}}</code> → 4) Paste the three keys below.</div>' +
-          '<div class="form-hint" style="margin-bottom:12px;padding:12px;background:#fff3cd;border:1px solid #ffeaa7;border-radius:8px"><b>⚠️ SECURITY: Configure Domain Whitelist</b><br>To prevent others from abusing your EmailJS quota, you MUST add your domain to the whitelist:<br>1. Go to <a href="https://dashboard.emailjs.com/admin/account" target="_blank" style="color:#0066cc;text-decoration:underline">EmailJS Dashboard → Account Settings</a><br>2. Find <b>Domains</b> section → Click <b>Add Domain</b><br>3. Add: <code>nebula-secret-supabase.vercel.app</code> (and your custom domain if any)<br>4. Click <b>Save</b><br><b>Current domain:</b> <code>' + esc(window.location.hostname) + '</code></div>' +
-          '<div class="form-grid">' +
-            '<div class="field"><label>Service ID</label><input id="mailSvc" type="text" value="' + esc(mc.serviceId || "") + '" placeholder="service_xxxxxxx"></div>' +
-            '<div class="field"><label>Order Template ID</label><input id="mailTpl" type="text" value="' + esc(mc.templateId || "") + '" placeholder="template_xxxxxxx"></div>' +
-            '<div class="field"><label>Contact Form Template ID</label><input id="mailContactTpl" type="text" value="' + esc(mc.contactTemplateId || "") + '" placeholder="template_xxxxxxx (leave empty to use order template)"></div>' +
-            '<div class="field full"><label>Public Key</label><input id="mailKey" type="text" value="' + esc(mc.publicKey || "") + '" placeholder="xxxxxxx"></div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="field full" id="formsubmitWrap" style="display:none"><label>FormSubmit inbox (single email)</label><input id="mailEmail" type="email" value="' + esc(mc.email || "") + '" placeholder="you@yourstore.com"></div>' +
-        '<div class="field full"><label>Enable auto email</label><select id="mailEnabled"><option value="1"' + (mc.enabled ? " selected" : "") + '>On — send order emails automatically</option><option value="0"' + (!mc.enabled ? " selected" : "") + '>Off — keep manual email button only</option></select></div>' +
-        '<div class="field full"><div class="form-hint" id="mailHelp"><b>EmailJS:</b> after saving, click <b>Send Test Email</b> — it sends straight to the recipients above, no activation step. <b>FormSubmit:</b> you must first confirm the one-time verification email FormSubmit sends to your inbox (check spam).</div></div>' +
+        '<div class="field full"><label>Email sending</label><select id="mailEnabled"><option value="1"' + (mc.enabled ? " selected" : "") + '>On — send order emails automatically</option><option value="0"' + (!mc.enabled ? " selected" : "") + '>Off — keep manual email button only</option></select></div>' +
+        '<div class="field full"><div class="form-hint">EmailJS service ID, template IDs and API keys are stored in Vercel environment variables (<code>EMAILJS_SERVICE_ID</code>, <code>EMAILJS_TEMPLATE_ID</code>, <code>EMAILJS_CONTACT_TEMPLATE_ID</code>, <code>EMAILJS_PUBLIC_KEY</code>, <code>EMAILJS_PRIVATE_KEY</code>). Recipients are also configured server-side. This toggle only controls whether emails are sent automatically.</div></div>' +
       '</div>' +
       '<button class="btn" style="margin-top:4px" onclick="saveMailForm()">Save Email Settings</button>' +
       '<button class="btn ghost" style="margin-top:4px;margin-left:8px" onclick="sendTestOrderEmail()">Send Test Email</button>' +
-      '<div class="form-hint" style="margin-top:10px"><b>Still not receiving order emails?</b> (1) Save settings, keep <b>Enable auto email</b> On; (2) click <b>Send Test Email</b>; (3) EmailJS users: watch for the toast error message and check your template/service keys. FormSubmit users: check spam folder for the verification link and click it once. Orders are always saved in Admin → Orders and downloadable as Excel/CSV regardless of email.</div>' +
+      '<div class="form-hint" style="margin-top:10px"><b>Still not receiving order emails?</b> (1) Save settings with email enabled; (2) click <b>Send Test Email</b>; (3) check Vercel env vars are set correctly. Orders are always saved in Admin → Orders and downloadable as Excel/CSV regardless of email.</div>' +
     '</div></div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Order Emails";
-  toggleMailProvider();
-  const mp = $("#mailProvider");
-  if(mp) mp.onchange = toggleMailProvider;
 }
 function adminContent(){
   const c = getContent();
@@ -968,12 +935,6 @@ function saveContentForm(){
   saveContent(c);
   applyFooterContent();
   showToast("Site content saved");
-  if(cloudReady()){
-    cloudPushKey("content", c).then(r => {
-      if(r && r.ok) showToast("Site content saved & synced to cloud");
-      else showToast("Saved locally — cloud sync failed: " + (r && r.reason || "unknown"));
-    });
-  }
 }
 function cleanContentObj(obj){
   Object.keys(obj).forEach(k => {
@@ -986,85 +947,8 @@ function cleanContentObj(obj){
     }
   });
 }
-function adminCloudSync(){
-  const cc = getCloudCfg();
-  const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Cloud Sync</h3><div class="ph-sub">Use your GitHub repo as a shared store — orders, accounts, products, categories, theme and admins stay in sync across all your devices</div></div></div>' +
-    '<div class="panel-body">' +
-      '<div class="form-hint" style="margin-bottom:12px"><b>How it works:</b> once enabled, every change is saved locally <b>and</b> pushed to <code>data/*.json</code> in your repo. On startup, this browser pulls the latest from the repo. Sign in on another device and enable the same settings there to keep everything in sync.<br><b>Your token stays in this browser only</b> — it is never written into the repo or the website source.</div>' +
-      '<div class="form-grid">' +
-        '<div class="field"><label>GitHub username (owner)</label><input id="csOwner" value="' + esc(cc.owner || "") + '" placeholder="your-github-name"></div>' +
-        '<div class="field"><label>Repository name</label><input id="csRepo" value="' + esc(cc.repo || "") + '" placeholder="nebula-secret"></div>' +
-        '<div class="field full"><label>Fine-grained token (Contents: read &amp; write)</label><input id="csToken" type="password" value="' + esc(cc.token || "") + '" placeholder="github_pat_..."><button type="button" class="btn sm ghost" style="margin-top:6px" onclick="toggleCsToken()">Show / Hide token</button></div>' +
-        '<div class="field full"><label>Enable cloud sync</label><select id="csEnabled"><option value="1"' + (cc.enabled ? " selected" : "") + '>On — sync to GitHub on every change</option><option value="0"' + (!cc.enabled ? " selected" : "") + '>Off — local-only mode</option></select></div>' +
-      '</div>' +
-      '<div style="margin-top:6px"><button class="btn" onclick="saveCloudForm()">Save Cloud Settings</button>' +
-      '<button class="btn ghost" style="margin-left:8px" onclick="testCloudConn()">Test Connection</button>' +
-      '<button class="btn ghost" style="margin-left:8px" onclick="pushCloudNow()">Push All Now</button>' +
-      '<button class="btn ghost" style="margin-left:8px" onclick="pullCloudNow()">Pull All Now</button></div>' +
-      '<div id="csStatus" style="margin-top:12px"></div>' +
-    '</div></div>';
-  renderAdminShell(content);
-  $("#adminTitle").textContent = "Cloud Sync";
-}
-function toggleCsToken(){
-  const inp = $("#csToken"); if(!inp) return;
-  inp.type = inp.type === "password" ? "text" : "password";
-}
-function csStatus(html, ok){
-  const el = $("#csStatus"); if(!el) return;
-  el.innerHTML = '<div class="form-hint" style="padding:10px 12px;border-radius:10px;background:' + (ok === false ? 'rgba(234,102,104,.12)' : 'rgba(82,196,26,.10)') + '">' + html + '</div>';
-}
-function readCloudForm(){
-  return { owner: $("#csOwner").value.trim(), repo: $("#csRepo").value.trim(), token: $("#csToken").value.trim(), enabled: $("#csEnabled").value === "1" };
-}
-async function saveCloudForm(){
-  const cfg = readCloudForm();
-  if(cfg.enabled && (!cfg.owner || !cfg.repo || !cfg.token)){ showToast("Please fill GitHub username, repo and token first"); return; }
-  saveCloudCfg(cfg);
-  if(cfg.enabled){
-    csStatus("Saving and pushing all data to GitHub…");
-    try{
-      await cloudPushAll();
-      csStatus("Cloud sync enabled and all data pushed to <code>data/*.json</code> in <b>" + esc(cfg.owner) + "/" + esc(cfg.repo) + "</b>. Now enable the same settings on your other devices (same username, repo and token) and they will share everything.");
-    }catch(e){ csStatus("Push failed: " + esc(String(e && e.message || e)), false); }
-  } else {
-    csStatus("Cloud sync is off. Your data stays local to this browser only.");
-  }
-  showToast("Cloud settings saved");
-}
-async function testCloudConn(){
-  const cfg = readCloudForm();
-  if(!cfg.owner || !cfg.repo || !cfg.token){ csStatus("Fill in username, repo and token first.", false); return; }
-  saveCloudCfg(cfg);
-  csStatus("Testing connection to <b>" + esc(cfg.owner) + "/" + esc(cfg.repo) + "</b>…");
-  try{
-    const got = await ghGetFile(cfg, "data/products.json");
-    csStatus("Connection OK. " + (got ? "Found existing cloud data." : "Connected — no cloud data yet. Press <b>Push All Now</b> or <b>Save Cloud Settings</b> to upload."));
-  }catch(e){
-    const msg = String(e && e.message || e);
-    if(msg.indexOf("401") >= 0) csStatus("401 — token is invalid or expired. Check the token in GitHub → Settings → Developer settings.", false);
-    else if(msg.indexOf("403") >= 0) csStatus("403 — token lacks access to this repo, or rate limit reached. Make sure the token grants <b>Contents: read and write</b> on this repository.", false);
-    else if(msg.indexOf("404") >= 0) csStatus("404 — repo not found, or token cannot see it. Check owner/repo and that the token is scoped to this repo.", false);
-    else csStatus("Connection failed: " + esc(msg), false);
-  }
-}
-async function pushCloudNow(){
-  const cfg = readCloudForm();
-  if(!cfg.enabled || !cfg.owner || !cfg.repo || !cfg.token){ csStatus("Enable cloud sync and fill in the settings first.", false); return; }
-  saveCloudCfg(cfg);
-  csStatus("Pushing all data to GitHub…");
-  try{ await cloudPushAll(); csStatus("All data pushed to GitHub successfully."); }
-  catch(e){ csStatus("Push failed: " + esc(String(e && e.message || e)), false); }
-}
-async function pullCloudNow(){
-  const cfg = readCloudForm();
-  if(!cfg.enabled || !cfg.owner || !cfg.repo || !cfg.token){ csStatus("Enable cloud sync and fill in the settings first.", false); return; }
-  saveCloudCfg(cfg);
-  csStatus("Pulling data from GitHub…");
-  try{ await cloudPullAll(); csStatus("Data pulled from GitHub and applied to this browser."); route(); }
-  catch(e){ csStatus("Pull failed: " + esc(String(e && e.message || e)), false); }
-}
+
+
 function handleBannerUpload(input){
   const file = input.files[0];
   if(!file) return;
@@ -1132,52 +1016,29 @@ function toggleMailProvider(){
     : "<b>FormSubmit:</b> you must first click the one-time verification link FormSubmit emails to your inbox (check spam).";
 }
 function saveMailForm(){
-  const cfg = getMailCfg();
-  cfg.provider = $("#mailProvider").value;
-  cfg.mailTo = ($("#mailTo") ? $("#mailTo").value : "").trim();
-  cfg.serviceId = ($("#mailSvc") ? $("#mailSvc").value : "").trim();
-  cfg.templateId = ($("#mailTpl") ? $("#mailTpl").value : "").trim();
-  cfg.contactTemplateId = ($("#mailContactTpl") ? $("#mailContactTpl").value : "").trim();
-  cfg.publicKey = ($("#mailKey") ? $("#mailKey").value : "").trim();
-  const email = ($("#mailEmail") ? $("#mailEmail").value : "").trim();
-  if(email && !/.+@.+\..+/.test(email)){ showToast("Please enter a valid email address"); return; }
-  cfg.email = email;
-  cfg.enabled = $("#mailEnabled").value === "1";
-  saveMailCfg(cfg);
-  if(cfg.provider === "emailjs"){
-    const recipients = mailRecipients(cfg);
-    showToast(cfg.enabled && recipients.length ? "EmailJS saved — click Send Test Email to verify" : "Email settings saved");
-  }else{
-    showToast(cfg.enabled && cfg.email ? "Email service on — place a test order to activate FormSubmit" : "Email settings saved");
-  }
+  var enabled = $("#mailEnabled") && $("#mailEnabled").value === "1";
+  saveMailCfg({ enabled: enabled });
+  showToast(enabled ? "Email sending enabled" : "Email sending disabled");
 }
 async function sendTestOrderEmail(){
   const cfg = getMailCfg();
   if(!cfg || !cfg.enabled){ showToast("Enable auto email first, then Save Email Settings"); return; }
-  const recipients = mailRecipients(cfg);
-  if(cfg.provider === "emailjs"){
-    if(!cfg.serviceId || !cfg.templateId || !cfg.publicKey){ showToast("Fill in EmailJS Service ID, Template ID and Public Key first"); return; }
-  }else{
-    if(!cfg.email){ showToast("Enter your FormSubmit inbox email first"); return; }
-  }
   const n = Math.floor(1000000 + Math.random() * 9000000);
   const test = {
     id: "NS-" + n,
     date: new Date().toISOString(),
     cur: curCode, rate: rateOf(curCode),
-    customer: { first:"Test", last:"Order", email: cfg.provider === "emailjs" ? (recipients[0] || "") : cfg.email, address:"", country:"Hong Kong SAR", phone:"", contact:"" },
+    customer: { first:"Test", last:"Order", email: "test@example.com", address:"", country:"Hong Kong SAR", phone:"", contact:"" },
     items: [{ id:"3", name:"Sample Product", cat:"other", price: 10, qty: 1 }],
     total: 10, status:"New"
   };
   showToast("Sending test order email…");
   const r = await sendOrderEmail(test, cfg);
   if(r.ok){
-    showToast(cfg.provider === "emailjs" ? "Test email sent to " + recipients.join(", ") : "Test email sent — confirm the FormSubmit activation link in your inbox");
+    showToast("Test email sent — check server inbox");
   }else{
     const errMap = {
-      "emailjs-config": "EmailJS keys incomplete — fill Service ID, Template ID and Public Key",
-      "emailjs-error": "EmailJS error: " + (r.detail || "check keys & template"),
-      "sdk-missing": "EmailJS library failed to load — check internet connection",
+      "emailjs-error": "Email send error: " + (r.detail || "check server config"),
       "not-configured": "Email not enabled — enable auto email and save first",
       "network": "Network error — check your connection and try again"
     };
@@ -1348,7 +1209,7 @@ function adminRoute(){
     else if(page === "theme") adminTheme();
     else if(page === "emails") adminEmails();
     else if(page === "content") adminContent();
-    else if(page === "cloudsync") adminCloudSync();
+
     else {
       /* Unknown page - show friendly 404 instead of login screen */
       const content = '<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px">' +

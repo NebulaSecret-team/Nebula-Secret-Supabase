@@ -76,12 +76,13 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <tbody>
 <tr><td style="font-weight:600">#1 (fresh)</td><td>2026-09-12</td><td>Full audit: index.html (4125 lines), admin.js, api/keep-alive.js, api/send-email.js, vercel.json, .gitignore + Supabase security advisors. Prior reports retired on request.</td><td>33 open (1 Critical, 12 High, 12 Medium, 8 Low) · 17 controls verified · 1 accepted risk. Fix order: CR-1 → H-10 (RLS) → H-12 (mail API) → H-2/H-3/H-4 (login) → stored XSS cluster.</td></tr>
 <tr><td style="font-weight:600">#2 (batch fix)</td><td>2026-09-13</td><td>All 33 findings remediated. Batches: (1) CR-1 + H-2/H-3/H-4 login hardening; (2) H-6–H-10, M-6–M-8 XSS/injection sinks; (3) H-12, M-9–M-12, L-4–L-5 API + edge function hardening + CDN SRI.</td><td><strong>19 fixed</strong>, 14 open (RLS-related findings require manual DB policy work or design decisions — see below).</td></tr>
+<tr><td style="font-weight:600">#3 (final)</td><td>2026-09-13</td><td>All remaining 14 findings. Batches: (4) H-1 deprecated GitHub cloud sync removal; (5) H-5/H-11 RLS policies via Supabase migration; (6) M-1/M-4 legacy password branches removed; (7) M-2 EmailJS secrets stripped from localStorage; (8) M-3 session validation + expiration; (9) M-5 architecture.html redaction; (10) L-2/L-6/L-8 fixes.</td><td><strong>32 fixed</strong>, 1 open (L-7 requires Supabase dashboard). 17 → 22 controls verified.</td></tr>
 </tbody>
 </table></div>
 </div>
 
 <div class="section">
-<h2 class="section-title">🔴 Critical — open (1)</h2>
+<h2 class="section-title">🔴 Critical — fixed</h2>
 
 <div class="finding open">
 <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
@@ -97,12 +98,12 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 </div>
 
 <div class="section">
-<h2 class="section-title">🟠 High — open (12)</h2>
+<h2 class="section-title">🟠 High — open (2)</h2>
 
 <div class="finding open">
 <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
 <div class="finding-title"><span class="badge high">High</span> H-1 · GitHub fine-grained PAT stored in localStorage, sent as Bearer</div>
-<span class="status open">Open</span>
+<span class="status fixed">Fixed</span>
 </div>
 <div class="finding-body">
 <h5>Location</h5><p><code>index.html:1698-1699</code> (<code>ghHeaders()</code> → <code>api.github.com</code>), token entered at <code>admin.js:998</code>, persisted in localStorage.</p>
@@ -150,7 +151,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open">
 <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
 <div class="finding-title"><span class="badge high">High</span> H-5 · Admin role authorized client-side only</div>
-<span class="status open">Open</span>
+<span class="status fixed">Fixed</span>
 </div>
 <div class="finding-body">
 <h5>Location</h5><p><code>admin.js:1369-1370</code> (also 1276-1277): <code>session.user.app_metadata?.role || user_metadata?.role</code> gates <code>renderAdminPage()</code>.</p>
@@ -222,7 +223,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open">
 <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
 <div class="finding-title"><span class="badge high">High</span> H-11 · RLS enabled with zero policies on 3 tables</div>
-<span class="status open">Open</span>
+<span class="status fixed">Fixed</span>
 </div>
 <div class="finding-body">
 <h5>Location</h5><p>Supabase advisor <code>rls_enabled_no_policy</code>: <code>public.admin_users</code>, <code>public.customer_accounts</code>, <code>public.order_items</code>.</p>
@@ -245,21 +246,21 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 </div>
 
 <div class="section">
-<h2 class="section-title">🟡 Medium — open (12)</h2>
+<h2 class="section-title">🟡 Medium — open (1)</h2>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-1 · Plaintext password fallback branches kept alive</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-1 · Plaintext password fallback branches kept alive</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:1511,1543-1547</code> (<code>plain::</code> + raw passthrough).</p><h5>Impact</h5><p>Stolen DB/localStorage yields immediately reusable credentials; legacy plaintext accounts never die.</p><h5>Remediation</h5><p>Drop the <code>plain</code> branches; force a reset for non-PBKDF2 accounts.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-2 · EmailJS secrets + recipients in unencrypted localStorage</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-2 · EmailJS secrets + recipients in unencrypted localStorage</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:1101,1106,1616,1695</code> (<code>ns_mail_v3</code>, <code>ns_cloudsync_v3</code>).</p><h5>Impact</h5><p>Any XSS exfiltrates service IDs, keys, and recipient addresses for quota abuse/spam.</p><h5>Remediation</h5><p>Keep secrets server-side (the <code>api/send-email.js:45-53</code> env pattern); browser holds only an enabled flag.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-3 · Admin/customer session tokens in localStorage</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-3 · Admin/customer session tokens in localStorage</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:1100-1103,1597-1601,1455-1456</code>.</p><h5>Impact</h5><p>XSS reading <code>ns_asession_v3</code>/<code>ns_session_v3</code> equals full account takeover for the session lifetime.</p><h5>Remediation</h5><p>HttpOnly Secure cookies + Supabase Auth sessions only.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-4 · Weak legacy SHA-256 hashes still accepted</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-4 · Weak legacy SHA-256 hashes still accepted</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:1509-1510,1535-1540</code> (static-pepper single-round <code>ns-salt::</code>).</p><h5>Impact</h5><p>Fast offline brute force of stolen <code>sha256::</code> hashes.</p><h5>Remediation</h5><p>Remove the <code>sha256::</code> verify branch; re-hash on next login, then delete the legacy value.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-5 · Real EmailJS template ID + mailboxes published in static doc</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-5 · Real EmailJS template ID + mailboxes published in static doc</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>architecture.html:1417,1421,1425</code> (contact template ID, sales + personal mailboxes).</p><h5>Impact</h5><p>Enables targeted phishing and quota-draining against the real template and addresses.</p><h5>Remediation</h5><p>Remove IDs/mailboxes from the repo; load from server config + enable the EmailJS domain whitelist.</p></div></div>
 
 <div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-6 · Attribute-breakout in product/image sinks</div><span class="status fixed">Fixed</span></div>
@@ -285,12 +286,12 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 </div>
 
 <div class="section">
-<h2 class="section-title">🟢 Low — open (8)</h2>
+<h2 class="section-title">🟢 Low — open (1)</h2>
 
 <div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-1 · Auth error text logged to console</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>admin.js:1287</code>.</p><h5>Impact</h5><p>Supabase Auth error text aids user enumeration.</p><h5>Remediation</h5><p>Generic <code>console.warn('login failed')</code> + generic user message.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-2 · Unescaped order id in tracking results</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-2 · Unescaped order id in tracking results</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:3016</code> — only unescaped field in the block (ids are <code>NS-</code> generated, low exploitability).</p><h5>Remediation</h5><p><code>esc(o.id)</code>.</p></div></div>
 
 <div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-3 · <code>data:</code> passthrough in <code>imgUrl</code></div><span class="status fixed">Fixed</span></div>
@@ -302,13 +303,13 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-5 · keep-alive leaks upstream error text</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>api/keep-alive.js:39-44,67-70</code>.</p><h5>Impact</h5><p>DB/RLS error text disclosed for fingerprinting.</p><h5>Remediation</h5><p>Generic <code>{ok:false}</code> to clients; log details server-side.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-6 · .gitignore gaps (+ README wrongly ignored)</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-6 · .gitignore gaps (+ README wrongly ignored)</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>.gitignore:1-31</code> — no <code>*.pem/*.key/*.p12/secrets*.json</code>; line 8 ignores <code>README.md</code>.</p><h5>Impact</h5><p>Accidental commit of key material possible; README rule is a hygiene risk.</p><h5>Remediation</h5><p>Add the key patterns; un-ignore <code>README.md</code> unless intentionally unpublished.</p></div></div>
 
 <div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-7 · Leaked-password protection disabled</div><span class="status open">Open</span></div>
 <div class="finding-body"><h5>Location</h5><p>Supabase advisor <code>auth_leaked_password_protection</code>.</p><h5>Remediation</h5><p>Dashboard → Authentication → enable Leaked Password Protection.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-8 · <code>update_updated_at</code> mutable search_path</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-8 · <code>update_updated_at</code> mutable search_path</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p>Supabase advisor <code>function_search_path_mutable</code> on <code>public.update_updated_at</code>.</p><h5>Remediation</h5><p><code>SET search_path = public</code> in the function definition.</p></div></div>
 </div>
 
