@@ -935,7 +935,7 @@ details.ct-block > .form-grid{padding:14px 16px}
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js" integrity="sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous"></script>
 <script>
 
 /* ============ Supabase Backend ============ */
@@ -958,7 +958,7 @@ try {
 function sanitizeHTML(html) {
   if(!html) return "";
   const allowedTags = ['B','I','EM','STRONG','A','P','BR','UL','OL','LI','H1','H2','H3','H4','H5','H6','SPAN','DIV','HR','BLOCKQUOTE','CODE','PRE'];
-  const allowedAttrs = ['href','title','class','style','target','rel'];
+  const allowedAttrs = ['href','title','class','target','rel'];
   const allowedProtocols = ['http:','https:','mailto:','tel:'];
   try {
     const parser = new DOMParser();
@@ -1201,7 +1201,7 @@ function applyTheme(){
       if(promo){
         if(th.announce){
           promo.style.display = "block";
-          promo.innerHTML = th.announce;
+          promo.innerHTML = sanitizeHTML(th.announce);
         }else{
           promo.style.display = "none";
         }
@@ -1355,7 +1355,7 @@ function esc(s){ return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;
 function escJs(s){ return String(s ?? "").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;"); }
 function fmt(n){ return fmtIn(n, curCode); }
 function slugify(s){ return String(s).toLowerCase().replace(/&/g,"and").replace(/[^a-z0-9\u4e00-\u9fff]+/g,"-").replace(/^-+|-+$/g,""); }
-function imgUrl(url, w){ if(!url) return PLACEHOLDER; if(String(url).indexOf("data:") === 0) return url; return url + (url.indexOf("?") === -1 ? "?width=" + w : "&width=" + w); }
+function imgUrl(url, w){ if(!url) return PLACEHOLDER; var u = String(url); if(u.indexOf("data:") === 0) return (/^data:image\/(png|jpeg|gif|webp);base64,/i.test(u) ? u : PLACEHOLDER); return u + (u.indexOf("?") === -1 ? "?width=" + w : "&width=" + w); }
 /* Image error fallback chain: product image -> category image -> neutral placeholder */
 function imgFallback(el){
   const prod = el.dataset.pid;
@@ -1551,14 +1551,12 @@ function updateAcctLabel(){ const el = $("#acctLabel"); if(el) el.textContent = 
 function myOrders(email){ return getOrders().filter(o => String(custEmail(o)).toLowerCase() === String(email).toLowerCase()); }
 
 /* ============ Admin user accounts (multiple admins, change password) ============ */
-/* Default admin is only used when no admins exist in Supabase — user should change password immediately */
-const DEFAULT_ADMIN_USER = "admin";
-const DEFAULT_ADMIN_PASS = "abcd1234";
+/* No hardcoded default credentials: with no admins in Supabase, legacy login is
+   disabled — provision the first admin via Supabase Auth instead. */
 function getAdmins(){
   const raw = _cache.admins;
   if(!raw || !Array.isArray(raw) || raw.length === 0){
-    /* Return default admin only if no admins configured — password will be hashed on first login */
-    return [{user: DEFAULT_ADMIN_USER, pass: DEFAULT_ADMIN_PASS, name: "Admin", role: "superadmin", isDefault: true}];
+    return [];
   }
   // Normalize: support both legacy {u,p} and current {user,pass} formats
   return raw.map(a => ({
@@ -1570,13 +1568,38 @@ function getAdmins(){
   }));
 }
 function saveAdmins(list){ _cache.admins = list; sbSave("admins", list); }
+/* Login brute-force throttle (client-side defense in depth: 5 fails = 5-min lockout.
+   A cleared localStorage resets it — server-side limits remain Supabase Auth's.) */
+function _throttleKey(k){ return "ns_login_fail_" + k; }
+function checkLoginThrottle(k){
+  try{
+    const rec = JSON.parse(localStorage.getItem(_throttleKey(k)) || '{"n":0,"t":0}');
+    if(rec.n >= 5 && Date.now() - rec.t < 5*60*1000) return Math.ceil((5*60*1000 - (Date.now() - rec.t))/1000);
+  }catch(e){}
+  return 0;
+}
+function recordLoginFail(k){
+  try{
+    const sk = _throttleKey(k);
+    const rec = JSON.parse(localStorage.getItem(sk) || '{"n":0,"t":0}');
+    const now = Date.now();
+    rec.n = (now - rec.t > 5*60*1000) ? 1 : (rec.n || 0) + 1;
+    rec.t = now;
+    localStorage.setItem(sk, JSON.stringify(rec));
+  }catch(e){}
+}
+function clearLoginFails(k){ try{ localStorage.removeItem(_throttleKey(k)); }catch(e){} }
 async function adminLoginUser(u, p){
+  const user = String(u).trim();
+  const wait = checkLoginThrottle("admin:" + user);
+  if(wait > 0){ showToast("Too many failed attempts. Try again in " + wait + "s."); return null; }
   const list = getAdmins();
-  const hit = list.find(a => a.user === String(u).trim());
-  if(!hit) return null;
+  const hit = list.find(a => a.user === user);
+  if(!hit){ recordLoginFail("admin:" + user); return null; }
   /* Verify password using secure hash comparison */
   const valid = await verifyPass(p, hit.pass);
   if(valid){
+    clearLoginFails("admin:" + user);
     /* If password is still plaintext or legacy format, upgrade to PBKDF2 */
     if(String(hit.pass).indexOf("pbkdf2::") !== 0){
       try{
@@ -1591,6 +1614,7 @@ async function adminLoginUser(u, p){
     }
     return hit;
   }
+  recordLoginFail("admin:" + user);
   return null;
 }
 /* Secure admin session with random token (prevents simple localStorage bypass) */
@@ -1605,8 +1629,9 @@ function setAdminSession(user, name){
 function validateAdminSession(){
   const sess = getAdminSession();
   if(!sess || !sess.token) return false;
-  /* Validate that session token matches in-memory token (prevents simple localStorage injection) */
-  if(window._adminToken && sess.token !== window._adminToken) return false;
+  /* Token must match the in-memory token: after a page reload there is no
+     in-memory token, so forged localStorage sessions are rejected (re-login required) */
+  if(!window._adminToken || sess.token !== window._adminToken) return false;
   /* Session expires after 24 hours */
   if(sess.ts && Date.now() - sess.ts > 24 * 60 * 60 * 1000) return false;
   return true;
@@ -2214,10 +2239,10 @@ function renderCart(){
     const unitPrice = getPriceForQty(p, i.q);
     const hasTierDiscount = p.priceTiers && p.priceTiers.length > 1 && unitPrice < p.p;
     return '<div class="cart-item">' +
-      '<a href="#/product/' + p.id + '" onclick="closeCart()"><img src="' + imgUrl(p.i, 200) + '" alt="' + esc(p.n) + '" loading="lazy" data-pid="' + p.id + '" onerror="imgFallback(this)"></a>' +
+      '<a href="#/product/' + esc(p.id) + '" onclick="closeCart()"><img src="' + esc(imgUrl(p.i, 200)) + '" alt="' + esc(p.n) + '" loading="lazy" data-pid="' + esc(p.id) + '" onerror="imgFallback(this)"></a>' +
       '<div><a class="ci-name" href="#/product/' + p.id + '" onclick="closeCart()">' + esc(p.n) + '</a>' +
       '<div class="ci-price">' + fmt(unitPrice) + ' each' + (hasTierDiscount ? ' <span style="color:var(--brand);font-size:11px;font-weight:600">Bulk discount!</span>' : '') + '</div>' +
-      '<div class="ci-qty"><button onclick="setQty(\'' + p.id + '\',' + (i.q - 1) + ')">−</button><input type="number" min="1" value="' + i.q + '" onchange="setCartQty(\'' + p.id + '\',this.value)"><button onclick="setQty(\'' + p.id + '\',' + (i.q + 1) + ')">+</button></div>' +
+      '<div class="ci-qty"><button onclick="setQty(\'' + escJs(p.id) + '\',' + (i.q - 1) + ')">−</button><input type="number" min="1" value="' + i.q + '" onchange="setCartQty(\'' + escJs(p.id) + '\',this.value)"><button onclick="setQty(\'' + escJs(p.id) + '\',' + (i.q + 1) + ')">+</button></div>' +
       '<button class="ci-remove" onclick="removeItem(\'' + p.id + '\')">Remove</button></div>' +
       '<div class="ci-total">' + fmt(i.q * unitPrice) + '</div></div>';
   }).join("");
@@ -2499,7 +2524,7 @@ function cardHTML(p, opts){
   const rt = productRating(p); const sold = productSold(p);
   return '<article class="product-card">' +
     '<div class="ph">' +
-      '<a href="#/product/' + p.id + '"><img src="' + imgUrl(p.i, 700) + '" alt="' + esc(p.n) + '" loading="lazy" data-pid="' + p.id + '" onerror="imgFallback(this)"></a>' +
+      '<a href="#/product/' + esc(p.id) + '"><img src="' + esc(imgUrl(p.i, 700)) + '" alt="' + esc(p.n) + '" loading="lazy" data-pid="' + esc(p.id) + '" onerror="imgFallback(this)"></a>' +
       '<button class="quick-add" onclick="addToCart(\'' + p.id + '\',1)">Add to cart</button>' +
     '</div>' +
     '<div class="info">' +
@@ -2549,19 +2574,19 @@ function viewAbout(){
   '</section>' +
 
   '<section class="about-section" id="ab-story">' +
-    '<h2><span class="bar"></span>' + abStoryT + '</h2>' +
-    '<div class="about-prose">' + abStoryB + '</div>' +
+    '<h2><span class="bar"></span>' + esc(abStoryT) + '</h2>' +
+    '<div class="about-prose">' + sanitizeHTML(abStoryB) + '</div>' +
   '</section>' +
 
   '<section class="about-section" id="ab-mission">' +
-    '<h2><span class="bar"></span>' + abMissionT + '</h2>' +
-    '<p class="lead">' + abMissionLead + '</p>' +
-    '<div class="about-prose">' + abMissionB + '</div>' +
+    '<h2><span class="bar"></span>' + esc(abMissionT) + '</h2>' +
+    '<p class="lead">' + esc(abMissionLead) + '</p>' +
+    '<div class="about-prose">' + sanitizeHTML(abMissionB) + '</div>' +
   '</section>' +
 
   '<section class="about-section" id="ab-promise">' +
-    '<h2><span class="bar"></span>' + abPromiseT + '</h2>' +
-    '<p class="lead">' + abPromiseLead + '</p>' +
+    '<h2><span class="bar"></span>' + esc(abPromiseT) + '</h2>' +
+    '<p class="lead">' + esc(abPromiseLead) + '</p>' +
     '<div class="value-grid">' +
       values.map(v => '<div class="value-card"><div class="v-icon">' + v.icon + '</div><h3>' + v.t + '</h3><p>' + v.p + '</p></div>').join("") +
     '</div>' +
@@ -2997,8 +3022,8 @@ function viewInfo(page){
   if(infoOv.body) body = infoOv.body;
 
   $("#app").innerHTML =
-  '<section class="info-hero"><div><h1>' + title + '</h1>' + (subtitle ? '<p>' + subtitle + '</p>' : '') + '</div></section>' +
-  '<section class="info-section">' + back + body + '</section>';
+  '<section class="info-hero"><div><h1>' + esc(title) + '</h1>' + (subtitle ? '<p>' + esc(subtitle) + '</p>' : '') + '</div></section>' +
+  '<section class="info-section">' + back + sanitizeHTML(body) + '</section>';
 }
 
 function trackOrderLookup(){
@@ -3013,7 +3038,7 @@ function trackOrderLookup(){
   result.style.display = "block";
   result.innerHTML =
   '<div class="track-result">' +
-    '<div class="tr-row"><span class="tr-label">Order Number</span><span class="tr-val">' + o.id + '</span></div>' +
+    '<div class="tr-row"><span class="tr-label">Order Number</span><span class="tr-val">' + esc(o.id) + '</span></div>' +
     '<div class="tr-row"><span class="tr-label">Date</span><span class="tr-val">' + fmtDT(o.date) + '</span></div>' +
     '<div class="tr-row"><span class="tr-label">Customer</span><span class="tr-val">' + esc(o.customer.first + " " + o.customer.last) + '</span></div>' +
     '<div class="tr-row"><span class="tr-label">Email</span><span class="tr-val">' + esc(o.customer.email) + '</span></div>' +
@@ -3123,7 +3148,8 @@ function showPopupIfNeeded(){
     const b = document.getElementById("popupBodyText"); if(b) b.innerHTML = sanitizeHTML(th.popupBody || "");
     const btn = document.getElementById("popupBtn");
     if(btn){
-      if(th.popupBtnText && th.popupBtnLink){
+      /* Scheme allowlist: blocks javascript:/data: URLs from popup config (XSS) */
+      if(th.popupBtnText && th.popupBtnLink && /^(https?:|mailto:|#\/)/i.test(th.popupBtnLink)){
         btn.style.display = "inline-flex";
         btn.textContent = th.popupBtnText;
         btn.href = th.popupBtnLink;
@@ -3426,7 +3452,7 @@ function viewProduct(id){
     '<div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<a href="#/shop">Shop</a>' + IC.chev + '<a href="#/shop?cat=' + p.cs + '">' + esc(catName(p.cs)) + '</a>' + IC.chev + '<span class="cur">' + esc(p.n) + '</span></div>' +
     '<div class="detail-wrap">' +
       '<div class="detail-gallery">' +
-        '<div class="detail-main-img"><img src="' + imgUrl(p.i, 1000) + '" alt="' + esc(p.n) + '" data-pid="' + p.id + '" onerror="imgFallback(this)"></div>' +
+        '<div class="detail-main-img"><img src="' + esc(imgUrl(p.i, 1000)) + '" alt="' + esc(p.n) + '" data-pid="' + esc(p.id) + '" onerror="imgFallback(this)"></div>' +
         '<div class="detail-badges"><span class="badge">' + esc(catName(p.cs)) + '</span><span class="badge tag-new">In Stock</span></div>' +
       '</div>' +
       '<div class="detail-info">' +
@@ -3548,11 +3574,23 @@ function acctLogin(){
   const pass = $("#acPass").value;
   const err = $("#acctErr");
   if(!email || !pass){ err.textContent = "Please enter your email and password"; return; }
+  const wait = checkLoginThrottle("acct:" + email);
+  if(wait > 0){ err.textContent = "Too many failed attempts. Try again in " + wait + "s."; return; }
   const acc = getAccounts().find(a => a.email === email);
-  if(!acc){ err.textContent = "No account found with this email — create one above"; return; }
-  return hashPass(pass).then(hash => {
-    if(hash !== acc.pass){ err.textContent = "Incorrect password"; return; }
-    setSession({ name: acc.name, email: acc.email });
+  if(!acc){ recordLoginFail("acct:" + email); err.textContent = "No account found with this email — create one above"; return; }
+  /* verifyPass handles pbkdf2/sha256/plain formats (never compare fresh hashes with ===) */
+  return verifyPass(pass, acc.pass).then(async valid => {
+    if(!valid){ recordLoginFail("acct:" + email); err.textContent = "Incorrect password"; return; }
+    clearLoginFails("acct:" + email);
+    /* Upgrade legacy password hashes to PBKDF2 on successful login */
+    try{
+      if(String(acc.pass).indexOf("pbkdf2::") !== 0){
+        const all = getAccounts();
+        const i = all.findIndex(a => a.email === email);
+        if(i >= 0){ all[i].pass = await hashPass(pass); saveAccounts(all); }
+      }
+    }catch(e){ /* Ignore upgrade errors */ }
+    setSession({ name: acc.name, email: acc.email, ts: Date.now() });
     updateAcctLabel();
     showToast("Signed in as " + acc.name.split(" ")[0]);
     route();
@@ -3669,7 +3707,7 @@ function viewCustomerQuote(id){
       (q.quoteNotes ? '<div style="margin-bottom:20px;padding:14px;background:rgba(37,186,181,0.05);border-radius:10px;border-left:3px solid var(--brand)"><div style="font-weight:600;font-size:13px;margin-bottom:6px">Quote Notes</div><div style="font-size:13px;color:var(--ink);line-height:1.6">' + esc(q.quoteNotes) + '</div></div>' : '') +
       (q.notes ? '<div style="margin-bottom:20px;padding:14px;background:var(--card);border-radius:10px"><div style="font-weight:600;font-size:13px;margin-bottom:6px">Your Notes</div><div style="font-size:13px;color:var(--ink);line-height:1.6">' + esc(q.notes) + '</div></div>' : '') +
       '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
-        (canAccept ? '<button class="btn" onclick="acceptQuote(\'' + esc(q.id) + '\')">Accept Quote & Create Order</button>' : '') +
+        (canAccept ? '<button class="btn" onclick="acceptQuote(\'' + escJs(q.id) + '\')">Accept Quote & Create Order</button>' : '') +
         '<button class="btn ghost" onclick="downloadQuotePDF(\'' + esc(q.id) + '\')">' + IC.down + ' Download Quote PDF</button>' +
         '<a class="btn ghost" href="#/account">Back to Account</a>' +
       '</div>' +
@@ -3927,8 +3965,8 @@ function changePassSave(){
   const accs = getAccounts();
   const acc = accs.find(a => a.email === s.email);
   if(!acc){ err.textContent = "Account not found"; return; }
-  return hashPass(oldP).then(hash => {
-    if(hash !== acc.pass){ err.textContent = "Current password is incorrect"; return; }
+  return verifyPass(oldP, acc.pass).then(valid => {
+    if(!valid){ err.textContent = "Current password is incorrect"; return; }
     if(newP.length < 6){ err.textContent = "New password must be at least 6 characters"; return; }
     return hashPass(newP).then(nh => {
       acc.pass = nh;

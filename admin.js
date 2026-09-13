@@ -155,9 +155,9 @@ function adminOrders(){
             ORDER_STATUSES.map(s => '<option ' + (o.status === s ? "selected" : "") + '>' + s + '</option>').join("") +
           '</select></td>' +
           '<td><div class="table-actions">' +
-            '<button onclick="viewOrder(\'' + esc(o.id) + '\')" title="View">' + IC.search + '</button>' +
-            '<button onclick="mailOrder(lastOrderById(\'' + esc(o.id) + '\'))" title="Email">' + IC.mail + '</button>' +
-            '<button class="del" onclick="deleteOrder(\'' + esc(o.id) + '\')" title="Delete">' + IC.del + '</button>' +
+            '<button onclick="viewOrder(\'' + escJs(o.id) + '\')" title="View">' + IC.search + '</button>' +
+            '<button onclick="mailOrder(lastOrderById(\'' + escJs(o.id) + '\'))" title="Email">' + IC.mail + '</button>' +
+            '<button class="del" onclick="deleteOrder(\'' + escJs(o.id) + '\')" title="Delete">' + IC.del + '</button>' +
           '</div></td></tr>'; }).join("") +
         '</tbody></table></div>'
       : '<div class="panel-body"><div style="font-size:13.5px;color:var(--ink-soft);padding:10px 0">No orders yet. When a customer places an order on the storefront it is saved here automatically and can be exported to Excel.</div></div>') +
@@ -262,13 +262,13 @@ function viewOrder(id){
       '</div>').join("") : '<p style="font-size:13px;color:var(--ink-soft)">No notes yet.</p>') +
       '<div style="margin-top:12px;display:flex;gap:8px">' +
         '<input type="text" id="orderNoteInput" placeholder="Add a note..." style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px" onkeypress="if(event.key===\'Enter\') submitOrderNote(\'' + esc(o.id) + '\')">' +
-        '<button class="btn sm" onclick="submitOrderNote(\'' + esc(o.id) + '\')">Add Note</button>' +
+        '<button class="btn sm" onclick="submitOrderNote(\'' + escJs(o.id) + '\')">Add Note</button>' +
       '</div>' +
     '</div>' +
     '<div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">' +
       '<button class="btn sm" onclick="mailOrder(lastOrder)">' + IC.mail + ' Email Order</button>' +
       '<button class="btn sm ghost" onclick="copyOrderSummary(lastOrder)">Copy Summary</button>' +
-      '<button class="btn sm ghost" onclick="downloadOrderPDF(\'' + esc(o.id) + '\')">' + IC.down + ' Download PDF</button>' +
+      '<button class="btn sm ghost" onclick="downloadOrderPDF(\'' + escJs(o.id) + '\')">' + IC.down + ' Download PDF</button>' +
     '</div>';
   $("#adminModal").classList.add("open");
 }
@@ -301,9 +301,9 @@ function adminQuotes(){
           '<td><span class="pill ' + (q.status === "Pending" ? "yellow" : q.status === "Quoted" ? "blue" : q.status === "Accepted" ? "green" : "gray") + '">' + esc(statusDisplay) + '</span></td>' +
           '<td style="white-space:nowrap">' + (q.validUntil ? fmtD(q.validUntil) : "—") + '</td>' +
           '<td><div class="table-actions">' +
-            '<button onclick="viewAdminQuote(\'' + esc(q.id) + '\')" title="View">' + IC.search + '</button>' +
-            '<button onclick="downloadQuotePDF(\'' + esc(q.id) + '\')" title="Download PDF">' + IC.down + '</button>' +
-            '<button class="del" onclick="deleteQuote(\'' + esc(q.id) + '\')" title="Delete">' + IC.del + '</button>' +
+            '<button onclick="viewAdminQuote(\'' + escJs(q.id) + '\')" title="View">' + IC.search + '</button>' +
+            '<button onclick="downloadQuotePDF(\'' + escJs(q.id) + '\')" title="Download PDF">' + IC.down + '</button>' +
+            '<button class="del" onclick="deleteQuote(\'' + escJs(q.id) + '\')" title="Delete">' + IC.del + '</button>' +
           '</div></td></tr>'; }).join("") +
         '</tbody></table></div>'
       : '<div class="panel-body"><div style="font-size:13.5px;color:var(--ink-soft);padding:10px 0">No quote requests yet. When a customer requests a quote from their cart it will appear here.</div></div>') +
@@ -336,8 +336,8 @@ function viewAdminQuote(id){
       '<h4 style="font-size:15px;font-weight:600;margin-bottom:8px;color:#b8860b">Customer Has Proposed a Target Price</h4>' +
       '<p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px">Customer requested <strong style="color:#b8860b;font-size:16px">' + fmt(q.customerTargetPrice) + '</strong> (€' + Number(q.customerTargetPrice).toFixed(2) + ' EUR base). You can accept this price or send your own quote.</p>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-        '<button class="btn" style="background:#22c55e" onclick="acceptCustomerTargetPrice(\'' + esc(q.id) + '\')">' + IC.sparkle + ' Accept Customer Price</button>' +
-        '<button class="btn ghost" style="color:#ef4444;border-color:#ef4444" onclick="rejectCustomerTargetPrice(\'' + esc(q.id) + '\')">Reject Target Price</button>' +
+        '<button class="btn" style="background:#22c55e" onclick="acceptCustomerTargetPrice(\'' + escJs(q.id) + '\')">' + IC.sparkle + ' Accept Customer Price</button>' +
+        '<button class="btn ghost" style="color:#ef4444;border-color:#ef4444" onclick="rejectCustomerTargetPrice(\'' + escJs(q.id) + '\')">Reject Target Price</button>' +
       '</div>' +
     '</div>' : '') +
     '<div style="margin-top:20px;padding:16px;background:rgba(37,186,181,0.05);border-radius:10px;border:1px solid rgba(37,186,181,0.2)">' +
@@ -345,16 +345,16 @@ function viewAdminQuote(id){
       '<div class="form-grid">' +
         '<div class="field"><label>Quoted Price (' + getCur().code + ') *</label><input id="qPrice" type="number" step="0.01" min="0" value="' + (q.quotedPrice ? (q.quotedPrice * rateOf(getCur().code)).toFixed(2) : (q.subtotal * rateOf(getCur().code)).toFixed(2)) + '"></div>' +
         '<div class="field"><label>Valid Until *</label><input id="qValid" type="text" class="date-picker" placeholder="Select date" readonly value="' + (q.validUntil ? q.validUntil.substring(0, 10) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10)) + '"></div>' +
-        '<div class="field full"><label>Quote Notes / Terms</label><textarea id="qNotes" rows="3" placeholder="e.g. Prices include packaging, shipping quoted separately, MOQ applies...">' + (q.quoteNotes || "") + '</textarea></div>' +
+        '<div class="field full"><label>Quote Notes / Terms</label><textarea id="qNotes" rows="3" placeholder="e.g. Prices include packaging, shipping quoted separately, MOQ applies...">' + esc(q.quoteNotes || "") + '</textarea></div>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:12px">' +
-        '<button class="btn" onclick="submitQuoteResponse(\'' + esc(q.id) + '\')">' + IC.mail + ' Send Quote</button>' +
-        '<button class="btn ghost" onclick="setQuoteStatus(\'' + esc(q.id) + '\', \'Rejected\')">Reject Request</button>' +
+        '<button class="btn" onclick="submitQuoteResponse(\'' + escJs(q.id) + '\')">' + IC.mail + ' Send Quote</button>' +
+        '<button class="btn ghost" onclick="setQuoteStatus(\'' + escJs(q.id) + '\', \'Rejected\')">Reject Request</button>' +
       '</div>' +
     '</div>' +
     '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">' +
-      '<button class="btn sm ghost" onclick="downloadQuotePDF(\'' + esc(q.id) + '\')">' + IC.down + ' Download Quote PDF</button>' +
-      '<button class="btn sm ghost" onclick="mailQuote(\'' + esc(q.id) + '\')">' + IC.mail + ' Email Customer</button>' +
+      '<button class="btn sm ghost" onclick="downloadQuotePDF(\'' + escJs(q.id) + '\')">' + IC.down + ' Download Quote PDF</button>' +
+      '<button class="btn sm ghost" onclick="mailQuote(\'' + escJs(q.id) + '\')">' + IC.mail + ' Email Customer</button>' +
     '</div>';
   $("#adminModal").classList.add("open");
   /* Initialize flatpickr date picker */
@@ -1284,7 +1284,7 @@ async function doLogin(){
       }
     }
   } catch(e) {
-    console.log("Supabase Auth login failed, trying legacy method:", e.message);
+    console.warn("Admin login failed, trying legacy method");
   }
 
   /* Method 2: Try legacy admin system (stored in site_settings) */

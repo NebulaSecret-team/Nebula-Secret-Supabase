@@ -17,6 +17,18 @@ export default async function handler(req) {
     });
   }
 
+  // Optional shared-secret gate. NOTE: Vercel Cron cannot send custom headers,
+  // so setting CRON_SECRET requires moving the schedule to an external cron
+  // (e.g. GitHub Actions) that calls this endpoint with
+  // `Authorization: Bearer <CRON_SECRET>`. Until then it stays open by design.
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && req.headers.get('authorization') !== 'Bearer ' + cronSecret) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     // Supabase credentials — use environment variables if available,
     // otherwise fall back to the public credentials from the website
@@ -34,12 +46,12 @@ export default async function handler(req) {
     });
 
     if (!response.ok) {
+      // Log upstream detail server-side only; never proxy DB error text to clients
       const errorText = await response.text();
       console.error('Supabase keep-alive query failed:', response.status, errorText);
-      return new Response(JSON.stringify({ 
-        ok: false, 
-        error: `Supabase returned ${response.status}`,
-        detail: errorText,
+      return new Response(JSON.stringify({
+        ok: false,
+        error: 'Keep-alive check failed',
         timestamp: new Date().toISOString()
       }), {
         status: 500,
@@ -64,9 +76,9 @@ export default async function handler(req) {
     });
   } catch (error) {
     console.error('Keep-alive endpoint error:', error);
-    return new Response(JSON.stringify({ 
-      ok: false, 
-      error: error.message,
+    return new Response(JSON.stringify({
+      ok: false,
+      error: 'Keep-alive check failed',
       timestamp: new Date().toISOString()
     }), {
       status: 500,

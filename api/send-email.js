@@ -12,6 +12,38 @@ export const config = {
   runtime: 'edge',
 };
 
+// Best-effort per-instance rate limit (edge isolates don't share state:
+// 10 requests/min per IP here; pair with Vercel Firewall/WAF for strict limits)
+const _rl = new Map();
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const win = 60 * 1000;
+  const max = 10;
+  let rec = _rl.get(ip);
+  if (!rec || now - rec.t > win) rec = { n: 0, t: now };
+  rec.n += 1;
+  _rl.set(ip, rec);
+  if (_rl.size > 5000) _rl.delete(_rl.keys().next().value);
+  return rec.n <= max ? 0 : Math.ceil((win - (now - rec.t)) / 1000);
+}
+
+function clientIp(req) {
+  const fwd = req.headers.get('x-forwarded-for');
+  return (fwd ? fwd.split(',')[0] : req.headers.get('x-real-ip') || 'unknown').trim();
+}
+
+// Allowlist + sanitize template params (max 30 fields, strings capped at 2000 chars)
+function cleanParams(params) {
+  if (!params || typeof params !== 'object' || Array.isArray(params)) return null;
+  const clean = {};
+  for (const [k, v] of Object.entries(params).slice(0, 30)) {
+    if (typeof k !== 'string' || k.length > 64) continue;
+    if (typeof v === 'string') clean[k] = v.slice(0, 2000);
+    else if (typeof v === 'number' || typeof v === 'boolean') clean[k] = v;
+  }
+  return clean;
+}
+
 export default async function handler(req) {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -29,13 +61,29 @@ export default async function handler(req) {
     });
   }
 
+  // Per-IP rate limit
+  const wait = checkRateLimit(clientIp(req));
+  if (wait > 0) {
+    return new Response(JSON.stringify({ error: 'Too many requests, try again later' }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
+    });
+  }
+
   try {
     const body = await req.json();
     const { type, params } = body;
 
-    // Validate request
-    if (!type || !params) {
-      return new Response(JSON.stringify({ error: 'Missing type or params' }), {
+    // Strict allowlist validation
+    if (!['order', 'contact'].includes(type)) {
+      return new Response(JSON.stringify({ error: 'Invalid type' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
+      });
+    }
+    const clean = cleanParams(params);
+    if (!clean) {
+      return new Response(JSON.stringify({ error: 'Invalid params' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
       });
@@ -74,7 +122,7 @@ export default async function handler(req) {
         template_id: templateId,
         user_id: publicKey,
         accessToken: privateKey,
-        template_params: params,
+        template_params: clean,
       }),
     });
 
@@ -84,9 +132,10 @@ export default async function handler(req) {
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
       });
     } else {
+      // Log upstream detail server-side only; never proxy it to the client
       const errorText = await response.text();
       console.error('EmailJS error:', response.status, errorText);
-      return new Response(JSON.stringify({ ok: false, error: 'Failed to send email', detail: errorText }), {
+      return new Response(JSON.stringify({ ok: false, error: 'Failed to send email' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...getCorsHeaders(req) },
       });

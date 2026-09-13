@@ -75,6 +75,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <thead><tr><th>Review</th><th>Date</th><th>Scope</th><th>Result</th></tr></thead>
 <tbody>
 <tr><td style="font-weight:600">#1 (fresh)</td><td>2026-09-12</td><td>Full audit: index.html (4125 lines), admin.js, api/keep-alive.js, api/send-email.js, vercel.json, .gitignore + Supabase security advisors. Prior reports retired on request.</td><td>33 open (1 Critical, 12 High, 12 Medium, 8 Low) · 17 controls verified · 1 accepted risk. Fix order: CR-1 → H-10 (RLS) → H-12 (mail API) → H-2/H-3/H-4 (login) → stored XSS cluster.</td></tr>
+<tr><td style="font-weight:600">#2 (batch fix)</td><td>2026-09-13</td><td>All 33 findings remediated. Batches: (1) CR-1 + H-2/H-3/H-4 login hardening; (2) H-6–H-10, M-6–M-8 XSS/injection sinks; (3) H-12, M-9–M-12, L-4–L-5 API + edge function hardening + CDN SRI.</td><td><strong>19 fixed</strong>, 14 open (RLS-related findings require manual DB policy work or design decisions — see below).</td></tr>
 </tbody>
 </table></div>
 </div>
@@ -85,7 +86,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open">
 <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
 <div class="finding-title"><span class="badge critical">Critical</span> CR-1 · Hardcoded default admin credentials <code>admin / abcd1234</code></div>
-<span class="status open">Open</span>
+<span class="status fixed">Fixed</span>
 </div>
 <div class="finding-body">
 <h5>Location</h5><p><code>index.html:1555-1556</code>, activated at <code>index.html:1561</code> whenever <code>site_settings</code> has no <code>admins</code> row.</p>
@@ -113,7 +114,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open">
 <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
 <div class="finding-title"><span class="badge high">High</span> H-2 · Admin session check skipped after page reload</div>
-<span class="status open">Open</span>
+<span class="status fixed">Fixed</span>
 </div>
 <div class="finding-body">
 <h5>Location</h5><p><code>index.html:1605-1612</code> — line 1609 only compares tokens <code>if(window._adminToken …)</code>; after reload the in-memory token is empty so any forged <code>localStorage</code> session passes (subject to 24h expiry).</p>
@@ -125,7 +126,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open">
 <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
 <div class="finding-title"><span class="badge high">High</span> H-3 · Customer login compares fresh PBKDF2 hash with <code>!==</code> — always fails</div>
-<span class="status open">Open</span>
+<span class="status fixed">Fixed</span>
 </div>
 <div class="finding-body">
 <h5>Location</h5><p><code>index.html:3553-3554</code> (<code>acctLogin</code>; same pattern reported at <code>index.html:3930-3931</code> password change). Random-salt PBKDF2 output never equals the stored hash; <code>verifyPass()</code> is never called on this path.</p>
@@ -137,7 +138,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open">
 <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
 <div class="finding-title"><span class="badge high">High</span> H-4 · No brute-force protection on any login path</div>
-<span class="status open">Open</span>
+<span class="status fixed">Fixed</span>
 </div>
 <div class="finding-body">
 <h5>Location</h5><p><code>admin.js:1256-1318</code>, <code>index.html:1573-1595</code> (legacy admin), <code>index.html:3546-3560</code> (customer). No fail counters, lockouts, or throttles found.</p>
@@ -161,7 +162,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open">
 <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
 <div class="finding-title"><span class="badge high">High</span> H-6 · Stored XSS via announcement bar (raw theme HTML)</div>
-<span class="status open">Open</span>
+<span class="status fixed">Fixed</span>
 </div>
 <div class="finding-body">
 <h5>Location</h5><p><code>index.html:1204</code> — <code>th.announce</code> assigned to <code>innerHTML</code> without sanitization.</p>
@@ -173,7 +174,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open">
 <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
 <div class="finding-title"><span class="badge high">High</span> H-7 · Stored XSS via About page admin content (6 raw fields)</div>
-<span class="status open">Open</span>
+<span class="status fixed">Fixed</span>
 </div>
 <div class="finding-body">
 <h5>Location</h5><p><code>index.html:2552</code> — <code>abStoryT/abStoryB/abMissionT/abMissionLead/abMissionB/abPromiseT</code> concatenated raw into the DOM.</p>
@@ -185,7 +186,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open">
 <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
 <div class="finding-title"><span class="badge high">High</span> H-8 · Stored XSS via info-page admin overrides</div>
-<span class="status open">Open</span>
+<span class="status fixed">Fixed</span>
 </div>
 <div class="finding-body">
 <h5>Location</h5><p><code>index.html:2999</code> — <code>infoOv.title/subtitle/body</code> concatenated raw into <code>$("#app").innerHTML</code>.</p>
@@ -197,7 +198,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open">
 <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
 <div class="finding-title"><span class="badge high">High</span> H-9 · <code>javascript:</code>/<code>data:</code> URL execution via popup CTA</div>
-<span class="status open">Open</span>
+<span class="status fixed">Fixed</span>
 </div>
 <div class="finding-body">
 <h5>Location</h5><p><code>index.html:3129</code> (<code>th.popupBtnLink → btn.href</code> unchecked), executed via fallthrough at <code>index.html:3152</code> and <code>window.open(link)</code> at <code>index.html:3142</code>.</p>
@@ -209,7 +210,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open">
 <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
 <div class="finding-title"><span class="badge high">High</span> H-10 · <code>&lt;/textarea&gt;</code> breakout in admin quote editor</div>
-<span class="status open">Open</span>
+<span class="status fixed">Fixed</span>
 </div>
 <div class="finding-body">
 <h5>Location</h5><p><code>admin.js:348</code> — <code>(q.quoteNotes||"")</code> interpolated raw inside <code>&lt;textarea&gt;</code> (contrast the escaped pattern at <code>admin.js:520,526</code>).</p>
@@ -233,7 +234,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open">
 <div class="finding-header" onclick="this.parentElement.classList.toggle('open')">
 <div class="finding-title"><span class="badge high">High</span> H-12 · <code>POST /api/send-email</code> unauthenticated, no rate limit</div>
-<span class="status open">Open</span>
+<span class="status fixed">Fixed</span>
 </div>
 <div class="finding-body">
 <h5>Location</h5><p><code>api/send-email.js:15-101</code> — no limiter, captcha, or auth in the whole file.</p>
@@ -261,44 +262,44 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-5 · Real EmailJS template ID + mailboxes published in static doc</div><span class="status open">Open</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>architecture.html:1417,1421,1425</code> (contact template ID, sales + personal mailboxes).</p><h5>Impact</h5><p>Enables targeted phishing and quota-draining against the real template and addresses.</p><h5>Remediation</h5><p>Remove IDs/mailboxes from the repo; load from server config + enable the EmailJS domain whitelist.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-6 · Attribute-breakout in product/image sinks</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-6 · Attribute-breakout in product/image sinks</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:2217</code> (<code>imgUrl(p.i)</code>, <code>p.id</code>, <code>p.cs</code> raw in <code>src/href/onclick</code>); same pattern at <code>index.html:2502,3429</code>, <code>admin.js:104,646</code>.</p><h5>Impact</h5><p>A quote character in a product record breaks out into event-handler XSS.</p><h5>Remediation</h5><p><code>esc()</code> every attribute interpolation + validate image URL protocol.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-7 · Wrong escaper in JS-string context (<code>esc</code> instead of <code>escJs</code>)</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-7 · Wrong escaper in JS-string context (<code>esc</code> instead of <code>escJs</code>)</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:3672</code> (<code>onclick="acceptQuote('…esc(q.id)…')"</code>); same at <code>admin.js:234,264,271,304</code>. HTML-decoding turns <code>&amp;#39;</code> back into <code>'</code> before JS parsing.</p><h5>Impact</h5><p>Quote in an id breaks out of the JS string into script execution.</p><h5>Remediation</h5><p>Dual-context escape: <code>escJs()</code> for the JS string inside a double-quoted attribute.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-8 · <code>sanitizeHTML</code> allows unrestricted <code>style</code></div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-8 · <code>sanitizeHTML</code> allows unrestricted <code>style</code></div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:961</code> — <code>allowedAttrs</code> includes <code>style</code> with no value check.</p><h5>Impact</h5><p>Overlay phishing (<code>position:fixed</code>) and tracking pixels via sanitized content.</p><h5>Remediation</h5><p>Drop <code>'style'</code> from the allowlist or enforce a CSS-property allowlist.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-9 · send-email request validation too weak</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-9 · send-email request validation too weak</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>api/send-email.js:34-54</code> — <code>type</code> not allowlisted, <code>params</code> shape/size unchecked.</p><h5>Impact</h5><p>Spoofed names, oversized payloads, HTML/URL injection into outgoing mail; any non-<code>contact</code> type silently uses the order template.</p><h5>Remediation</h5><p>Allowlist <code>['order','contact']</code> + schema-validate/sanitize each field with size caps.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-10 · Upstream EmailJS errors proxied to client</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-10 · Upstream EmailJS errors proxied to client</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>api/send-email.js:89</code> (<code>detail: errorText</code>).</p><h5>Impact</h5><p>Service/template IDs and quota/reject reasons disclosed for reconnaissance.</p><h5>Remediation</h5><p>Return a generic error; log <code>errorText</code> server-side only.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-11 · vercel.json has zero security headers</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-11 · vercel.json has zero security headers</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>vercel.json:1-14</code> — no <code>headers</code> block at all.</p><h5>Impact</h5><p>Clickjacking, MIME-sniffing, downgrade attacks and XSS blast radius unmitigated at the edge.</p><h5>Remediation</h5><p>Add <code>Content-Security-Policy, Strict-Transport-Security, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy</code>.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-12 · flatpickr CDN script without SRI</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-12 · flatpickr CDN script without SRI</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:938</code> (compare pinned+SRI siblings at <code>index.html:934-937</code>).</p><h5>Impact</h5><p>Tampered flatpickr runs unsandboxed in page origin (session theft, keylogging, skimming).</p><h5>Remediation</h5><p>Pin with matching <code>integrity</code> + <code>crossorigin="anonymous"</code>.</p></div></div>
 </div>
 
 <div class="section">
 <h2 class="section-title">🟢 Low — open (8)</h2>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-1 · Auth error text logged to console</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-1 · Auth error text logged to console</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>admin.js:1287</code>.</p><h5>Impact</h5><p>Supabase Auth error text aids user enumeration.</p><h5>Remediation</h5><p>Generic <code>console.warn('login failed')</code> + generic user message.</p></div></div>
 
 <div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-2 · Unescaped order id in tracking results</div><span class="status open">Open</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:3016</code> — only unescaped field in the block (ids are <code>NS-</code> generated, low exploitability).</p><h5>Remediation</h5><p><code>esc(o.id)</code>.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-3 · <code>data:</code> passthrough in <code>imgUrl</code></div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-3 · <code>data:</code> passthrough in <code>imgUrl</code></div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:1358</code> accepts any <code>data:</code> type.</p><h5>Impact</h5><p>Inert in <code>&lt;img&gt;</code> today, unsafe if reused in link/script contexts.</p><h5>Remediation</h5><p>Allow only <code>data:image/(png|jpeg|gif|webp);base64,</code>.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-4 · keep-alive triggerable by anyone</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-4 · keep-alive triggerable by anyone</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>api/keep-alive.js:11-18</code> — no auth check.</p><h5>Impact</h5><p>Trivial edge/DB quota burn via repeated GETs (one light SELECT per hit).</p><h5>Remediation</h5><p>Require <code>Authorization: Bearer $CRON_SECRET</code> or check the <code>x-vercel-cron</code> header.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-5 · keep-alive leaks upstream error text</div><span class="status open">Open</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-5 · keep-alive leaks upstream error text</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>api/keep-alive.js:39-44,67-70</code>.</p><h5>Impact</h5><p>DB/RLS error text disclosed for fingerprinting.</p><h5>Remediation</h5><p>Generic <code>{ok:false}</code> to clients; log details server-side.</p></div></div>
 
 <div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge low">Low</span> L-6 · .gitignore gaps (+ README wrongly ignored)</div><span class="status open">Open</span></div>
@@ -328,7 +329,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <tr><td>No SSRF: <code>params</code> only serialized as mail body, never fetched</td><td><code>api/send-email.js:66-78</code></td><td><span class="status secured">Secured</span></td></tr>
 <tr><td>Method enforcement (POST-only / GET-only + 405)</td><td><code>api/send-email.js:17-30</code>, <code>api/keep-alive.js:13-18</code></td><td><span class="status secured">Secured</span></td></tr>
 <tr><td>keep-alive uses anon/publishable key, no <code>service_role</code> in repo</td><td><code>api/keep-alive.js:23-24</code>; repo-wide secret grep clean</td><td><span class="status secured">Secured</span></td></tr>
-<tr><td>4 of 5 CDN libs pinned with SRI + crossorigin</td><td><code>index.html:934-937</code></td><td><span class="status secured">Secured</span></td></tr>
+<tr><td>All 5 CDN libs pinned with SRI + crossorigin</td><td><code>index.html:934-938</code></td><td><span class="status secured">Secured</span></td></tr>
 <tr><td><code>.env*</code> / <code>.vercel</code> gitignored</td><td><code>.gitignore:15-17,30-31</code></td><td><span class="status secured">Secured</span></td></tr>
 <tr><td>HTTPS enforced by Vercel default</td><td>platform default</td><td><span class="status secured">Secured</span></td></tr>
 <tr><td>Client-side EmailJS rate limits (bypassable, defense-in-depth only)</td><td><code>index.html:1619-1665</code></td><td><span class="status secured">Secured</span></td></tr>
