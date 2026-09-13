@@ -1695,9 +1695,11 @@ function validateAdminSession(){
   return true;
 }
 
-/* ============ Email delivery (EmailJS or FormSubmit) ============ */
-function getMailCfg(){ return lsGet(LS.mail, { enabled: false }); }
-function saveMailCfg(m){ lsSet(LS.mail, { enabled: !!(m && m.enabled) }); }
+/* ============ Email delivery (server-side via Edge Function) ============ */
+async function getEmailConfig(){
+  try{ const r = await fetch("/api/email-config"); return await r.json(); }
+  catch(e){ return { configured: false, enabled: false }; }
+}
 
 /* ============ EmailJS Security: Rate Limiting & Domain Validation ============ */
 const EMAILJS_RATE_LIMIT = {
@@ -1766,15 +1768,12 @@ function validateEmailDomain(){
 }
 
 
-function mailRecipients(cfg){
-  // Recipients are now configured server-side; browser only tracks the enabled flag.
-  return [];
+async function sendOrderEmail(o){
+  const cfg = await getEmailConfig();
+  if(!cfg.enabled) return {ok:false, reason:"not-configured"};
+  return sendViaEmailJS(o);
 }
-async function sendOrderEmail(o, cfg){
-  if(!cfg || !cfg.enabled) return {ok:false, reason:"not-configured"};
-  return sendViaEmailJS(o, cfg);
-}
-function emailTemplateParams(o, cfg){
+function emailTemplateParams(o){
   const cur = o.cur || "EUR"; const r = orate(o);
   const storeName = getTheme().storeName || "Nebula Secret";
   const itemsLines = o.items.map(it => "• " + it.name + "  x" + it.qty + "  = " + fmtIn(it.price * it.qty, cur, r)).join("\n");
@@ -1795,7 +1794,7 @@ function emailTemplateParams(o, cfg){
     message: orderEmailText(o, storeName)
   };
 }
-async function sendViaEmailJS(o, cfg){
+async function sendViaEmailJS(o){
   try{
     /* Security check 1: Validate domain */
     if(!validateEmailDomain()){
@@ -1808,7 +1807,7 @@ async function sendViaEmailJS(o, cfg){
       return {ok:false, reason:rateCheck.reason, detail:rateCheck.message};
     }
     
-    const params = emailTemplateParams(o, cfg);
+    const params = emailTemplateParams(o);
     const resp = await fetch("/api/send-email", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
@@ -1981,16 +1980,15 @@ function orderEmailText(o, storeName){
   return lines.join("\n");
 }
 async function mailOrder(o){
-  const cfg = getMailCfg();
-  const recipients = mailRecipients(cfg);
-  if(!cfg || !cfg.enabled){
-    showToast("Order email not sent — set up Admin → Order Emails first");
+  const cfg = await getEmailConfig();
+  if(!cfg.enabled){
+    showToast("Order email not configured — set MAIL_ENABLED and EmailJS env vars in Vercel");
     return;
   }
   const st = $("#ocEmailState");
   if(st) st.textContent = "Sending order email…";
-  const r = await sendOrderEmail(o, cfg);
-  if(st) st.textContent = r.ok ? "Order email sent to " + recipients.join(", ") : "Email send failed — check Admin → Order Emails";
+  const r = await sendOrderEmail(o);
+  if(st) st.textContent = r.ok ? "Order email sent" : "Email send failed — " + (r.detail || r.reason);
   showToast(r.ok ? "Order email sent" : "Email send failed");
 }
 function continueShopping(){
@@ -2472,19 +2470,18 @@ function placeOrder(){
     o.items.map(it => '<div class="o-line"><span>' + esc(it.name) + ' <span class="q">× ' + it.qty + '</span></span><span>' + fmt(it.price * it.qty) + '</span></div>').join("") +
     '<div class="o-total"><span>Total</span><span>' + fmt(o.total) + '</span></div>';
   // auto-send email to store inbox when configured
-  const cfg = getMailCfg();
-  const recipients = mailRecipients(cfg);
-  const mailReady = cfg && cfg.enabled;
-  if(mailReady){
-    const st = $("#ocEmailState");
-    if(st) st.textContent = "Sending order email…";
-    sendOrderEmail(o, cfg).then(r => {
-      if(st) st.textContent = r.ok ? "Order email sent to " + recipients.join(", ") : "Email not sent — check Admin → Order Emails for details.";
-    });
-  }else{
-    const st = $("#ocEmailState");
-    if(st) st.textContent = "Order saved. To receive order emails automatically, set up Admin → Order Emails, then click Send Order Email.";
-  }
+  getEmailConfig().then(cfg => {
+    if(cfg.enabled){
+      const st = $("#ocEmailState");
+      if(st) st.textContent = "Sending order email…";
+      sendOrderEmail(o).then(r => {
+        if(st) st.textContent = r.ok ? "Order email sent" : "Email not sent — " + (r.detail || r.reason);
+      });
+    }else{
+      const st = $("#ocEmailState");
+      if(st) st.textContent = "Order saved. Email not configured — set MAIL_ENABLED and EmailJS env vars in Vercel.";
+    }
+  });
   $("#orderModal").classList.add("open");
 }
 
@@ -3246,9 +3243,9 @@ async function submitContactForm(ev){
   if(!email || !/.+@.+\..+/.test(email)){ showCfMsg(msgEl, "#c0392b", "Please enter a valid email address."); return; }
   if(!message){ showCfMsg(msgEl, "#c0392b", "Please enter your message."); return; }
 
-  // Check email config
-  const cfg = getMailCfg();
-  if(!cfg || !cfg.enabled){
+  // Check email config from server
+  const cfg = await getEmailConfig();
+  if(!cfg.enabled){
     showCfMsg(msgEl, "#c0392b", "Email service not configured. Please contact us directly at sales@nebulasecret.com.");
     return;
   }
