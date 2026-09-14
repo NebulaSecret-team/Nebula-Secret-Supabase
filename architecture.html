@@ -565,6 +565,8 @@
     .role-grid { grid-template-columns: 1fr; }
   }
 </style>
+<!-- Supabase JS Library -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 
@@ -1805,23 +1807,62 @@
 </div>
 
 <script>
-// Check admin session from main site (shared localStorage on same domain)
-// If logged in, show architecture page; if not, redirect to Admin Panel on SAME domain
-(function() {
+// Supabase configuration
+const SUPABASE_URL = 'https://xwhhsoppcpkijxxychjm.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_2GnjItYkv_TRex8Z9YKTag_oUdiyHEk';
+
+// Initialize Supabase client
+let supabase = null;
+try {
+  supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+} catch(e) {
+  console.error('Failed to initialize Supabase:', e);
+}
+
+// Check admin session using Supabase Auth
+(async function() {
   try {
-    const session = localStorage.getItem('ns_asession_v3');
-    if (session) {
-      const data = JSON.parse(session);
+    if (supabase) {
+      // Check Supabase Auth session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const role = session.user.app_metadata?.role || session.user.user_metadata?.role;
+        if (role === 'admin' || role === 'superadmin') {
+          // Admin is logged in - show architecture page
+          document.getElementById('mainContent').style.display = 'block';
+          const email = session.user.email || 'Admin';
+          document.getElementById('adminBadge').textContent = email.toUpperCase();
+          return;
+        }
+      }
+    }
+    
+    // Fallback: check legacy session
+    const legacySession = localStorage.getItem('ns_asession_v3');
+    if (legacySession) {
+      const data = JSON.parse(legacySession);
       if (data && data.user) {
-        // Admin is logged in - show architecture page
         document.getElementById('mainContent').style.display = 'block';
         document.getElementById('adminBadge').textContent = (data.name || data.user).toUpperCase();
         return;
       }
     }
   } catch(e) {
-    console.error('Failed to parse admin session:', e);
+    console.error('Auth check failed:', e);
+    // Fallback to legacy session check
+    try {
+      const legacySession = localStorage.getItem('ns_asession_v3');
+      if (legacySession) {
+        const data = JSON.parse(legacySession);
+        if (data && data.user) {
+          document.getElementById('mainContent').style.display = 'block';
+          document.getElementById('adminBadge').textContent = (data.name || data.user).toUpperCase();
+          return;
+        }
+      }
+    } catch(e2) {}
   }
+  
   // Not logged in - redirect to Admin Panel on SAME domain (relative path)
   window.location.href = '/#/admin';
 })();
