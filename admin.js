@@ -1055,8 +1055,8 @@ async function adminCustomers(){
   }).join("") : '<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:24px">No customer accounts yet — accounts appear here when customers create one on the Account page.</td></tr>';
   const content =
     '<div class="admin-panel"><div class="panel-head"><div><h3>Customer Accounts</h3><div class="ph-sub">Everyone who created an account on the storefront</div></div><div style="display:flex;gap:8px"><button class="btn sm ghost" onclick="adminCustomers()">Refresh</button><button class="btn sm ghost" onclick="location.hash=\'#/admin/tiers\'">Manage Tiers</button><button class="btn sm ghost" onclick="location.hash=\'#/account\'">Open Account page</button></div></div>' +
-    '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th>Name</th><th>Email</th><th>Registered</th><th>Orders</th><th>Tier</th><th style="text-align:right">Action</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>' +
-    '<div class="form-hint" style="margin-top:8px">Use <b>Tier</b> dropdown to assign a customer tier (discount applies automatically when they log in). Use <b>Reset password</b> to set a new password for a customer when they have forgotten theirs. Changes apply immediately. Click <b>Refresh</b> to see the latest accounts.</div>';
+    '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th>Name</th><th>Email</th><th>Registered</th><th>Orders</th><th>Tier</th><th style="text-align:right">Actions</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>' +
+    '<div class="form-hint" style="margin-top:8px">Use <b>Tier</b> dropdown to assign a customer tier (discount applies automatically when they log in). Use <b>Reset password</b> to set a new password for a customer when they have forgotten theirs. Use <b>Delete</b> to remove a customer account (their orders will remain in the system). Changes apply immediately. Click <b>Refresh</b> to see the latest accounts.</div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Customer Accounts";
 }
@@ -1072,6 +1072,22 @@ function adminResetCustomerPass(email){
     saveAccounts(accs);
     showToast("Password updated for " + acc.email);
   });
+}
+
+/* Delete a customer account */
+function deleteCustomerAccount(email){
+  const accs = getAccounts();
+  const acc = accs.find(a => a.email === email);
+  if(!acc){ showToast("Account not found"); return; }
+  const orderCount = myOrders(email).length;
+  const confirmMsg = "Delete customer account '" + acc.name + "' (" + email + ")?" +
+    (orderCount > 0 ? "\n\nThis customer has " + orderCount + " order(s). Their orders will remain in the system, but the account will be removed." : "") +
+    "\n\nThis action cannot be undone.";
+  if(!confirm(confirmMsg)) return;
+  const newAccs = accs.filter(a => a.email !== email);
+  saveAccounts(newAccs);
+  showToast("Customer account " + email + " deleted");
+  adminCustomers();
 }
 
 /* ============ Customer Tiers Management ============ */
