@@ -727,7 +727,14 @@ const THEME_PRESETS = [
   {name:"Classic Black", brand:"#1f1e23", accent:"#ff5983"}
 ];
 
-function adminCustomers(){
+async function adminCustomers(){
+  /* Always reload accounts from Supabase to show the latest data */
+  try {
+    _cache.loaded = false;
+    await sbLoadAll();
+  } catch(e) {
+    console.warn("Failed to reload accounts:", e);
+  }
   const accs = getAccounts();
   const rows = accs.length ? accs.map(a =>
     '<tr>' +
@@ -739,9 +746,9 @@ function adminCustomers(){
     '</tr>'
   ).join("") : '<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);padding:24px">No customer accounts yet — accounts appear here when customers create one on the Account page.</td></tr>';
   const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Customer Accounts</h3><div class="ph-sub">Everyone who created an account on the storefront</div></div><button class="btn sm ghost" onclick="location.hash=\'#/account\'">Open Account page</button></div>' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Customer Accounts</h3><div class="ph-sub">Everyone who created an account on the storefront</div></div><div style="display:flex;gap:8px"><button class="btn sm ghost" onclick="adminCustomers()">Refresh</button><button class="btn sm ghost" onclick="location.hash=\'#/account\'">Open Account page</button></div></div>' +
     '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th>Name</th><th>Email</th><th>Registered</th><th>Orders</th><th style="text-align:right">Action</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>' +
-    '<div class="form-hint" style="margin-top:8px">Use <b>Reset password</b> to set a new password for a customer when they have forgotten theirs. Changes apply immediately.</div>';
+    '<div class="form-hint" style="margin-top:8px">Use <b>Reset password</b> to set a new password for a customer when they have forgotten theirs. Changes apply immediately. Click <b>Refresh</b> to see the latest accounts.</div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Customer Accounts";
 }
