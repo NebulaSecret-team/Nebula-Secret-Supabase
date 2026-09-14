@@ -93,23 +93,69 @@ function renderAdminShell(content){
 
 function adminDashboard(){
   const products = getProducts(); const cats = getCats(); const orders = getOrders();
-  const totalValue = products.reduce((s,p) => s + Number(p.p || 0), 0);
-  const avg = products.length ? totalValue / products.length : 0;
+  const accounts = getAccounts ? getAccounts() : [];
+  const quotes = getQuotes ? getQuotes() : [];
   const revenue = orders.filter(o => o.status !== "Cancelled").reduce((s,o) => s + Number(o.total || 0), 0);
   const recentOrders = orders.slice(0, 6);
+  
+  // Build recent activity feed
+  const activities = [];
+  // Recent products
+  products.slice(-5).reverse().forEach(p => {
+    activities.push({ type: 'product', icon: IC.box, text: 'Product added: <strong>' + esc(p.n) + '</strong>', time: p.createdAt || p.updatedAt || Date.now(), color: 'var(--accent)' });
+  });
+  // Recent orders
+  orders.slice(0, 5).forEach(o => {
+    activities.push({ type: 'order', icon: IC.orders, text: 'Order <strong>' + esc(o.id) + '</strong> from ' + esc(custName(o)), time: o.date, color: '#3b82f6' });
+  });
+  // Recent accounts
+  if (accounts && accounts.length) {
+    accounts.slice(-5).reverse().forEach(a => {
+      activities.push({ type: 'account', icon: IC.user, text: 'Customer registered: <strong>' + esc(a.name || a.email || a.u) + '</strong>', time: a.createdAt || a.ts || Date.now(), color: '#10b981' });
+    });
+  }
+  // Recent quotes
+  if (quotes && quotes.length) {
+    quotes.slice(-5).reverse().forEach(q => {
+      activities.push({ type: 'quote', icon: IC.doc, text: 'Quote request: <strong>' + esc(q.id || 'New') + '</strong> (' + esc(q.status || 'Pending') + ')', time: q.date || q.createdAt || Date.now(), color: '#f59e0b' });
+    });
+  }
+  // Sort by time (newest first) and take top 8
+  activities.sort((a, b) => new Date(b.time) - new Date(a.time));
+  const recentActivity = activities.slice(0, 8);
+  
   const content =
     '<div class="stat-grid">' +
       '<div class="stat-card"><span class="s-icon">' + IC.box + '</span><div class="s-label">Total Products</div><div class="s-value">' + products.length + '</div><div class="s-sub">All products from catalog</div></div>' +
       '<div class="stat-card"><span class="s-icon">' + IC.tag + '</span><div class="s-label">Categories</div><div class="s-value">' + cats.length + '</div><div class="s-sub">Manageable in Categories</div></div>' +
       '<div class="stat-card"><span class="s-icon">' + IC.orders + '</span><div class="s-label">Orders</div><div class="s-value">' + orders.length + '</div><div class="s-sub"><a href="#/admin/orders" style="color:var(--accent)">View orders &amp; export Excel</a></div></div>' +
       '<div class="stat-card"><span class="s-icon">' + IC.chart + '</span><div class="s-label">Revenue</div><div class="s-value">' + fmt(revenue) + '</div><div class="s-sub">From ' + orders.filter(o => o.status !== "Cancelled").length + ' active orders</div></div>' +
-      '<div class="stat-card"><span class="s-icon">' + IC.palette + '</span><div class="s-label">Avg. Price</div><div class="s-value">' + fmt(avg) + '</div><div class="s-sub">per item</div></div>' +
-      '<div class="stat-card"><span class="s-icon">' + IC.sparkle + '</span><div class="s-label">Catalog Value</div><div class="s-value">' + fmt(totalValue) + '</div><div class="s-sub">Sum of all products</div></div>' +
+      '<div class="stat-card"><span class="s-icon">' + IC.user + '</span><div class="s-label">Customers</div><div class="s-value">' + (accounts.length || 0) + '</div><div class="s-sub"><a href="#/admin/customers" style="color:var(--accent)">Manage customers</a></div></div>' +
+      '<div class="stat-card"><span class="s-icon">' + IC.doc + '</span><div class="s-label">Quotes</div><div class="s-value">' + (quotes.length || 0) + '</div><div class="s-sub"><a href="#/admin/quotes" style="color:var(--accent)">View quotes &amp; enquiries</a></div></div>' +
     '</div>' +
+    // Recent Activity
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Recent Activity</h3><div class="ph-sub">Latest additions and changes across your store</div></div></div>' +
+    '<div class="panel-body" style="padding:0">' +
+      (recentActivity.length
+        ? '<div style="display:flex;flex-direction:column;gap:0">' +
+            recentActivity.map(a => {
+              const timeAgo = formatTimeAgo(a.time);
+              return '<div style="display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);transition:background .15s" onmouseover="this.style.background=\'var(--bg-soft)\'" onmouseout="this.style.background=\'transparent\'">' +
+                '<div style="width:36px;height:36px;border-radius:10px;background:' + a.color + '15;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:' + a.color + ';font-size:16px">' + a.icon + '</div>' +
+                '<div style="flex:1;min-width:0"><div style="font-size:13.5px;color:var(--ink);line-height:1.4">' + a.text + '</div>' +
+                '<div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px">' + timeAgo + '</div></div>' +
+                '<span class="pill ' + a.type + '" style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;flex-shrink:0">' + a.type + '</span>' +
+              '</div>';
+            }).join("") +
+          '</div>'
+        : '<div style="padding:20px;font-size:13.5px;color:var(--ink-soft)">No recent activity yet.</div>') +
+    '</div></div>' +
+    // Recent Products
     '<div class="admin-panel"><div class="panel-head"><div><h3>Recent Products</h3><div class="ph-sub">Latest additions to your store</div></div><a class="btn sm" href="#/admin/products">Manage Products</a></div>' +
     '<div class="panel-body" style="padding:0"><table class="admin-table"><thead><tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Status</th></tr></thead><tbody>' +
     products.slice(-6).reverse().map(p => '<tr><td><img class="td-img" src="' + imgUrl(p.i, 100) + '" alt="" data-pid="' + p.id + '" onerror="imgFallback(this)"></td><td style="font-weight:600">' + esc(p.n) + '</td><td><span class="pill">' + esc(catName(p.cs)) + '</span></td><td>' + fmt(p.p) + '</td><td><span class="pill green">Visible</span></td></tr>').join("") +
     '</tbody></table></div></div>' +
+    // Recent Orders
     '<div class="admin-panel"><div class="panel-head"><div><h3>Recent Orders</h3><div class="ph-sub">Latest customer orders</div></div><a class="btn sm" href="#/admin/orders">All Orders</a></div>' +
     (recentOrders.length
       ? '<div class="panel-body" style="padding:0"><table class="admin-table"><thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th></tr></thead><tbody>' +
@@ -117,16 +163,38 @@ function adminDashboard(){
         '</tbody></table></div>'
       : '<div class="panel-body"><div style="font-size:13.5px;color:var(--ink-soft);padding:8px 0">No orders yet. Place an order on the storefront and it will appear here.</div></div>') +
     '</div>' +
+    // Quick Actions
     '<div class="admin-panel"><div class="panel-head"><div><h3>Quick Actions</h3><div class="ph-sub">Common admin tasks</div></div></div>' +
     '<div class="panel-body" style="display:flex;gap:10px;flex-wrap:wrap">' +
       '<button class="btn sm" onclick="location.hash=\'#/admin/products\'">' + IC.plus + ' Add Product</button>' +
       '<button class="btn sm ghost" onclick="location.hash=\'#/admin/orders\'">' + IC.orders + ' View Orders</button>' +
       '<button class="btn sm ghost" onclick="location.hash=\'#/admin/categories\'">Manage Categories</button>' +
+      '<button class="btn sm ghost" onclick="location.hash=\'#/admin/quotes\'">' + IC.doc + ' Quotes & Enquiries</button>' +
       '<button class="btn sm ghost" onclick="location.hash=\'#/admin/theme\'">Customize Theme</button>' +
+      '<button class="btn sm ghost" onclick="location.hash=\'/architecture.html\'">' + IC.info + ' System Architecture</button>' +
       '<button class="btn sm ghost" style="color:#c0392b;border-color:#e5b4ad" onclick="resetStoreData()">Reset Store Data</button>' +
     '</div></div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Dashboard";
+}
+
+// Helper: format time ago
+function formatTimeAgo(timestamp){
+  try {
+    const now = Date.now();
+    const then = new Date(timestamp).getTime();
+    const diff = now - then;
+    const mins = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return mins + ' min ago';
+    if (hours < 24) return hours + ' hour' + (hours > 1 ? 's' : '') + ' ago';
+    if (days < 7) return days + ' day' + (days > 1 ? 's' : '') + ' ago';
+    return new Date(timestamp).toLocaleDateString();
+  } catch(e) {
+    return 'Recently';
+  }
 }
 
 /* ---- Reset all store data (products/categories/theme/orders) ---- */
