@@ -1488,11 +1488,22 @@ async function loadRates(){
 
 /* ============ Customer accounts ============ */
 function getAccounts(){ return _cache.accounts || []; }
-function saveAccounts(a){
+async function saveAccounts(a){
   _cache.accounts = a;
-  sbSave("accounts", a).then(res => {
-    if(!res.ok){ console.warn("Failed to save accounts to Supabase:", res.error); showToast("Warning: account may not have saved to cloud"); }
-  }).catch(e => { console.warn("Error saving accounts:", e); showToast("Error saving account to cloud"); });
+  try {
+    const res = await sbSave("accounts", a);
+    if(!res.ok){
+      console.warn("Failed to save accounts to Supabase:", res.error);
+      showToast("Warning: account may not have saved to cloud");
+      return false;
+    }
+    console.log("Accounts saved to Supabase successfully, count:", a.length);
+    return true;
+  } catch(e) {
+    console.warn("Error saving accounts:", e);
+    showToast("Error saving account to cloud");
+    return false;
+  }
 }
 /* ============ Session validation (M-3) ============ */
 const _SESS_SALT = "ns_s7k9x2";
@@ -3607,14 +3618,15 @@ async function acctRegister(){
         /* Also save to legacy accounts for backward compatibility */
         const accs = getAccounts();
         if(!accs.some(a => a.email === email)){
-          return hashPass(pass).then(hash => {
-            accs.push({ name, email, pass: hash, created: new Date().toISOString() });
-            saveAccounts(accs);
-            setSession({ name, email, supabaseAuth: true, userId: data.user.id });
-            updateAcctLabel();
-            showToast("Welcome, " + name.split(" ")[0] + "!");
-            route();
-          });
+          const hash = await hashPass(pass);
+          accs.push({ name, email, pass: hash, created: new Date().toISOString() });
+          const saved = await saveAccounts(accs);
+          console.log("Account saved to Supabase:", saved, "email:", email);
+          setSession({ name, email, supabaseAuth: true, userId: data.user.id });
+          updateAcctLabel();
+          showToast("Welcome, " + name.split(" ")[0] + "!");
+          route();
+          return;
         }
         setSession({ name, email, supabaseAuth: true, userId: data.user.id });
         updateAcctLabel();
@@ -3633,14 +3645,14 @@ async function acctRegister(){
   /* Method 2: Try legacy account system */
   const accs = getAccounts();
   if(accs.some(a => a.email === email)){ err.textContent = "An account with this email already exists — sign in instead"; return; }
-  return hashPass(pass).then(hash => {
-    accs.push({ name, email, pass: hash, created: new Date().toISOString() });
-    saveAccounts(accs);
-    setSession({ name, email });
-    updateAcctLabel();
-    showToast("Welcome, " + name.split(" ")[0] + "!");
-    route();
-  });
+  const hash = await hashPass(pass);
+  accs.push({ name, email, pass: hash, created: new Date().toISOString() });
+  const saved = await saveAccounts(accs);
+  console.log("Legacy account saved to Supabase:", saved, "email:", email);
+  setSession({ name, email });
+  updateAcctLabel();
+  showToast("Welcome, " + name.split(" ")[0] + "!");
+  route();
 }
 async function acctLogin(){
   const email = $("#acEmail").value.trim().toLowerCase();
