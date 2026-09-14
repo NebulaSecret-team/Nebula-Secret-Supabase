@@ -1933,7 +1933,21 @@ function uploadImageTo(inputId, targetId, maxW){
 
 /* ============ Orders (saved at checkout, managed in admin) ============ */
 function getOrders(){ return _cache.orders || []; }
-function saveOrders(o){ _cache.orders = o; sbSave("orders", o); }
+async function saveOrders(o){
+  _cache.orders = o;
+  try {
+    const res = await sbSave("orders", o);
+    if(!res.ok){
+      console.warn("Failed to save orders to Supabase:", res.error);
+      return false;
+    }
+    console.log("Orders saved to Supabase successfully, count:", o.length);
+    return true;
+  } catch(e) {
+    console.warn("Error saving orders:", e);
+    return false;
+  }
+}
 /* Safe customer info helpers (prevents "undefined" for legacy orders) */
 function custName(o){ const c = o.customer || {}; return ((c.first || "") + " " + (c.last || "")).trim() || c.name || "Customer"; }
 function custEmail(o){ const c = o.customer || {}; return c.email || ""; }
@@ -2419,7 +2433,7 @@ function closeAdminModal(){ $("#adminModal").classList.remove("open"); }
 
 /* ============ Place order: save + email + confirm ============ */
 let lastOrder = null;
-function placeOrder(){
+async function placeOrder(){
   const first = $("#ckFirst").value.trim();
   const last = $("#ckLast").value.trim();
   const email = $("#ckEmail").value.trim();
@@ -2449,7 +2463,8 @@ function placeOrder(){
   };
   const orders = getOrders();
   orders.unshift(o);
-  saveOrders(orders);
+  const saved = await saveOrders(orders);
+  console.log("Order saved to Supabase:", saved, "order id:", o.id);
   lastOrder = o;
   // clear cart
   cart = []; saveCart(); updateCartUI();
