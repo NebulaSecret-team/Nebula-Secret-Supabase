@@ -70,6 +70,7 @@ function renderAdminShell(content){
         '<a href="#/admin/products" data-av="products">' + IC.box + ' Products</a>' +
         '<a href="#/admin/categories" data-av="categories">' + IC.tag + ' Categories</a>' +
         '<a href="#/admin/customers" data-av="customers">' + IC.users + ' Customer Accounts</a>' +
+        '<a href="#/admin/tiers" data-av="tiers">' + IC.tag + ' Customer Tiers</a>' +
         '<a href="#/admin/theme" data-av="theme">' + IC.palette + ' Theme</a>' +
         '<a href="#/admin/emails" data-av="emails">' + IC.mail + ' Order Emails</a>' +
         '<a href="#/admin/content" data-av="content">' + IC.edit + ' Site Content</a>' +
@@ -494,7 +495,6 @@ function adminProducts(){
         '<span id="selectedCount" style="font-size:13px;color:var(--ink-soft)">0 selected</span>' +
         '<div style="flex:1"></div>' +
         '<button class="btn sm ghost" onclick="openBulkEditModal()" id="bulkEditBtn" disabled style="opacity:0.5;cursor:not-allowed">' + IC.edit + ' Bulk Edit MOQ & Price</button>' +
-        '<button class="btn sm" onclick="setAllMoqTo100()" style="background:#25bab5;color:white">✓ Set All MOQ to 100</button>' +
       '</div>' +
     '</div>' +
     '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th style="width:40px"><input type="checkbox" id="selectAllHeader" onchange="toggleSelectAllProducts(this)" style="width:16px;height:16px;cursor:pointer"></th><th></th><th>Name</th><th>Category</th><th>Price</th><th>MOQ</th><th>Rating</th><th>Actions</th></tr></thead><tbody>' +
@@ -905,19 +905,25 @@ async function adminCustomers(){
     console.warn("Failed to reload accounts:", e);
   }
   const accs = getAccounts();
-  const rows = accs.length ? accs.map(a =>
-    '<tr>' +
+  const tiers = getTiers();
+  const rows = accs.length ? accs.map(a => {
+    const currentTier = a.tier || 'new';
+    const tierOptions = tiers.map(t => 
+      '<option value="' + t.id + '"' + (t.id === currentTier ? ' selected' : '') + '>' + esc(t.name) + ' (' + t.discount + '%)</option>'
+    ).join("");
+    return '<tr>' +
       '<td><b>' + esc(a.name) + '</b></td>' +
       '<td>' + esc(a.email) + '</td>' +
       '<td>' + fmtD(a.created) + '</td>' +
       '<td>' + myOrders(a.email).length + '</td>' +
+      '<td><select onchange="setCustomerTier(\'' + escJs(a.email) + '\', this.value)" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--card);color:var(--ink);cursor:pointer">' + tierOptions + '</select></td>' +
       '<td style="text-align:right"><button class="btn sm ghost" onclick="adminResetCustomerPass(\'' + escJs(a.email) + '\')">Reset password</button></td>' +
-    '</tr>'
-  ).join("") : '<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);padding:24px">No customer accounts yet — accounts appear here when customers create one on the Account page.</td></tr>';
+    '</tr>';
+  }).join("") : '<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:24px">No customer accounts yet — accounts appear here when customers create one on the Account page.</td></tr>';
   const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Customer Accounts</h3><div class="ph-sub">Everyone who created an account on the storefront</div></div><div style="display:flex;gap:8px"><button class="btn sm ghost" onclick="adminCustomers()">Refresh</button><button class="btn sm ghost" onclick="location.hash=\'#/account\'">Open Account page</button></div></div>' +
-    '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th>Name</th><th>Email</th><th>Registered</th><th>Orders</th><th style="text-align:right">Action</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>' +
-    '<div class="form-hint" style="margin-top:8px">Use <b>Reset password</b> to set a new password for a customer when they have forgotten theirs. Changes apply immediately. Click <b>Refresh</b> to see the latest accounts.</div>';
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Customer Accounts</h3><div class="ph-sub">Everyone who created an account on the storefront</div></div><div style="display:flex;gap:8px"><button class="btn sm ghost" onclick="adminCustomers()">Refresh</button><button class="btn sm ghost" onclick="location.hash=\'#/admin/tiers\'">Manage Tiers</button><button class="btn sm ghost" onclick="location.hash=\'#/account\'">Open Account page</button></div></div>' +
+    '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th>Name</th><th>Email</th><th>Registered</th><th>Orders</th><th>Tier</th><th style="text-align:right">Action</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>' +
+    '<div class="form-hint" style="margin-top:8px">Use <b>Tier</b> dropdown to assign a customer tier (discount applies automatically when they log in). Use <b>Reset password</b> to set a new password for a customer when they have forgotten theirs. Changes apply immediately. Click <b>Refresh</b> to see the latest accounts.</div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Customer Accounts";
 }
@@ -933,6 +939,114 @@ function adminResetCustomerPass(email){
     saveAccounts(accs);
     showToast("Password updated for " + acc.email);
   });
+}
+
+/* ============ Customer Tiers Management ============ */
+function adminTiers(){
+  const tiers = getTiers();
+  const accounts = getAccounts();
+  
+  /* Count customers per tier */
+  const tierCounts = {};
+  tiers.forEach(t => tierCounts[t.id] = 0);
+  accounts.forEach(a => {
+    const tierId = a.tier || 'new';
+    if(tierCounts[tierId] !== undefined) tierCounts[tierId]++;
+  });
+  
+  const rows = tiers.map((t, i) =>
+    '<tr>' +
+      '<td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + t.color + ';margin-right:8px;vertical-align:middle"></span><b>' + esc(t.name) + '</b></td>' +
+      '<td>' + t.discount + '%</td>' +
+      '<td>' + tierCounts[t.id] + ' customers</td>' +
+      '<td>' + esc(t.description) + '</td>' +
+      '<td style="text-align:right">' +
+        '<button class="btn sm ghost" onclick="editTier(\'' + t.id + '\')">Edit</button> ' +
+        (tiers.length > 1 ? '<button class="btn sm ghost" style="color:#c0392b;border-color:#e0b4b0" onclick="deleteTier(\'' + t.id + '\')">Delete</button>' : '') +
+      '</td>' +
+    '</tr>'
+  ).join("");
+  
+  const content =
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Customer Tiers</h3><div class="ph-sub">Set discount levels for different customer groups</div></div><div style="display:flex;gap:8px"><button class="btn sm ghost" onclick="adminTiers()">Refresh</button></div></div>' +
+    '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th>Tier Name</th><th>Discount</th><th>Customers</th><th>Description</th><th style="text-align:right">Action</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>' +
+    '<div class="panel-body" style="border-top:1px solid var(--border);padding-top:16px">' +
+      '<h4 style="margin:0 0 12px">Add New Tier</h4>' +
+      '<div class="form-grid">' +
+        '<div class="field"><label>Tier Name</label><input id="newTierName" type="text" placeholder="e.g. Gold Customer"></div>' +
+        '<div class="field"><label>Discount (%)</label><input id="newTierDiscount" type="number" min="0" max="100" placeholder="e.g. 15"></div>' +
+        '<div class="field"><label>Color</label><input id="newTierColor" type="color" value="#8b5cf6"></div>' +
+        '<div class="field" style="grid-column:1/-1"><label>Description</label><input id="newTierDesc" type="text" placeholder="e.g. Gold customers get 15% discount"></div>' +
+      '</div>' +
+      '<button class="btn" onclick="addTier()">Add Tier</button>' +
+    '</div>' +
+    '<div class="form-hint" style="margin-top:8px">Customer tiers automatically apply discounts when customers are logged in. Assign tiers to customers in the <a href="#/admin/customers">Customer Accounts</a> page.</div>';
+  renderAdminShell(content);
+  $("#adminTitle").textContent = "Customer Tiers";
+}
+
+function addTier(){
+  const name = ($("#newTierName").value || "").trim();
+  const discount = Number($("#newTierDiscount").value || 0);
+  const color = $("#newTierColor").value || "#8b5cf6";
+  const desc = ($("#newTierDesc").value || "").trim();
+  if(!name){ showToast("Enter a tier name"); return; }
+  if(discount < 0 || discount > 100){ showToast("Discount must be 0-100"); return; }
+  const tiers = getTiers();
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if(tiers.some(t => t.id === id)){ showToast("This tier already exists"); return; }
+  tiers.push({ id, name, discount, color, description: desc || name + ' - ' + discount + '% discount' });
+  saveTiers(tiers);
+  showToast("Tier " + name + " added");
+  adminTiers();
+}
+
+function editTier(tierId){
+  const tiers = getTiers();
+  const tier = tiers.find(t => t.id === tierId);
+  if(!tier){ showToast("Tier not found"); return; }
+  const name = prompt("Tier name:", tier.name);
+  if(name === null) return;
+  const discount = prompt("Discount (%):", tier.discount);
+  if(discount === null) return;
+  const desc = prompt("Description:", tier.description);
+  if(desc === null) return;
+  tier.name = name.trim() || tier.name;
+  tier.discount = Math.max(0, Math.min(100, Number(discount) || 0));
+  tier.description = desc.trim() || tier.description;
+  saveTiers(tiers);
+  showToast("Tier updated");
+  adminTiers();
+}
+
+function deleteTier(tierId){
+  const tiers = getTiers();
+  if(tiers.length <= 1){ showToast("Cannot delete the last tier"); return; }
+  const tier = tiers.find(t => t.id === tierId);
+  if(!tier){ showToast("Tier not found"); return; }
+  if(!confirm("Delete tier '" + tier.name + "'? Customers in this tier will be moved to 'New Customer'.")) return;
+  /* Move customers in this tier to 'new' */
+  const accounts = getAccounts();
+  accounts.forEach(a => {
+    if(a.tier === tierId) a.tier = 'new';
+  });
+  saveAccounts(accounts);
+  /* Remove the tier */
+  const newTiers = tiers.filter(t => t.id !== tierId);
+  saveTiers(newTiers);
+  showToast("Tier deleted");
+  adminTiers();
+}
+
+/* Set customer tier */
+function setCustomerTier(email, tierId){
+  const accounts = getAccounts();
+  const acc = accounts.find(a => a.email === email);
+  if(!acc){ showToast("Account not found"); return; }
+  acc.tier = tierId;
+  saveAccounts(accounts);
+  showToast("Tier updated for " + email);
+  adminCustomers();
 }
 function adminAdminUsers(){
   const admins = getAdmins();
@@ -1583,6 +1697,7 @@ function adminRoute(){
     else if(page === "quotes") adminQuotes();
     else if(page === "categories") adminCategories();
     else if(page === "customers") adminCustomers();
+    else if(page === "tiers") adminTiers();
     else if(page === "users") adminAdminUsers();
     else if(page === "theme") adminTheme();
     else if(page === "emails") adminEmails();
