@@ -1,0 +1,1847 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nebula Secret — 系統架構總覽</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --brand: #8b5cf6;
+    --brand-dark: #7c3aed;
+    --brand-soft: rgba(139,92,246,0.15);
+    --accent: #25bab5;
+    --accent-soft: rgba(37,186,181,0.15);
+    --bg: #0a0a14;
+    --bg-2: #0f0f1e;
+    --card: #16162a;
+    --card-hover: #1c1c35;
+    --line: #2a2a45;
+    --line-dark: #1f1f38;
+    --ink: #e8e8f0;
+    --ink-soft: #9898b0;
+    --ink-muted: #686888;
+    --gold: #f0c674;
+    --green: #4ade80;
+    --blue: #60a5fa;
+    --purple: #c084fc;
+    --orange: #fb923c;
+    --red: #f87171;
+    --pink: #ff5983;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 0;
+    line-height: 1.6;
+  }
+  .main-content { display: none; }
+  .topbar {
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-soft);
+    padding: 12px 24px;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .topbar a { color: var(--ink-soft); text-decoration: none; }
+  .topbar a:hover { color: var(--brand); }
+  .topbar .sep { margin: 0 10px; opacity: 0.4; }
+  .topbar .admin-badge {
+    background: var(--brand-soft);
+    color: var(--brand);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .header {
+    background: linear-gradient(135deg, var(--bg-2) 0%, var(--card) 100%);
+    padding: 50px 24px 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -100px; right: -100px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -100px; left: -100px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(37,186,181,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .header h1 {
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .header h1 span { color: var(--brand); }
+  .header p {
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 700px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .header .badges {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 24px;
+    flex-wrap: wrap;
+    position: relative;
+  }
+  .header .badge {
+    padding: 6px 16px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+  .header .badge strong { color: var(--brand); }
+  .container { max-width: 1300px; margin: 0 auto; padding: 40px 24px; }
+  .section { margin-bottom: 50px; }
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--line);
+    color: var(--ink);
+  }
+  .section-title .icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    background: var(--brand-soft);
+  }
+  .section-title .count {
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--brand-soft);
+    color: var(--brand);
+    padding: 4px 12px;
+    border-radius: 12px;
+    margin-left: auto;
+  }
+  .section-desc {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin-bottom: 20px;
+    line-height: 1.7;
+  }
+  .role-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+    margin-bottom: 30px;
+  }
+  .role-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .role-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--card-color, var(--brand));
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+  .role-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-color, var(--brand));
+  }
+  .role-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .role-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    background: var(--card-color, var(--brand));
+    flex-shrink: 0;
+  }
+  .role-title { font-size: 16px; font-weight: 700; color: var(--ink); }
+  .role-subtitle { font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .role-desc { font-size: 13px; color: var(--ink-soft); line-height: 1.6; margin-bottom: 14px; }
+  .role-perms { list-style: none; }
+  .role-perms li {
+    font-size: 12px;
+    color: var(--ink-soft);
+    padding: 4px 0;
+    padding-left: 20px;
+    position: relative;
+  }
+  .role-perms li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--card-color, var(--brand));
+    font-weight: 700;
+  }
+  .arch-diagram {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 36px;
+    margin-bottom: 50px;
+  }
+  .arch-layers { display: flex; flex-direction: column; gap: 16px; }
+  .arch-layer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .arch-node {
+    background: var(--bg);
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 20px;
+    text-align: center;
+    min-width: 130px;
+    transition: all 0.25s ease;
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .arch-node:hover {
+    border-color: var(--brand);
+    background: var(--brand-soft);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139,92,246,0.2);
+  }
+  .arch-node .node-icon { font-size: 24px; margin-bottom: 6px; }
+  .arch-node .node-name { font-size: 12px; font-weight: 600; }
+  .arch-node .node-role { font-size: 10px; color: var(--ink-muted); margin-top: 2px; }
+  .arch-node.primary { border-color: var(--brand); background: var(--brand-soft); }
+  .arch-node.accent { border-color: var(--accent); background: var(--accent-soft); }
+  .arch-node.gold { border-color: var(--gold); background: rgba(240,198,116,0.1); }
+  .arch-connector {
+    width: 40px;
+    height: 2px;
+    background: var(--line);
+    position: relative;
+  }
+  .arch-connector::after {
+    content: '→';
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-muted);
+    font-size: 14px;
+  }
+  .arch-vertical {
+    width: 2px;
+    height: 28px;
+    background: var(--line);
+    margin: 0 auto;
+    position: relative;
+  }
+  .arch-vertical::after {
+    content: '↓';
+    position: absolute;
+    bottom: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--ink-muted);
+    font-size: 14px;
+  }
+  .arch-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--ink-muted);
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .arch-flow-label {
+    font-size: 10px;
+    color: var(--accent);
+    text-align: center;
+    margin-top: 4px;
+    font-weight: 600;
+  }
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 18px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--ink);
+    display: block;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-color, var(--brand));
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    border-color: var(--card-color, var(--brand));
+  }
+  .card-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+  .card-icon {
+    width: 48px; height: 48px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    background: var(--card-color, var(--brand));
+    flex-shrink: 0;
+  }
+  .card-title { font-size: 16px; font-weight: 700; margin-bottom: 2px; color: var(--ink); }
+  .card-subtitle { font-size: 11px; color: var(--ink-muted); }
+  .card-desc { font-size: 13px; color: var(--ink-soft); line-height: 1.6; margin-bottom: 14px; }
+  .card-stats { display: flex; gap: 10px; margin-bottom: 14px; }
+  .stat {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 8px 10px;
+    flex: 1;
+    text-align: center;
+  }
+  .stat-value { font-size: 15px; font-weight: 700; color: var(--card-color, var(--brand)); }
+  .stat-label { font-size: 9px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--card-color, var(--brand));
+    text-decoration: none;
+    transition: gap 0.2s;
+  }
+  .card:hover .card-link { gap: 8px; }
+  .card-tag {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    font-size: 9px;
+    padding: 3px 8px;
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  .color-brand { --card-color: #8b5cf6; }
+  .color-accent { --card-color: #25bab5; }
+  .color-purple { --card-color: #c084fc; }
+  .color-blue { --card-color: #60a5fa; }
+  .color-green { --card-color: #4ade80; }
+  .color-orange { --card-color: #fb923c; }
+  .color-red { --card-color: #f87171; }
+  .color-gold { --card-color: #f0c674; }
+  .color-dark { --card-color: #64748b; }
+  .color-pink { --card-color: #ff5983; }
+  .flow-card { cursor: default !important; }
+  .flow-card .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .flow-card .flow-step .step-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--card-color, var(--brand));
+    color: #000;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 18px;
+  }
+  .detail-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .detail-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-color, var(--brand));
+  }
+  .detail-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .detail-card-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    background: var(--card-color, var(--brand));
+  }
+  .detail-card-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+  .detail-card-sub { font-size: 11px; color: var(--ink-muted); }
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--line);
+    gap: 12px;
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label {
+    font-size: 12px;
+    color: var(--ink-muted);
+    font-weight: 500;
+    min-width: 110px;
+    flex-shrink: 0;
+  }
+  .detail-value {
+    font-size: 12.5px;
+    color: var(--ink);
+    font-weight: 600;
+    text-align: right;
+    word-break: break-all;
+    flex: 1;
+  }
+  .detail-value a {
+    color: var(--card-color, var(--brand));
+    text-decoration: none;
+  }
+  .detail-value a:hover { text-decoration: underline; }
+  .detail-code {
+    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+    font-size: 11px;
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--card-color, var(--brand));
+  }
+  .detail-mask {
+    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--ink-muted);
+    letter-spacing: 1px;
+  }
+  .warning-box {
+    background: rgba(240,198,116,0.1);
+    border: 1px solid rgba(240,198,116,0.3);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--gold);
+    line-height: 1.6;
+  }
+  .warning-box strong { color: var(--gold); }
+  .info-box {
+    background: rgba(37,186,181,0.1);
+    border: 1px solid rgba(37,186,181,0.3);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--accent);
+    line-height: 1.6;
+  }
+  .info-box strong { color: var(--accent); }
+  .currency-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .currency-tag {
+    font-size: 11px;
+    padding: 3px 8px;
+    background: var(--brand-soft);
+    color: var(--brand);
+    border-radius: 6px;
+    font-weight: 600;
+  }
+  .tier-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .tier-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  .tier-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .tier-name { font-weight: 600; color: var(--ink); }
+  .tier-discount { margin-left: auto; color: var(--accent); font-weight: 700; }
+  .footer {
+    background: var(--bg-2);
+    border-top: 1px solid var(--line);
+    color: var(--ink-muted);
+    text-align: center;
+    padding: 30px 24px;
+    font-size: 13px;
+    margin-top: 40px;
+  }
+  .footer a { color: var(--ink-soft); text-decoration: none; }
+  .footer a:hover { color: var(--brand); }
+  .footer .links { margin-top: 10px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  @media (max-width: 768px) {
+    .topbar { padding: 8px 16px; font-size: 11px; }
+    .topbar .sep { margin: 0 6px; }
+    .header { padding: 36px 16px 44px; }
+    .header h1 { font-size: 26px; }
+    .header p { font-size: 14px; }
+    .container { padding: 24px 16px; }
+    .section-title { font-size: 18px; }
+    .arch-diagram { padding: 20px; }
+    .arch-node { min-width: 100px; padding: 10px 14px; }
+    .arch-node .node-icon { font-size: 20px; }
+    .arch-node .node-name { font-size: 10px; }
+    .arch-connector { width: 20px; }
+    .cards-grid { grid-template-columns: 1fr; }
+    .card { padding: 18px; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .role-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="main-content" id="mainContent" style="display:none;">
+
+<div class="topbar">
+  <div>🌌 Nebula Secret System Architecture</div>
+  <div>
+    <span class="admin-badge" id="adminBadge">ADMIN</span>
+    <span class="sep">|</span>
+    <a href="https://nebula-secret-supabase.vercel.app" target="_blank">Production</a>
+    <span class="sep">|</span>
+    <a href="https://uat.nebulasecret.com" target="_blank">UAT</a>
+    <span class="sep">|</span>
+    <a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank">Admin Panel</a>
+  </div>
+</div>
+
+<div class="header">
+  <h1>🌌 Nebula Secret <span>系統架構總覽</span></h1>
+  <p>B2B 批發電商平台完整系統架構圖 — 一圖看清所有系統、角色、頁面、外部服務的關係與運作流程。點擊任何卡片即可跳轉到對應頁面或後台。</p>
+  <div class="badges">
+    <div class="badge"><strong>5</strong> 大系統層級</div>
+    <div class="badge"><strong>4</strong> 種用戶角色</div>
+    <div class="badge"><strong>35+</strong> 功能頁面</div>
+    <div class="badge"><strong>7</strong> 外部服務</div>
+    <div class="badge"><strong>18</strong> 支援貨幣</div>
+    <div class="badge"><strong>3</strong> 客戶級別</div>
+    <div class="badge"><strong>2</strong> 部署環境</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Section: User Roles -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon">👥</div>
+      用戶角色與權限
+      <div class="count">4 種角色</div>
+    </div>
+    <div class="section-desc">
+      系統包含四種用戶角色，每種角色擁有不同的訪問權限和功能。客戶分級定價系統根據客戶級別自動應用不同折扣。
+    </div>
+    <div class="role-grid">
+      <div class="role-card color-brand">
+        <div class="role-header">
+          <div class="role-icon">🛍️</div>
+          <div>
+            <div class="role-title">訪客 / 新客戶</div>
+            <div class="role-subtitle">Guest / New Customer</div>
+          </div>
+        </div>
+        <div class="role-desc">瀏覽網站的普通用戶，可查看產品、下單、註冊賬戶。默認級別：New Customer（0% 折扣）。</div>
+        <ul class="role-perms">
+          <li>瀏覽所有產品和分類（標準批發價）</li>
+          <li>使用購物車和結賬功能</li>
+          <li>註冊和登錄客戶賬戶</li>
+          <li>提交聯繫表單查詢</li>
+          <li>切換貨幣（18 種）</li>
+          <li>請求產品報價</li>
+        </ul>
+      </div>
+
+      <div class="role-card color-blue">
+        <div class="role-header">
+          <div class="role-icon">👤</div>
+          <div>
+            <div class="role-title">註冊客戶</div>
+            <div class="role-subtitle">Registered Customer</div>
+          </div>
+        </div>
+        <div class="role-desc">已註冊的批發客戶，擁有個人賬戶和訂單管理功能。可設置客戶級別享受折扣。</div>
+        <ul class="role-perms">
+          <li>所有訪客權限</li>
+          <li>客戶級別定價（Regular 5% / VIP 10%）</li>
+          <li>個人資料管理和密碼修改</li>
+          <li>完整訂單歷史記錄和 PDF 下載</li>
+          <li>訂單狀態實時追蹤</li>
+          <li>報價請求和管理</li>
+        </ul>
+      </div>
+
+      <div class="role-card color-purple">
+        <div class="role-header">
+          <div class="role-icon">🔧</div>
+          <div>
+            <div class="role-title">管理員</div>
+            <div class="role-subtitle">Admin</div>
+          </div>
+        </div>
+        <div class="role-desc">網站管理員，可管理產品、訂單、客戶、報價和網站內容。</div>
+        <ul class="role-perms">
+          <li>產品增刪改查和圖片上傳</li>
+          <li>分類管理和排序調整</li>
+          <li>訂單查看、狀態更新、Excel 導出</li>
+          <li>報價管理（接受/拒絕/修改價格）</li>
+          <li>客戶賬戶管理和級別設置</li>
+          <li>客戶分級定價管理</li>
+          <li>網站內容編輯（Footer/About）</li>
+          <li>主題顏色和 Banner 設置</li>
+        </ul>
+      </div>
+
+      <div class="role-card color-gold">
+        <div class="role-header">
+          <div class="role-icon">👑</div>
+          <div>
+            <div class="role-title">超級管理員</div>
+            <div class="role-subtitle">Super Admin</div>
+          </div>
+        </div>
+        <div class="role-desc">最高權限管理員，可管理其他管理員和系統配置。</div>
+        <ul class="role-perms">
+          <li>所有管理員權限</li>
+          <li>新增和刪除管理員賬戶</li>
+          <li>修改任意管理員密碼</li>
+          <li>查看系統架構頁面</li>
+          <li>郵件服務配置和測試</li>
+          <li>雲端數據同步管理</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Architecture Diagram -->
+  <div class="arch-diagram">
+    <div class="section-title" style="border:none; margin-bottom:24px;">
+      <div class="icon">🏗️</div>
+      系統架構圖
+    </div>
+    <div class="arch-layers">
+      <div class="arch-label">👤 第 1 層：用戶層 (User Layer)</div>
+      <div class="arch-layer">
+        <a href="https://nebula-secret-supabase.vercel.app" target="_blank" class="arch-node primary">
+          <div class="node-icon">🛍️</div>
+          <div class="node-name">訪客 / 新客戶</div>
+          <div class="node-role">0% 折扣</div>
+        </a>
+        <div class="arch-connector"></div>
+        <a href="https://nebula-secret-supabase.vercel.app/#/account" target="_blank" class="arch-node">
+          <div class="node-icon">👤</div>
+          <div class="node-name">註冊客戶</div>
+          <div class="node-role">5% / 10% 折扣</div>
+        </a>
+        <div class="arch-connector"></div>
+        <a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank" class="arch-node accent">
+          <div class="node-icon">🔧</div>
+          <div class="node-name">管理員</div>
+          <div class="node-role">後台管理</div>
+        </a>
+      </div>
+      <div class="arch-vertical"></div>
+      <div class="arch-label">🌐 第 2 層：應用層 (Application Layer)</div>
+      <div class="arch-layer">
+        <a href="https://nebula-secret-supabase.vercel.app" target="_blank" class="arch-node primary">
+          <div class="node-icon">🌐</div>
+          <div class="node-name">前台網站</div>
+          <div class="node-role">產品展示、購物車</div>
+        </a>
+        <div class="arch-connector"></div>
+        <a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank" class="arch-node accent">
+          <div class="node-icon">⚙️</div>
+          <div class="node-name">Admin Panel</div>
+          <div class="node-role">數據管理、配置</div>
+        </a>
+        <div class="arch-connector"></div>
+        <a href="#" class="arch-node">
+          <div class="node-icon">📱</div>
+          <div class="node-name">響應式界面</div>
+          <div class="node-role">手機/平板/桌面</div>
+        </a>
+      </div>
+      <div class="arch-vertical"></div>
+      <div class="arch-label">⚡ 第 3 層：服務層 (Service Layer)</div>
+      <div class="arch-layer">
+        <a href="https://supabase.com/dashboard/project/xwhhsoppcpkijxxychjm" target="_blank" class="arch-node">
+          <div class="node-icon">🗄️</div>
+          <div class="node-name">Supabase DB</div>
+          <div class="node-role">數據存儲、Auth</div>
+        </a>
+        <div class="arch-connector"></div>
+        <a href="https://dashboard.emailjs.com" target="_blank" class="arch-node">
+          <div class="node-icon">📧</div>
+          <div class="node-name">EmailJS</div>
+          <div class="node-role">郵件發送</div>
+        </a>
+        <div class="arch-connector"></div>
+        <a href="#" class="arch-node gold">
+          <div class="node-icon">⚡</div>
+          <div class="node-name">Vercel Edge</div>
+          <div class="node-role">郵件代理</div>
+        </a>
+        <div class="arch-connector"></div>
+        <a href="#" class="arch-node">
+          <div class="node-icon">💱</div>
+          <div class="node-name">匯率 API</div>
+          <div class="node-role">實時匯率換算</div>
+        </a>
+      </div>
+      <div class="arch-flow-label">↑ 數據讀取 / ↓ 數據寫入</div>
+      <div class="arch-vertical"></div>
+      <div class="arch-label">🏢 第 4 層：基礎設施層 (Infrastructure Layer)</div>
+      <div class="arch-layer">
+        <a href="https://vercel.com" target="_blank" class="arch-node">
+          <div class="node-icon">▲</div>
+          <div class="node-name">Vercel</div>
+          <div class="node-role">前端托管、CDN</div>
+        </a>
+        <div class="arch-connector"></div>
+        <a href="https://github.com/NebulaSecret-team/Nebula-Secret-Supabase" target="_blank" class="arch-node">
+          <div class="node-icon">🐙</div>
+          <div class="node-name">GitHub</div>
+          <div class="node-role">源代碼版本控制</div>
+        </a>
+        <div class="arch-connector"></div>
+        <a href="https://cron-job.org" target="_blank" class="arch-node">
+          <div class="node-icon">⏰</div>
+          <div class="node-name">cron-job.org</div>
+          <div class="node-role">定時任務、保活</div>
+        </a>
+      </div>
+      <div class="arch-vertical"></div>
+      <div class="arch-label">🔒 第 5 層：安全層 (Security Layer)</div>
+      <div class="arch-layer">
+        <div class="arch-node" style="border-color: var(--gold); background: rgba(240,198,116,0.1);">
+          <div class="node-icon">🔐</div>
+          <div class="node-name">Supabase Auth</div>
+          <div class="node-role">用戶身份驗證</div>
+        </div>
+        <div class="arch-connector"></div>
+        <div class="arch-node" style="border-color: var(--gold); background: rgba(240,198,116,0.1);">
+          <div class="node-icon">🛡️</div>
+          <div class="node-name">HTTPS / SSL</div>
+          <div class="node-role">數據加密傳輸</div>
+        </div>
+        <div class="arch-connector"></div>
+        <div class="arch-node" style="border-color: var(--gold); background: rgba(240,198,116,0.1);">
+          <div class="node-icon">📝</div>
+          <div class="node-name">權限控制</div>
+          <div class="node-role">角色基礎訪問控制</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Customer Tier Pricing -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon">⭐</div>
+      客戶分級定價系統
+      <div class="count">3 個級別</div>
+    </div>
+    <div class="section-desc">
+      客戶分級定價系統自動根據客戶級別應用不同折扣。管理員可在 Admin Panel 設置客戶級別，客戶登錄後自動看到對應級別的折扣價格。
+    </div>
+    <div class="cards-grid">
+      <div class="card color-dark flow-card">
+        <div class="card-header">
+          <div class="card-icon">🆕</div>
+          <div>
+            <div class="card-title">New Customer</div>
+            <div class="card-subtitle">新客戶 · 0% 折扣</div>
+          </div>
+        </div>
+        <div class="card-desc">新註冊客戶的默認級別，享受標準批發價格。</div>
+        <div class="tier-list">
+          <div class="tier-item">
+            <div class="tier-dot" style="background:#6b7280"></div>
+            <div class="tier-name">標準批發價</div>
+            <div class="tier-discount">0% OFF</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card color-blue flow-card">
+        <div class="card-header">
+          <div class="card-icon">🔵</div>
+          <div>
+            <div class="card-title">Regular Customer</div>
+            <div class="card-subtitle">普通客戶 · 5% 折扣</div>
+          </div>
+        </div>
+        <div class="card-desc">回頭客或穩定合作客戶，享受 5% 批量折扣。</div>
+        <div class="tier-list">
+          <div class="tier-item">
+            <div class="tier-dot" style="background:#3b82f6"></div>
+            <div class="tier-name">批量優惠價</div>
+            <div class="tier-discount">5% OFF</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card color-gold flow-card">
+        <div class="card-header">
+          <div class="card-icon">👑</div>
+          <div>
+            <div class="card-title">VIP Customer</div>
+            <div class="card-subtitle">VIP 客戶 · 10% 折扣</div>
+          </div>
+        </div>
+        <div class="card-desc">重要合作夥伴和大客戶，享受最高 10% 專屬折扣。</div>
+        <div class="tier-list">
+          <div class="tier-item">
+            <div class="tier-dot" style="background:#f59e0b"></div>
+            <div class="tier-name">VIP 專屬價</div>
+            <div class="tier-discount">10% OFF</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="info-box" style="margin-top:20px">
+      <strong>💡 工作原理：</strong>客戶登錄後，系統自動識別其級別並在產品列表、產品詳情頁、購物車中應用對應折扣。管理員可在 <strong>Admin Panel → Customer Tiers</strong> 管理級別，在 <strong>Customer Accounts</strong> 為每個客戶設置級別。
+    </div>
+  </div>
+
+  <!-- Section: Frontend Pages -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon">🌐</div>
+      前台頁面
+      <div class="count">12 個頁面</div>
+    </div>
+    <div class="cards-grid">
+      <a href="https://nebula-secret-supabase.vercel.app/#/" target="_blank" class="card color-brand">
+        <div class="card-tag">主頁</div>
+        <div class="card-header">
+          <div class="card-icon">🏠</div>
+          <div>
+            <div class="card-title">首頁</div>
+            <div class="card-subtitle">Homepage</div>
+          </div>
+        </div>
+        <div class="card-desc">品牌介紹、精選產品、OEM/ODM 服務流程、聯繫表單、推廣彈窗。</div>
+        <div class="card-link">訪問首頁 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/shop" target="_blank" class="card color-purple">
+        <div class="card-tag">產品</div>
+        <div class="card-header">
+          <div class="card-icon">🛍️</div>
+          <div>
+            <div class="card-title">產品列表</div>
+            <div class="card-subtitle">Shop / Products</div>
+          </div>
+        </div>
+        <div class="card-desc">92 個產品展示，支持分類篩選、搜索、排序、貨幣切換、分級定價。</div>
+        <div class="card-stats">
+          <div class="stat"><div class="stat-value">92</div><div class="stat-label">產品</div></div>
+          <div class="stat"><div class="stat-value">10</div><div class="stat-label">分類</div></div>
+        </div>
+        <div class="card-link">瀏覽產品 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/cart" target="_blank" class="card color-blue">
+        <div class="card-tag">購物</div>
+        <div class="card-header">
+          <div class="card-icon">🛒</div>
+          <div>
+            <div class="card-title">購物車</div>
+            <div class="card-subtitle">Shopping Cart</div>
+          </div>
+        </div>
+        <div class="card-desc">查看已選產品、修改數量、移除商品、即時計算總價（含分級折扣）。</div>
+        <div class="card-link">查看購物車 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/checkout" target="_blank" class="card color-accent">
+        <div class="card-tag">結賬</div>
+        <div class="card-header">
+          <div class="card-icon">💳</div>
+          <div>
+            <div class="card-title">結賬頁</div>
+            <div class="card-subtitle">Checkout</div>
+          </div>
+        </div>
+        <div class="card-desc">填寫客戶信息、配送地址、聯絡方式，確認訂單並提交。</div>
+        <div class="card-link">前往結賬 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/about" target="_blank" class="card color-green">
+        <div class="card-tag">品牌</div>
+        <div class="card-header">
+          <div class="card-icon">📖</div>
+          <div>
+            <div class="card-title">關於我們</div>
+            <div class="card-subtitle">About Us</div>
+          </div>
+        </div>
+        <div class="card-desc">品牌故事、使命承諾、OEM/ODM 服務流程、聯繫表單。</div>
+        <div class="card-link">了解品牌 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/why-us" target="_blank" class="card color-orange">
+        <div class="card-tag">優勢</div>
+        <div class="card-header">
+          <div class="card-icon">⭐</div>
+          <div>
+            <div class="card-title">為什麼選擇我們</div>
+            <div class="card-subtitle">Why Us</div>
+          </div>
+        </div>
+        <div class="card-desc">展示品牌核心優勢、OEM/ODM 專業能力、品質保證等賣點。</div>
+        <div class="card-link">查看優勢 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/blog" target="_blank" class="card color-purple">
+        <div class="card-tag">內容</div>
+        <div class="card-header">
+          <div class="card-icon">📝</div>
+          <div>
+            <div class="card-title">博客 / 資源</div>
+            <div class="card-subtitle">Blog / Resources</div>
+          </div>
+        </div>
+        <div class="card-desc">OEM/ODM 指南、行業趨勢、批發採購技巧等 8 篇專業內容。</div>
+        <div class="card-link">閱讀博客 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/info/track" target="_blank" class="card color-red">
+        <div class="card-tag">查詢</div>
+        <div class="card-header">
+          <div class="card-icon">📦</div>
+          <div>
+            <div class="card-title">訂單追蹤</div>
+            <div class="card-subtitle">Track Order</div>
+          </div>
+        </div>
+        <div class="card-desc">輸入訂單編號查詢訂單狀態、產品明細和客戶信息。</div>
+        <div class="card-link">追蹤訂單 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/info/faq" target="_blank" class="card color-dark">
+        <div class="card-tag">幫助</div>
+        <div class="card-header">
+          <div class="card-icon">❓</div>
+          <div>
+            <div class="card-title">常見問題</div>
+            <div class="card-subtitle">FAQ / Help</div>
+          </div>
+        </div>
+        <div class="card-desc">批發流程、MOQ、付款方式、運輸條款等常見問題解答。</div>
+        <div class="card-link">查看 FAQ →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/account" target="_blank" class="card color-brand">
+        <div class="card-tag">賬戶</div>
+        <div class="card-header">
+          <div class="card-icon">👤</div>
+          <div>
+            <div class="card-title">客戶賬戶</div>
+            <div class="card-subtitle">Customer Account</div>
+          </div>
+        </div>
+        <div class="card-desc">客戶註冊、登錄、查看訂單歷史、報價管理、修改密碼、顯示客戶級別。</div>
+        <div class="card-link">登錄賬戶 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/quote" target="_blank" class="card color-gold">
+        <div class="card-tag">報價</div>
+        <div class="card-header">
+          <div class="card-icon">📋</div>
+          <div>
+            <div class="card-title">報價請求</div>
+            <div class="card-subtitle">Request Quote</div>
+          </div>
+        </div>
+        <div class="card-desc">客戶可自訂目標價格，提交報價請求，管理員接受/拒絕後客戶可查看。</div>
+        <div class="card-link">請求報價 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/contact" target="_blank" class="card color-pink">
+        <div class="card-tag">聯繫</div>
+        <div class="card-header">
+          <div class="card-icon">✉️</div>
+          <div>
+            <div class="card-title">聯繫我們</div>
+            <div class="card-subtitle">Contact Us</div>
+          </div>
+        </div>
+        <div class="card-desc">Email 表單查詢，支持多種查詢類型（批發/OEM/ODM/售後等）。</div>
+        <div class="card-link">聯繫我們 →</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Section: Admin Panel -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon">⚙️</div>
+      管理後台 (Admin Panel)
+      <div class="count">11 個功能模組</div>
+    </div>
+    <div class="section-desc">
+      管理後台僅限管理員和超級管理員訪問，用於管理網站的所有數據和配置。
+    </div>
+    <div class="cards-grid">
+      <a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank" class="card color-accent">
+        <div class="card-tag">總覽</div>
+        <div class="card-header">
+          <div class="card-icon">📊</div>
+          <div>
+            <div class="card-title">Dashboard</div>
+            <div class="card-subtitle">數據總覽</div>
+          </div>
+        </div>
+        <div class="card-desc">訂單統計、產品數量、客戶數、營業額等關鍵指標一覽。</div>
+        <div class="card-link">進入 Dashboard →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/admin/products" target="_blank" class="card color-blue">
+        <div class="card-tag">產品</div>
+        <div class="card-header">
+          <div class="card-icon">📦</div>
+          <div>
+            <div class="card-title">Products</div>
+            <div class="card-subtitle">產品管理</div>
+          </div>
+        </div>
+        <div class="card-desc">新增、編輯、刪除產品，支持圖片上傳、批量編輯 MOQ 和價格。</div>
+        <div class="card-link">管理產品 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/admin/categories" target="_blank" class="card color-purple">
+        <div class="card-tag">分類</div>
+        <div class="card-header">
+          <div class="card-icon">🏷️</div>
+          <div>
+            <div class="card-title">Categories</div>
+            <div class="card-subtitle">分類管理</div>
+          </div>
+        </div>
+        <div class="card-desc">新增、編輯、刪除產品分類，支持上傳圖片、上下移動排序。</div>
+        <div class="card-link">管理分類 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/admin/orders" target="_blank" class="card color-green">
+        <div class="card-tag">訂單</div>
+        <div class="card-header">
+          <div class="card-icon">📋</div>
+          <div>
+            <div class="card-title">Orders</div>
+            <div class="card-subtitle">訂單管理</div>
+          </div>
+        </div>
+        <div class="card-desc">查看所有訂單、訂單詳情、導出 Excel/CSV、更新訂單狀態。</div>
+        <div class="card-link">查看訂單 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/admin/quotes" target="_blank" class="card color-gold">
+        <div class="card-tag">報價</div>
+        <div class="card-header">
+          <div class="card-icon">💰</div>
+          <div>
+            <div class="card-title">Quotes & Enquiries</div>
+            <div class="card-subtitle">報價管理</div>
+          </div>
+        </div>
+        <div class="card-desc">查看客戶報價請求、接受/拒絕報價、修改價格、設置有效期。</div>
+        <div class="card-link">管理報價 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/admin/customers" target="_blank" class="card color-orange">
+        <div class="card-tag">客戶</div>
+        <div class="card-header">
+          <div class="card-icon">👥</div>
+          <div>
+            <div class="card-title">Customers</div>
+            <div class="card-subtitle">客戶管理</div>
+          </div>
+        </div>
+        <div class="card-desc">查看所有註冊客戶、設置客戶級別、重置客戶密碼。</div>
+        <div class="card-link">管理客戶 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/admin/tiers" target="_blank" class="card color-brand">
+        <div class="card-tag">定價</div>
+        <div class="card-header">
+          <div class="card-icon">⭐</div>
+          <div>
+            <div class="card-title">Customer Tiers</div>
+            <div class="card-subtitle">分級定價</div>
+          </div>
+        </div>
+        <div class="card-desc">管理客戶級別（名稱、折扣、顏色、描述），新增/編輯/刪除級別。</div>
+        <div class="card-link">管理級別 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/admin/users" target="_blank" class="card color-red">
+        <div class="card-tag">權限</div>
+        <div class="card-header">
+          <div class="card-icon">🔐</div>
+          <div>
+            <div class="card-title">Admin Users</div>
+            <div class="card-subtitle">管理員管理</div>
+          </div>
+        </div>
+        <div class="card-desc">新增管理員、修改密碼、刪除管理員賬戶。</div>
+        <div class="card-link">管理管理員 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/admin/theme" target="_blank" class="card color-pink">
+        <div class="card-tag">外觀</div>
+        <div class="card-header">
+          <div class="card-icon">🎨</div>
+          <div>
+            <div class="card-title">Theme</div>
+            <div class="card-subtitle">主題設置</div>
+          </div>
+        </div>
+        <div class="card-desc">設置品牌顏色、店鋪名稱、Banner 圖片、首頁彈窗內容和圖片。</div>
+        <div class="card-link">設置主題 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/admin/content" target="_blank" class="card color-dark">
+        <div class="card-tag">內容</div>
+        <div class="card-header">
+          <div class="card-icon">📝</div>
+          <div>
+            <div class="card-title">Site Content</div>
+            <div class="card-subtitle">網站內容</div>
+          </div>
+        </div>
+        <div class="card-desc">編輯頂部歡迎語、Footer 描述、About 頁面故事/使命/承諾等。</div>
+        <div class="card-link">編輯內容 →</div>
+      </a>
+
+      <a href="https://nebula-secret-supabase.vercel.app/#/admin/emails" target="_blank" class="card color-accent">
+        <div class="card-tag">郵件</div>
+        <div class="card-header">
+          <div class="card-icon">📧</div>
+          <div>
+            <div class="card-title">Order Emails</div>
+            <div class="card-subtitle">郵件設置</div>
+          </div>
+        </div>
+        <div class="card-desc">配置 EmailJS 服務、訂單模板、聯繫表單模板、收件人郵箱。</div>
+        <div class="card-link">配置郵件 →</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Section: Data Flow -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon">🔄</div>
+      數據流向與運作流程
+    </div>
+    <div class="section-desc">
+      了解系統中各個核心流程的運作方式，包括客戶下單、報價請求、聯繫表單、管理員操作和部署更新。
+    </div>
+    <div class="cards-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+      <div class="card color-brand flow-card">
+        <div class="card-header">
+          <div class="card-icon">🛒</div>
+          <div>
+            <div class="card-title">客戶下單流程</div>
+            <div class="card-subtitle">Order Flow</div>
+          </div>
+        </div>
+        <div class="flow-step"><div class="step-num">1</div><div>客戶瀏覽產品（自動應用分級折扣）→ 加入購物車</div></div>
+        <div class="flow-step"><div class="step-num">2</div><div>填寫結賬信息 → 提交訂單</div></div>
+        <div class="flow-step"><div class="step-num">3</div><div>訂單數據寫入 Supabase 數據庫</div></div>
+        <div class="flow-step"><div class="step-num">4</div><div>Vercel Edge Function → EmailJS 發送確認郵件</div></div>
+        <div class="flow-step"><div class="step-num">5</div><div>管理員在 Admin Panel 查看訂單</div></div>
+        <div class="flow-step"><div class="step-num">6</div><div>管理員更新訂單狀態 → 客戶可追蹤</div></div>
+      </div>
+
+      <div class="card color-gold flow-card">
+        <div class="card-header">
+          <div class="card-icon">💰</div>
+          <div>
+            <div class="card-title">報價請求流程</div>
+            <div class="card-subtitle">Quote Flow</div>
+          </div>
+        </div>
+        <div class="flow-step"><div class="step-num">1</div><div>客戶在購物車點擊 "Request Quote"</div></div>
+        <div class="flow-step"><div class="step-num">2</div><div>填寫目標價格和期望交貨日期</div></div>
+        <div class="flow-step"><div class="step-num">3</div><div>報價請求寫入 Supabase 數據庫</div></div>
+        <div class="flow-step"><div class="step-num">4</div><div>管理員在 Admin Panel 查看報價</div></div>
+        <div class="flow-step"><div class="step-num">5</div><div>管理員接受/拒絕/修改價格</div></div>
+        <div class="flow-step"><div class="step-num">6</div><div>客戶在賬戶頁面查看報價狀態</div></div>
+      </div>
+
+      <div class="card color-accent flow-card">
+        <div class="card-header">
+          <div class="card-icon">✉️</div>
+          <div>
+            <div class="card-title">聯繫表單流程</div>
+            <div class="card-subtitle">Contact Flow</div>
+          </div>
+        </div>
+        <div class="flow-step"><div class="step-num">1</div><div>客戶填寫聯繫表單</div></div>
+        <div class="flow-step"><div class="step-num">2</div><div>選擇查詢類型（批發/OEM/ODM 等）</div></div>
+        <div class="flow-step"><div class="step-num">3</div><div>提交表單 → Vercel Edge Function</div></div>
+        <div class="flow-step"><div class="step-num">4</div><div>Edge Function 調用 EmailJS API</div></div>
+        <div class="flow-step"><div class="step-num">5</div><div>郵件發送到 sales@nebulasecret.com</div></div>
+        <div class="flow-step"><div class="step-num">6</div><div>同時發送到 bong8686@gmail.com</div></div>
+      </div>
+
+      <div class="card color-green flow-card">
+        <div class="card-header">
+          <div class="card-icon">⚙️</div>
+          <div>
+            <div class="card-title">管理員操作流程</div>
+            <div class="card-subtitle">Admin Flow</div>
+          </div>
+        </div>
+        <div class="flow-step"><div class="step-num">1</div><div>管理員登錄 Admin Panel（Supabase Auth）</div></div>
+        <div class="flow-step"><div class="step-num">2</div><div>新增/編輯產品、分類、內容</div></div>
+        <div class="flow-step"><div class="step-num">3</div><div>設置客戶級別和折扣</div></div>
+        <div class="flow-step"><div class="step-num">4</div><div>數據實時同步到 Supabase 雲端</div></div>
+        <div class="flow-step"><div class="step-num">5</div><div>前台網站立即顯示最新數據</div></div>
+        <div class="flow-step"><div class="step-num">6</div><div>所有設備共享同一份雲端數據</div></div>
+      </div>
+
+      <div class="card color-purple flow-card">
+        <div class="card-header">
+          <div class="card-icon">🌐</div>
+          <div>
+            <div class="card-title">部署更新流程</div>
+            <div class="card-subtitle">Deploy Flow</div>
+          </div>
+        </div>
+        <div class="flow-step"><div class="step-num">1</div><div>修改 index.html / admin.js 源代碼</div></div>
+        <div class="flow-step"><div class="step-num">2</div><div>Commit 到 GitHub uat 分支（測試）</div></div>
+        <div class="flow-step"><div class="step-num">3</div><div>Vercel 自動部署到 UAT 環境</div></div>
+        <div class="flow-step"><div class="step-num">4</div><div>在 uat.nebulasecret.com 測試</div></div>
+        <div class="flow-step"><div class="step-num">5</div><div>測試通過後合併到 main 分支</div></div>
+        <div class="flow-step"><div class="step-num">6</div><div>Vercel 自動部署到 Production 環境</div></div>
+      </div>
+
+      <div class="card color-blue flow-card">
+        <div class="card-header">
+          <div class="card-icon">⭐</div>
+          <div>
+            <div class="card-title">分級定價流程</div>
+            <div class="card-subtitle">Tier Pricing Flow</div>
+          </div>
+        </div>
+        <div class="flow-step"><div class="step-num">1</div><div>管理員在 Customer Tiers 設置級別和折扣</div></div>
+        <div class="flow-step"><div class="step-num">2</div><div>管理員在 Customer Accounts 為客戶設置級別</div></div>
+        <div class="flow-step"><div class="step-num">3</div><div>客戶登錄賬戶</div></div>
+        <div class="flow-step"><div class="step-num">4</div><div>系統自動識別客戶級別</div></div>
+        <div class="flow-step"><div class="step-num">5</div><div>產品列表/詳情頁顯示折扣價</div></div>
+        <div class="flow-step"><div class="step-num">6</div><div>購物車自動應用折扣計算總價</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Detailed Configuration -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon">🔧</div>
+      詳細配置信息
+      <div class="count">10 個模組</div>
+    </div>
+    <div class="detail-grid">
+
+      <!-- Website Access -->
+      <div class="detail-card color-brand">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">🌐</div>
+          <div>
+            <div class="detail-card-title">網站訪問信息</div>
+            <div class="detail-card-sub">Website Access</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Production 環境</div>
+          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app" target="_blank">nebula-secret-supabase.vercel.app</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">UAT 測試環境</div>
+          <div class="detail-value"><a href="https://uat.nebulasecret.com" target="_blank">uat.nebulasecret.com</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Admin Panel</div>
+          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank">/#/admin</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">系統架構頁</div>
+          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app/architecture.html" target="_blank">/architecture.html</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">本地開發地址</div>
+          <div class="detail-value"><span class="detail-code">http://localhost:8080</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">本地啟動命令</div>
+          <div class="detail-value"><span class="detail-code">python3 -m http.server 8080</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">項目目錄</div>
+          <div class="detail-value" style="font-size:11px">nebula-secret-supabase/</div>
+        </div>
+      </div>
+
+      <!-- Supabase Database -->
+      <div class="detail-card color-green">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">🗄️</div>
+          <div>
+            <div class="detail-card-title">Supabase 數據庫</div>
+            <div class="detail-card-sub">Database + Auth</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Project URL</div>
+          <div class="detail-value"><a href="https://xwhhsoppcpkijxxychjm.supabase.co" target="_blank" style="font-size:11px">xwhhsoppcpkijxxychjm.supabase.co</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Project Ref ID</div>
+          <div class="detail-value"><span class="detail-code">xwhhsoppcpkijxxychjm</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">項目名稱</div>
+          <div class="detail-value">Nebula Secret</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">區域 (Region)</div>
+          <div class="detail-value">Singapore (SG)</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">計劃 (Plan)</div>
+          <div class="detail-value">Free Tier</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">主要數據表</div>
+          <div class="detail-value"><span class="detail-code">site_settings</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">存儲的 Keys</div>
+          <div class="detail-value" style="font-size:10px;text-align:left">products, cats, theme, content, orders, accounts, admins, tiers, quotes, emailjs</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">用戶認證</div>
+          <div class="detail-value">Supabase Auth（Email/Password）</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Publishable Key</div>
+          <div class="detail-value"><span class="detail-mask">sb_publishable_2Gnj...HEk</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">後台登錄</div>
+          <div class="detail-value"><a href="https://supabase.com/dashboard/project/xwhhsoppcpkijxxychjm" target="_blank">Supabase Dashboard</a></div>
+        </div>
+      </div>
+
+      <!-- Vercel -->
+      <div class="detail-card color-dark">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">▲</div>
+          <div>
+            <div class="detail-card-title">Vercel 托管</div>
+            <div class="detail-card-sub">Hosting + Edge Functions</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">組織名稱</div>
+          <div class="detail-value">nebula-secret-wholesale</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">項目名稱</div>
+          <div class="detail-value">nebula-secret-supabase</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">計劃 (Plan)</div>
+          <div class="detail-value">Hobby (Free)</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">框架預設</div>
+          <div class="detail-value">Other (純靜態)</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Production 域名</div>
+          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app" target="_blank">nebula-secret-supabase.vercel.app</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">UAT 域名</div>
+          <div class="detail-value"><a href="https://uat.nebulasecret.com" target="_blank">uat.nebulasecret.com</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Edge Function</div>
+          <div class="detail-value"><span class="detail-code">/api/send-email</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">部署方式</div>
+          <div class="detail-value">GitHub 自動部署（雙環境）</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">部署時間</div>
+          <div class="detail-value">1-2 分鐘</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">後台登錄</div>
+          <div class="detail-value"><a href="https://vercel.com" target="_blank">vercel.com</a></div>
+        </div>
+      </div>
+
+      <!-- GitHub -->
+      <div class="detail-card color-blue">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">🐙</div>
+          <div>
+            <div class="detail-card-title">GitHub 代碼倉庫</div>
+            <div class="detail-card-sub">Source Code Repository</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">倉庫所有者</div>
+          <div class="detail-value">NebulaSecret-team</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">倉庫名稱</div>
+          <div class="detail-value">Nebula-Secret-Supabase</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">倉庫類型</div>
+          <div class="detail-value">Public (公開)</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Production 分支</div>
+          <div class="detail-value"><span class="detail-code">main</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">UAT 分支</div>
+          <div class="detail-value"><span class="detail-code">uat</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">倉庫 URL</div>
+          <div class="detail-value"><a href="https://github.com/NebulaSecret-team/Nebula-Secret-Supabase" target="_blank" style="font-size:11px">github.com/NebulaSecret-team/...</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">主要文件</div>
+          <div class="detail-value" style="font-size:11px;text-align:left">index.html, admin.js, architecture.html, api/send-email.js</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">推送工具</div>
+          <div class="detail-value">GitHub Desktop</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">工作流程</div>
+          <div class="detail-value">uat 分支測試 → main 分支上線</div>
+        </div>
+      </div>
+
+      <!-- EmailJS -->
+      <div class="detail-card color-orange">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">📧</div>
+          <div>
+            <div class="detail-card-title">EmailJS 郵件服務</div>
+            <div class="detail-card-sub">Email Service (via Edge Function)</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">服務平台</div>
+          <div class="detail-value">EmailJS</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">計劃 (Plan)</div>
+          <div class="detail-value">Free Tier (200 封/月)</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Service ID</div>
+          <div class="detail-value"><span class="detail-code">service_klqhx4h</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">訂單模板 ID</div>
+          <div class="detail-value"><span class="detail-code">template_cdrvj4m</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">聯繫表單模板 ID</div>
+          <div class="detail-value"><span class="detail-code">template_o5u18d6</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">收件人 1</div>
+          <div class="detail-value" style="font-size:11px">sales@nebulasecret.com</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">收件人 2</div>
+          <div class="detail-value" style="font-size:11px">bong8686@gmail.com</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">發送方式</div>
+          <div class="detail-value">Vercel Edge Function 代理</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">後台登錄</div>
+          <div class="detail-value"><a href="https://dashboard.emailjs.com" target="_blank">dashboard.emailjs.com</a></div>
+        </div>
+        <div class="info-box">
+          <strong>🔒 安全：</strong>EmailJS Private Key 存儲在 Vercel 環境變量中，前端永遠看不到密鑰。
+        </div>
+      </div>
+
+      <!-- Vercel Edge Function -->
+      <div class="detail-card color-gold">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">⚡</div>
+          <div>
+            <div class="detail-card-title">Vercel Edge Function</div>
+            <div class="detail-card-sub">Serverless Email Proxy</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Function 路徑</div>
+          <div class="detail-value"><span class="detail-code">/api/send-email</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">運行時</div>
+          <div class="detail-value">Vercel Edge Runtime</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">用途</div>
+          <div class="detail-value">保護 EmailJS Private Key</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">環境變量</div>
+          <div class="detail-value" style="font-size:10px;text-align:left">EMAILJS_PUBLIC_KEY, EMAILJS_PRIVATE_KEY, EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_CONTACT_TEMPLATE_ID, ALLOWED_ORIGINS</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">降級機制</div>
+          <div class="detail-value">Edge 失敗 → 前端 EmailJS SDK</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">源代碼</div>
+          <div class="detail-value"><span class="detail-code">api/send-email.js</span></div>
+        </div>
+        <div class="info-box">
+          <strong>💡 工作原理：</strong>前端發送請求到 /api/send-email，Edge Function 使用服務端環境變量中的 Private Key 調用 EmailJS API，避免密鑰暴露在前端。
+        </div>
+      </div>
+
+      <!-- cron-job.org -->
+      <div class="detail-card color-red">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">⏰</div>
+          <div>
+            <div class="detail-card-title">cron-job.org 定時任務</div>
+            <div class="detail-card-sub">Scheduled Task</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">任務名稱</div>
+          <div class="detail-value">Supabase Keep Alive</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">服務平台</div>
+          <div class="detail-value">cron-job.org</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">執行時間</div>
+          <div class="detail-value">每天 20:00 (HKT)</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">時區</div>
+          <div class="detail-value">Asia/Hong_Kong</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">調用方法</div>
+          <div class="detail-value">HTTP GET</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">調用 URL</div>
+          <div class="detail-value" style="font-size:10px;text-align:left">Supabase REST API（查詢 site_settings 表）</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">目的</div>
+          <div class="detail-value">防止 Supabase 免費版冬眠</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">後台登錄</div>
+          <div class="detail-value"><a href="https://cron-job.org" target="_blank">cron-job.org</a></div>
+        </div>
+      </div>
+
+      <!-- Admin Login -->
+      <div class="detail-card color-accent">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">🔐</div>
+          <div>
+            <div class="detail-card-title">管理員登錄信息</div>
+            <div class="detail-card-sub">Admin Credentials</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Admin Panel URL</div>
+          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank">/#/admin</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">管理員郵箱</div>
+          <div class="detail-value"><span class="detail-code">admin@nebulasecret.com</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">管理員密碼</div>
+          <div class="detail-value"><span class="detail-mask">••••••••••</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">管理員角色</div>
+          <div class="detail-value">superadmin</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">認證方式</div>
+          <div class="detail-value">Supabase Auth</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">修改密碼位置</div>
+          <div class="detail-value">Admin Users → Change Password</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">可新增管理員</div>
+          <div class="detail-value">是 (Admin Users → Add Admin)</div>
+        </div>
+        <div class="warning-box">
+          <strong>⚠️ 安全提醒：</strong>請妥善保管管理員密碼，不要將密碼分享給無關人員。首次登錄後請立即修改默認密碼。
+        </div>
+      </div>
+
+      <!-- Currency & API -->
+      <div class="detail-card color-purple">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">💱</div>
+          <div>
+            <div class="detail-card-title">貨幣與 API</div>
+            <div class="detail-card-sub">Currency & APIs</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">支援貨幣數量</div>
+          <div class="detail-value">18 種</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">默認貨幣</div>
+          <div class="detail-value">EUR (€)</div>
+        </div>
+        <div class="detail-row" style="flex-direction:column;align-items:flex-start">
+          <div class="detail-label" style="margin-bottom:6px">貨幣列表</div>
+          <div class="currency-list">
+            <span class="currency-tag">EUR</span>
+            <span class="currency-tag">USD</span>
+            <span class="currency-tag">HKD</span>
+            <span class="currency-tag">CNY</span>
+            <span class="currency-tag">GBP</span>
+            <span class="currency-tag">JPY</span>
+            <span class="currency-tag">SGD</span>
+            <span class="currency-tag">AUD</span>
+            <span class="currency-tag">CAD</span>
+            <span class="currency-tag">CHF</span>
+            <span class="currency-tag">KRW</span>
+            <span class="currency-tag">AED</span>
+            <span class="currency-tag">SAR</span>
+            <span class="currency-tag">TWD</span>
+            <span class="currency-tag">THB</span>
+            <span class="currency-tag">MYR</span>
+            <span class="currency-tag">NZD</span>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">匯率 API</div>
+          <div class="detail-value" style="font-size:11px">@fawazahmed0/currency-api</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">CDN</div>
+          <div class="detail-value">jsDelivr</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Supabase JS 版本</div>
+          <div class="detail-value"><span class="detail-code">@supabase/supabase-js@2.49.1</span></div>
+        </div>
+      </div>
+
+      <!-- Customer Tiers -->
+      <div class="detail-card color-brand">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">⭐</div>
+          <div>
+            <div class="detail-card-title">客戶分級定價</div>
+            <div class="detail-card-sub">Customer Tier Pricing</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">級別數量</div>
+          <div class="detail-value">3 個（可自定義新增）</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">New Customer</div>
+          <div class="detail-value">0% 折扣 · 灰色 #6b7280</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Regular Customer</div>
+          <div class="detail-value">5% 折扣 · 藍色 #3b82f6</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">VIP Customer</div>
+          <div class="detail-value">10% 折扣 · 金色 #f59e0b</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">級別管理頁面</div>
+          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app/#/admin/tiers" target="_blank">Admin → Customer Tiers</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">客戶級別設置</div>
+          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app/#/admin/customers" target="_blank">Admin → Customer Accounts</a></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">折扣應用範圍</div>
+          <div class="detail-value">產品列表、詳情頁、購物車</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">數據存儲</div>
+          <div class="detail-value">Supabase site_settings.tiers</div>
+        </div>
+        <div class="info-box">
+          <strong>💡 提示：</strong>新客戶註冊後自動設為 "New Customer" 級別。管理員可隨時在 Customer Accounts 頁面調整客戶級別。
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>🌌 Nebula Secret 系統架構總覽 · 最後更新：2026-09-15 · 僅限管理員訪問</p>
+  <div class="links">
+    <a href="https://nebula-secret-supabase.vercel.app" target="_blank">Production</a>
+    <a href="https://uat.nebulasecret.com" target="_blank">UAT</a>
+    <a href="https://github.com/NebulaSecret-team/Nebula-Secret-Supabase" target="_blank">GitHub</a>
+    <a href="https://supabase.com/dashboard/project/xwhhsoppcpkijxxychjm" target="_blank">Supabase</a>
+    <a href="https://vercel.com" target="_blank">Vercel</a>
+    <a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank">Admin Panel</a>
+  </div>
+</div>
+
+</div>
+
+<script>
+// Check admin session from main site (shared localStorage)
+// If logged in, show architecture page; if not, redirect to Admin Panel
+(function() {
+  const session = localStorage.getItem('ns_asession_v3');
+  if (session) {
+    try {
+      const data = JSON.parse(session);
+      if (data && data.user) {
+        // Admin is logged in - show architecture page
+        document.getElementById('mainContent').style.display = 'block';
+        document.getElementById('adminBadge').textContent = (data.name || data.user).toUpperCase();
+        return;
+      }
+    } catch(e) {
+      console.error('Failed to parse admin session:', e);
+    }
+  }
+  // Not logged in - redirect directly to Admin Panel
+  window.location.href = 'https://nebula-secret-supabase.vercel.app/#/admin';
+})();
+
+// Listen for storage changes (in case admin logs in on another tab)
+window.addEventListener('storage', function(e) {
+  if (e.key === 'ns_asession_v3') {
+    const session = e.newValue;
+    if (session) {
+      try {
+        const data = JSON.parse(session);
+        if (data && data.user) {
+          document.getElementById('mainContent').style.display = 'block';
+          document.getElementById('adminBadge').textContent = (data.name || data.user).toUpperCase();
+        }
+      } catch(e) {}
+    }
+  }
+});
+</script>
+
+</body>
+</html>
