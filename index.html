@@ -2690,6 +2690,7 @@ const BLOG_POSTS = [
     category: "OEM/ODM",
     date: "2024-01-15",
     readTime: "8 min",
+    image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=600&h=400&fit=crop",
     excerpt: "Finding the right OEM skincare manufacturer is crucial for your brand's success. Learn what to look for, questions to ask, and red flags to avoid.",
     content: [
       "Choosing the right OEM skincare manufacturer is one of the most important decisions you'll make for your beauty brand. The manufacturer you partner with will directly impact product quality, cost, timeline, and ultimately your brand reputation.",
@@ -2705,6 +2706,7 @@ const BLOG_POSTS = [
     category: "OEM/ODM",
     date: "2024-01-22",
     readTime: "6 min",
+    image: "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=600&h=400&fit=crop",
     excerpt: "Understanding the difference between OEM and ODM is essential when launching a private label beauty brand. Here's what you need to know.",
     content: [
       "If you're new to the beauty industry, the terms OEM and ODM can be confusing. Both refer to manufacturing partnerships, but they represent very different approaches to product development.",
@@ -2720,6 +2722,7 @@ const BLOG_POSTS = [
     category: "Business",
     date: "2024-02-05",
     readTime: "7 min",
+    image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&h=400&fit=crop",
     excerpt: "Thinking about launching your own skincare brand? These 10 essential tips will help you avoid common mistakes and set your brand up for success.",
     content: [
       "Launching a private label skincare brand is an exciting venture, but it requires careful planning and execution. The beauty industry is competitive, but with the right strategy, there's plenty of room for new brands to succeed.",
@@ -2735,6 +2738,7 @@ const BLOG_POSTS = [
     category: "OEM/ODM",
     date: "2024-02-19",
     readTime: "5 min",
+    image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&h=400&fit=crop",
     excerpt: "Minimum Order Quantity (MOQ) is a critical factor when choosing a manufacturer. Learn how MOQs work and how to negotiate the best terms for your brand.",
     content: [
       "MOQ (Minimum Order Quantity) is one of the most important terms to understand when working with cosmetic manufacturers. It refers to the minimum number of units you must order for a particular product.",
@@ -2750,6 +2754,7 @@ const BLOG_POSTS = [
     category: "Product Development",
     date: "2024-03-04",
     readTime: "8 min",
+    image: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=600&h=400&fit=crop",
     excerpt: "A signature scent can set your brand apart. Learn the process of creating a custom perfume fragrance, from concept to finished product.",
     content: [
       "A signature perfume can be one of the most powerful brand differentiators in the beauty industry. Think of the most iconic luxury brands — many are instantly recognizable by their signature scents alone.",
@@ -2765,6 +2770,7 @@ const BLOG_POSTS = [
     category: "Wholesale",
     date: "2024-03-18",
     readTime: "6 min",
+    image: "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=600&h=400&fit=crop",
     excerpt: "Body care products are a staple in the beauty industry. This guide covers the most popular categories, trends, and tips for selecting the right products for your business.",
     content: [
       "Body care is one of the largest and fastest-growing segments in the beauty industry. From body washes and lotions to scrubs and serums, consumers are increasingly investing in comprehensive body care routines.",
@@ -2780,6 +2786,7 @@ const BLOG_POSTS = [
     category: "Packaging",
     date: "2024-04-01",
     readTime: "7 min",
+    image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=600&h=400&fit=crop",
     excerpt: "Packaging is often the first thing customers notice about your product. Explore the different packaging options available for private label cosmetics.",
     content: [
       "They say you shouldn't judge a book by its cover, but in the cosmetics industry, packaging can make or break a product. Your packaging is the customer's first physical interaction with your brand, and it plays a crucial role in purchasing decisions.",
@@ -2795,6 +2802,7 @@ const BLOG_POSTS = [
     category: "Quality",
     date: "2024-04-15",
     readTime: "6 min",
+    image: "https://images.unsplash.com/photo-1581093458791-9d42e3c5f1e1?w=600&h=400&fit=crop",
     excerpt: "Quality control is non-negotiable in skincare manufacturing. Learn what quality measures to look for in a manufacturer and how to ensure your products meet the highest standards.",
     content: [
       "In the skincare industry, quality control is not just a nice-to-have — it's essential for protecting your customers and your brand reputation. A single quality issue can lead to product recalls, negative reviews, and lasting damage to your brand.",
@@ -2820,9 +2828,12 @@ function viewBlog(){
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:28px">' +
       BLOG_POSTS.map(post =>
         '<a href="#/blog/' + post.slug + '" style="background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:block;transition:transform .2s,box-shadow .2s;text-decoration:none;color:inherit" onmouseover="this.style.transform=\'translateY(-4px)\';this.style.boxShadow=\'0 8px 24px rgba(0,0,0,.1)\'" onmouseout="this.style.transform=\'\';this.style.box-shadow=\'\'">' +
-          '<div style="height:180px;background:linear-gradient(135deg,var(--brand-light),var(--card));display:flex;align-items:center;justify-content:center;color:var(--brand)">' +
-            ic('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>') +
-          '</div>' +
+          (post.image
+            ? '<div style="height:180px;background-image:url(\'' + post.image + '\');background-size:cover;background-position:center;position:relative"><div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,rgba(0,0,0,0.1),rgba(0,0,0,0.3))"></div></div>'
+            : '<div style="height:180px;background:linear-gradient(135deg,var(--brand-light),var(--card));display:flex;align-items:center;justify-content:center;color:var(--brand)">' +
+                ic('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>') +
+              '</div>'
+          ) +
           '<div style="padding:24px">' +
             '<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">' +
               '<span style="background:var(--brand-light);color:var(--brand);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600">' + post.category + '</span>' +
@@ -2855,14 +2866,20 @@ function viewBlogPost(slug){
       '<h1 style="font-size:32px;line-height:1.3;margin:0 0 16px 0">' + post.title + '</h1>' +
       '<p style="color:var(--ink-soft);font-size:17px;line-height:1.7;margin:0">' + post.excerpt + '</p>' +
     '</div>' +
-    '<div style="height:200px;background:linear-gradient(135deg,var(--brand-light),var(--card));border-radius:12px;margin-bottom:32px;display:flex;align-items:center;justify-content:center;color:var(--brand)">' +
-      ic('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>') +
-    '</div>' +
+    (post.image
+      ? '<div style="height:300px;background-image:url(\'' + post.image + '\');background-size:cover;background-position:center;border-radius:12px;margin-bottom:32px;position:relative"><div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,rgba(0,0,0,0.1),rgba(0,0,0,0.3));border-radius:12px"></div></div>'
+      : '<div style="height:200px;background:linear-gradient(135deg,var(--brand-light),var(--card));border-radius:12px;margin-bottom:32px;display:flex;align-items:center;justify-content:center;color:var(--brand)">' +
+          ic('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>') +
+        '</div>'
+    ) +
     '<div style="font-size:16px;line-height:1.8;color:var(--ink)">' +
       post.content.map(para => '<p style="margin:0 0 20px 0">' + para + '</p>').join("") +
     '</div>' +
     '<div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">' +
-      '<a href="#/blog" style="display:inline-flex;align-items:center;gap:8px;color:var(--brand);text-decoration:none;font-weight:600;font-size:15px">' + ic('<path d="m15 18-6-6 6-6"/>') + ' Back to All Articles</a>' +
+      '<a href="#/blog" style="display:inline-flex;align-items:center;gap:8px;color:var(--brand);text-decoration:none;font-weight:600;font-size:15px;line-height:1">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="m15 18-6-6 6-6"/></svg>' +
+        '<span style="line-height:1">Back to All Articles</span>' +
+      '</a>' +
       '<a href="#/" onclick="setTimeout(function(){var el=document.getElementById(\'contact-section\');if(el)el.scrollIntoView({behavior:\'smooth\'});},200);" style="display:inline-block;background:var(--brand);color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Contact Us</a>' +
     '</div>' +
   '</div>';
@@ -3008,9 +3025,9 @@ function viewInfo(page){
     ];
     body = '<div style="margin-top:8px">' +
       faqs.map((f, i) =>
-        '<div class="faq-item" onclick="this.classList.toggle(\'open\')">' +
+        '<div class="faq-item" id="faq-' + i + '" onclick="toggleFaq(' + i + ')">' +
           '<div class="faq-q"><span>' + f.q + '</span><svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>' +
-          '<div class="faq-a"><p>' + f.a + '</p></div>' +
+          '<div class="faq-a" id="faq-a-' + i + '" style="display:none"><p>' + f.a + '</p></div>' +
         '</div>'
       ).join("") +
     '</div>';
@@ -3031,6 +3048,20 @@ function viewInfo(page){
   $("#app").innerHTML =
   '<section class="info-hero"><div><h1>' + esc(title) + '</h1>' + (subtitle ? '<p>' + esc(subtitle) + '</p>' : '') + '</div></section>' +
   '<section class="info-section">' + back + sanitizeHTML(body) + '</section>';
+}
+
+function toggleFaq(index){
+  const item = document.getElementById('faq-' + index);
+  const answer = document.getElementById('faq-a-' + index);
+  if(item && answer){
+    if(answer.style.display === 'none'){
+      answer.style.display = 'block';
+      item.classList.add('open');
+    } else {
+      answer.style.display = 'none';
+      item.classList.remove('open');
+    }
+  }
 }
 
 function viewHome(){
