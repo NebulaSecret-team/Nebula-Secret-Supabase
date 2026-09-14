@@ -486,13 +486,27 @@ function adminProducts(){
   const products = getProducts();
   const content =
     '<div class="admin-panel"><div class="panel-head"><div><h3>Products</h3><div class="ph-sub">' + products.length + ' products · add, edit or remove items</div></div><button class="btn sm" onclick="openProductForm()">' + IC.plus + ' Add Product</button></div>' +
-    '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Rating</th><th>Actions</th></tr></thead><tbody>' +
+    '<div class="panel-body" style="padding:16px;border-bottom:1px solid var(--border)">' +
+      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
+        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600">' +
+          '<input type="checkbox" id="selectAllProducts" onchange="toggleSelectAllProducts(this)" style="width:16px;height:16px;cursor:pointer"> Select All' +
+        '</label>' +
+        '<span id="selectedCount" style="font-size:13px;color:var(--ink-soft)">0 selected</span>' +
+        '<div style="flex:1"></div>' +
+        '<button class="btn sm ghost" onclick="openBulkEditModal()" id="bulkEditBtn" disabled style="opacity:0.5;cursor:not-allowed">' + IC.edit + ' Bulk Edit MOQ & Price</button>' +
+        '<button class="btn sm" onclick="setAllMoqTo100()" style="background:#25bab5;color:white">✓ Set All MOQ to 100</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th style="width:40px"><input type="checkbox" id="selectAllHeader" onchange="toggleSelectAllProducts(this)" style="width:16px;height:16px;cursor:pointer"></th><th></th><th>Name</th><th>Category</th><th>Price</th><th>MOQ</th><th>Rating</th><th>Actions</th></tr></thead><tbody>' +
     products.slice().reverse().map(p => {
       const rt = productRating(p);
-      return '<tr><td><img class="td-img" src="' + imgUrl(p.i, 100) + '" alt="" data-pid="' + p.id + '" onerror="imgFallback(this)"></td>' +
+      const moq = p.priceTiers && p.priceTiers.length ? p.priceTiers[0].minQty : 1;
+      return '<tr data-product-id="' + p.id + '"><td><input type="checkbox" class="product-checkbox" value="' + p.id + '" onchange="updateSelectedCount()" style="width:16px;height:16px;cursor:pointer"></td>' +
+        '<td><img class="td-img" src="' + imgUrl(p.i, 100) + '" alt="" data-pid="' + p.id + '" onerror="imgFallback(this)"></td>' +
         '<td style="font-weight:600">' + esc(p.n) + '</td>' +
         '<td><span class="pill">' + esc(catName(p.cs)) + '</span></td>' +
         '<td>' + fmt(p.p) + '</td>' +
+        '<td><span class="pill" style="background:#e8f8f7;color:#25bab5;font-weight:600">' + moq + '</span></td>' +
         '<td><span class="stars" style="color:#f5a623;font-size:12px">' + stars(rt.r) + '</span> <span style="font-size:12px;color:var(--ink-soft)">' + rt.r.toFixed(1) + '</span></td>' +
         '<td><div class="table-actions">' +
           '<button onclick="openProductForm(\'' + p.id + '\')" title="Edit">' + IC.edit + '</button>' +
@@ -500,9 +514,164 @@ function adminProducts(){
         '</div></td></tr>';
     }).join("") +
     '</tbody></table></div></div>' +
-    '<div class="admin-panel"><div class="panel-body"><div style="font-size:13px;color:var(--ink-soft)">Changes are saved to this browser (localStorage) and appear on the storefront immediately.</div></div></div>';
+    '<div class="admin-panel"><div class="panel-body"><div style="font-size:13px;color:var(--ink-soft)">Changes are saved to this browser (localStorage) and appear on the storefront immediately. Use checkboxes to select products for bulk editing.</div></div></div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Products";
+}
+
+function toggleSelectAllProducts(checkbox){
+  const checkboxes = document.querySelectorAll('.product-checkbox');
+  checkboxes.forEach(cb => cb.checked = checkbox.checked);
+  const headerCheckbox = document.getElementById('selectAllHeader');
+  const selectAllBtn = document.getElementById('selectAllProducts');
+  if(headerCheckbox) headerCheckbox.checked = checkbox.checked;
+  if(selectAllBtn) selectAllBtn.checked = checkbox.checked;
+  updateSelectedCount();
+}
+
+function updateSelectedCount(){
+  const checkboxes = document.querySelectorAll('.product-checkbox:checked');
+  const count = checkboxes.length;
+  const countEl = document.getElementById('selectedCount');
+  const bulkBtn = document.getElementById('bulkEditBtn');
+  if(countEl) countEl.textContent = count + ' selected';
+  if(bulkBtn){
+    if(count > 0){
+      bulkBtn.disabled = false;
+      bulkBtn.style.opacity = '1';
+      bulkBtn.style.cursor = 'pointer';
+    } else {
+      bulkBtn.disabled = true;
+      bulkBtn.style.opacity = '0.5';
+      bulkBtn.style.cursor = 'not-allowed';
+    }
+  }
+}
+
+function getSelectedProductIds(){
+  return Array.from(document.querySelectorAll('.product-checkbox:checked')).map(cb => cb.value);
+}
+
+function setAllMoqTo100(){
+  if(!confirm('Set MOQ (Minimum Order Quantity) to 100 for ALL ' + getProducts().length + ' products? This will update the first price tier of every product.')) return;
+  const products = getProducts();
+  let updated = 0;
+  products.forEach(p => {
+    if(!p.priceTiers || p.priceTiers.length === 0){
+      p.priceTiers = [{ minQty: 100, price: p.p || 0 }];
+    } else {
+      p.priceTiers[0].minQty = 100;
+    }
+    updated++;
+  });
+  saveProducts(products);
+  adminProducts();
+  showToast('Set MOQ to 100 for ' + updated + ' products');
+}
+
+function openBulkEditModal(){
+  const selectedIds = getSelectedProductIds();
+  if(selectedIds.length === 0){ showToast('Please select at least one product'); return; }
+  
+  const products = getProducts().filter(p => selectedIds.includes(String(p.id)));
+  
+  $("#amTitle").textContent = "Bulk Edit: MOQ & Price";
+  $("#amSub").textContent = "Editing " + products.length + " selected products";
+  $("#amBody").innerHTML =
+    '<div class="form-grid">' +
+      '<div class="field full"><label>Selected Products</label>' +
+        '<div style="max-height:120px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--card)">' +
+          products.map(p => '<div style="font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)">' + esc(p.n) + ' (Current MOQ: ' + (p.priceTiers && p.priceTiers.length ? p.priceTiers[0].minQty : 1) + ', Price: ' + fmt(p.p) + ')</div>').join("") +
+        '</div>' +
+      '</div>' +
+      '<div class="field"><label>Set MOQ (Min Qty)</label><input id="bulkMoq" type="number" min="1" placeholder="e.g. 100"><div class="form-hint">Leave empty to keep current MOQ</div></div>' +
+      '<div class="field"><label>Set Base Price (EUR)</label><input id="bulkPrice" type="number" step="0.01" min="0" placeholder="e.g. 5.00"><div class="form-hint">Leave empty to keep current price</div></div>' +
+      '<div class="field full"><label>Additional Price Tiers (Volume Discounts)</label>' +
+        '<div class="form-hint">Add volume discount tiers for bulk orders. Example: 500+ units at €4.50, 1000+ units at €4.00</div>' +
+        '<div id="bulkTiersContainer"></div>' +
+        '<button class="btn sm ghost" style="margin-top:8px" onclick="addBulkTier()">+ Add Volume Discount Tier</button>' +
+      '</div>' +
+      '<div class="field full" style="background:#fff8e6;padding:12px;border-radius:8px;border:1px solid #ffe08a">' +
+        '<label style="font-weight:600;color:#8a6d00">⚠️ Important</label>' +
+        '<div style="font-size:13px;color:#8a6d00;margin-top:6px">This will overwrite the existing price tiers for all selected products. Make sure the first tier\'s MOQ matches the MOQ you set above.</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">' +
+      '<button class="btn ghost" onclick="closeAdminModal()">Cancel</button>' +
+      '<button class="btn" onclick="applyBulkEdit()">Apply to ' + products.length + ' Products</button>' +
+    '</div>';
+  $("#adminModal").classList.add("open");
+  
+  // Add default tier row
+  addBulkTier();
+}
+
+function addBulkTier(){
+  const container = document.getElementById("bulkTiersContainer");
+  if(!container) return;
+  const rows = container.querySelectorAll(".bulk-tier-row");
+  const lastQty = rows.length > 0 ? parseInt(rows[rows.length - 1].querySelector(".bulk-tier-minqty").value) || 100 : 100;
+  const newIndex = rows.length;
+  const div = document.createElement("div");
+  div.innerHTML = '<div class="bulk-tier-row" style="display:flex;gap:10px;align-items:center;margin-bottom:8px">' +
+    '<div style="flex:1"><label style="font-size:11px;color:var(--ink-soft)">Min Qty</label><input type="number" min="1" value="' + (lastQty * 2 || 200) + '" class="bulk-tier-minqty" style="width:100%"></div>' +
+    '<div style="flex:1"><label style="font-size:11px;color:var(--ink-soft)">Price (EUR)</label><input type="number" step="0.01" min="0" value="" class="bulk-tier-price" style="width:100%" placeholder="e.g. 4.50"></div>' +
+    '<button class="btn sm del" style="margin-top:18px" onclick="this.parentElement.remove()" title="Remove tier">×</button>' +
+  '</div>';
+  container.appendChild(div.firstElementChild);
+}
+
+function applyBulkEdit(){
+  const selectedIds = getSelectedProductIds();
+  const bulkMoq = document.getElementById("bulkMoq") ? parseInt(document.getElementById("bulkMoq").value) : null;
+  const bulkPrice = document.getElementById("bulkPrice") ? parseFloat(document.getElementById("bulkPrice").value) : null;
+  
+  if(!bulkMoq && !bulkPrice && document.querySelectorAll("#bulkTiersContainer .bulk-tier-row").length === 0){
+    showToast('Please enter at least one value to update');
+    return;
+  }
+  
+  const products = getProducts();
+  let updated = 0;
+  
+  products.forEach(p => {
+    if(selectedIds.includes(String(p.id))){
+      // Update base price if provided
+      if(bulkPrice && !isNaN(bulkPrice)){
+        p.p = bulkPrice;
+        p.pf = "€" + Number(bulkPrice).toFixed(2);
+      }
+      
+      // Build new price tiers
+      const newTiers = [];
+      
+      // First tier (MOQ)
+      const firstTierMoq = bulkMoq && !isNaN(bulkMoq) ? bulkMoq : (p.priceTiers && p.priceTiers.length ? p.priceTiers[0].minQty : 1);
+      const firstTierPrice = bulkPrice && !isNaN(bulkPrice) ? bulkPrice : (p.priceTiers && p.priceTiers.length ? p.priceTiers[0].price : p.p);
+      newTiers.push({ minQty: firstTierMoq, price: firstTierPrice });
+      
+      // Additional tiers from bulk edit
+      const bulkTierRows = document.querySelectorAll("#bulkTiersContainer .bulk-tier-row");
+      bulkTierRows.forEach(row => {
+        const minQty = parseInt(row.querySelector(".bulk-tier-minqty").value);
+        const price = parseFloat(row.querySelector(".bulk-tier-price").value);
+        if(minQty && !isNaN(minQty) && price && !isNaN(price)){
+          newTiers.push({ minQty, price });
+        }
+      });
+      
+      // Sort tiers by minQty
+      newTiers.sort((a, b) => a.minQty - b.minQty);
+      
+      p.priceTiers = newTiers;
+      updated++;
+    }
+  });
+  
+  saveProducts(products);
+  closeAdminModal();
+  adminProducts();
+  showToast('Updated ' + updated + ' products');
 }
 
 function openProductForm(id){
