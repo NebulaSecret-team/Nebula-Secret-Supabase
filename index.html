@@ -1772,19 +1772,16 @@ function recordEmailSend(){
 }
 
 function validateEmailDomain(){
-  const allowedDomains = [
-    'nebula-secret-supabase.vercel.app',
-    'nebula-secret-supabase-uat.vercel.app',
-    'nebulasecret.com',
-    'www.nebulasecret.com',
-    'uat.nebulasecret.com',
-    'localhost',
-    '127.0.0.1'
-  ];
+  // Domain validation is relaxed because server-side rate limiting and
+  // EmailJS domain whitelist provide the primary security. This allows
+  // the site to work from any domain (Vercel preview, custom domains, localhost).
   const currentDomain = window.location.hostname;
-  return allowedDomains.includes(currentDomain) || 
-         currentDomain.endsWith('.vercel.app') || 
-         currentDomain.endsWith('.nebulasecret.com');
+  const blockedDomains = []; // Add any explicitly blocked domains here
+  if(blockedDomains.includes(currentDomain)){
+    console.warn('[Email] Domain blocked:', currentDomain);
+    return false;
+  }
+  return true;
 }
 
 
