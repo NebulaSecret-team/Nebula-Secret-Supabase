@@ -19,6 +19,50 @@
 /* ============ Supabase Auth State Management ============ */
 let _currentAdminUser = null;
 
+/* ============ Activity Log System ============ */
+/* Log an activity to site_settings.activity_log */
+async function logActivity(type, text, color, icon) {
+  try {
+    const key = 'activity_log';
+    let logs = [];
+    // Try to load existing logs from Supabase
+    if (typeof supabase !== 'undefined' && supabase) {
+      const { data, error } = await supabase.from('site_settings').select('data').eq('id', key).single();
+      if (!error && data && data.data) {
+        logs = Array.isArray(data.data) ? data.data : [];
+      }
+    }
+    // Add new activity
+    logs.unshift({
+      type: type,
+      text: text,
+      color: color || '#6b7280',
+      icon: icon || IC.info,
+      time: new Date().toISOString()
+    });
+    // Keep only last 50
+    logs = logs.slice(0, 50);
+    // Save
+    if (typeof sbSave !== 'undefined') {
+      sbSave(key, logs);
+    }
+    // Also update cache if available
+    if (typeof _cache !== 'undefined') {
+      _cache.activityLog = logs;
+    }
+  } catch(e) {
+    console.warn('Failed to log activity:', e);
+  }
+}
+
+/* Get activity log */
+function getActivityLog() {
+  if (typeof _cache !== 'undefined' && _cache.activityLog) {
+    return _cache.activityLog;
+  }
+  return [];
+}
+
 /* Listen for auth state changes */
 if(typeof supabase !== 'undefined' && supabaseAvailable && supabase.auth) {
   try {
@@ -100,6 +144,18 @@ function adminDashboard(){
   
   // Build recent activity feed
   const activities = [];
+  
+  // 0. Manual activity log (deletes, etc.)
+  const activityLog = getActivityLog();
+  activityLog.forEach(a => {
+    activities.push({ 
+      type: a.type || 'activity', 
+      icon: a.icon || IC.info, 
+      text: a.text, 
+      time: a.time, 
+      color: a.color || '#6b7280' 
+    });
+  });
   
   // 1. Order status changes (from statusHistory)
   orders.forEach(o => {
@@ -204,11 +260,11 @@ function adminDashboard(){
         ? '<div style="display:flex;flex-direction:column;gap:0">' +
             recentActivity.map(a => {
               const timeAgo = formatTimeAgo(a.time);
-              return '<div style="display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);transition:background .15s" onmouseover="this.style.background=\'var(--bg-soft)\'" onmouseout="this.style.background=\'transparent\'">' +
-                '<div style="width:36px;height:36px;border-radius:10px;background:' + a.color + '15;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:' + a.color + ';font-size:16px">' + a.icon + '</div>' +
-                '<div style="flex:1;min-width:0"><div style="font-size:13.5px;color:var(--ink);line-height:1.4">' + a.text + '</div>' +
-                '<div style="font-size:11.5px;color:var(--ink-soft);margin-top:2px">' + timeAgo + '</div></div>' +
-                '<span class="pill ' + a.type + '" style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;flex-shrink:0">' + a.type + '</span>' +
+              return '<div style="display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid var(--line);transition:background .15s" onmouseover="this.style.background=\'var(--bg-soft)\'" onmouseout="this.style.background=\'transparent\'">' +
+                '<div style="width:32px;height:32px;border-radius:8px;background:' + a.color + '15;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:' + a.color + ';font-size:14px">' + a.icon + '</div>' +
+                '<div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--ink);line-height:1.35">' + a.text + '</div>' +
+                '<div style="font-size:11px;color:var(--ink-soft);margin-top:1px">' + timeAgo + '</div></div>' +
+                '<span class="pill ' + a.type + '" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;flex-shrink:0;padding:3px 8px">' + a.type + '</span>' +
               '</div>';
             }).join("") +
           '</div>'
@@ -1090,6 +1146,8 @@ function deleteCustomerAccount(email){
   if(!confirm(confirmMsg)) return;
   const newAccs = accs.filter(a => a.email !== email);
   saveAccounts(newAccs);
+  // Log the activity
+  logActivity('delete', 'Customer account deleted: <strong>' + esc(acc.name || email) + '</strong> (' + esc(email) + ')', '#ef4444', IC.del);
   showToast("Customer account " + email + " deleted");
   adminCustomers();
 }
