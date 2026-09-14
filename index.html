@@ -3025,9 +3025,12 @@ function viewInfo(page){
     ];
     body = '<div style="margin-top:8px">' +
       faqs.map((f, i) =>
-        '<div class="faq-item" id="faq-' + i + '" onclick="toggleFaq(' + i + ')">' +
-          '<div class="faq-q"><span>' + f.q + '</span><svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>' +
-          '<div class="faq-a" id="faq-a-' + i + '" style="display:none"><p>' + f.a + '</p></div>' +
+        '<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden">' +
+          '<div onclick="var a=document.getElementById(\'faq-a-' + i + '\');var arr=document.getElementById(\'faq-arrow-' + i + '\');if(a.style.display===\'none\'){a.style.display=\'block\';arr.style.transform=\'rotate(180deg)\';}else{a.style.display=\'none\';arr.style.transform=\'rotate(0deg)\';}" style="padding:16px 20px;font-size:14.5px;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;user-select:none">' +
+            '<span>' + f.q + '</span>' +
+            '<svg id="faq-arrow-' + i + '" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--brand-dark);transition:transform .25s"><polyline points="6 9 12 15 18 9"/></svg>' +
+          '</div>' +
+          '<div id="faq-a-' + i + '" style="display:none;padding:0 20px 16px"><p style="font-size:13.5px;line-height:1.75;color:var(--ink-soft);margin:0">' + f.a + '</p></div>' +
         '</div>'
       ).join("") +
     '</div>';
@@ -3045,9 +3048,13 @@ function viewInfo(page){
   if(infoOv.subtitle) subtitle = infoOv.subtitle;
   if(infoOv.body) body = infoOv.body;
 
+  /* FAQ and Track pages use hardcoded interactive HTML (id/onclick/style), so skip sanitization for those */
+  const isInteractivePage = (page === "faq" || page === "track");
+  const finalBody = isInteractivePage ? body : sanitizeHTML(body);
+
   $("#app").innerHTML =
   '<section class="info-hero"><div><h1>' + esc(title) + '</h1>' + (subtitle ? '<p>' + esc(subtitle) + '</p>' : '') + '</div></section>' +
-  '<section class="info-section">' + back + sanitizeHTML(body) + '</section>';
+  '<section class="info-section">' + back + finalBody + '</section>';
 }
 
 function toggleFaq(index){
@@ -3062,6 +3069,31 @@ function toggleFaq(index){
       item.classList.remove('open');
     }
   }
+}
+
+function trackOrderLookup(){
+  const id = (document.getElementById("trOrder").value || "").trim().toUpperCase();
+  const email = (document.getElementById("trEmail").value || "").trim().toLowerCase();
+  const result = document.getElementById("trResult");
+  if(!id || !email){ result.style.display = "block"; result.innerHTML = '<div class="track-result" style="color:#c0392b;font-weight:600">Please enter both your order number and email address.</div>'; return; }
+  const orders = getOrders();
+  const o = orders.find(x => x.id.toUpperCase() === id && x.customer.email.toLowerCase() === email);
+  if(!o){ result.style.display = "block"; result.innerHTML = '<div class="track-result" style="color:#c0392b;font-weight:600">No order found with these details. Please check your order number and email, or contact us at sales@nebulasecret.com.</div>'; return; }
+  const cur = o.cur || "EUR"; const r = o.rate ?? rateOf(cur);
+  result.style.display = "block";
+  result.innerHTML =
+  '<div class="track-result">' +
+    '<div class="tr-row"><span class="tr-label">Order Number</span><span class="tr-val">' + esc(o.id) + '</span></div>' +
+    '<div class="tr-row"><span class="tr-label">Date</span><span class="tr-val">' + fmtDT(o.date) + '</span></div>' +
+    '<div class="tr-row"><span class="tr-label">Customer</span><span class="tr-val">' + esc(o.customer.first + " " + o.customer.last) + '</span></div>' +
+    '<div class="tr-row"><span class="tr-label">Email</span><span class="tr-val">' + esc(o.customer.email) + '</span></div>' +
+    '<div class="tr-row"><span class="tr-label">Status</span><span class="tr-val" style="color:var(--brand)">' + esc(o.status || "New") + '</span></div>' +
+    '<div class="tr-row"><span class="tr-label">Items</span><span class="tr-val">' + o.items.reduce((s,i) => s + i.qty, 0) + '</span></div>' +
+    '<div class="tr-row"><span class="tr-label">Total</span><span class="tr-val">' + fmtIn(o.total, cur, r) + ' (' + cur + ')</span></div>' +
+    '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)"><strong style="font-size:13px">Items:</strong>' +
+      o.items.map(it => '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px"><span>' + esc(it.name) + ' × ' + it.qty + '</span><span style="font-weight:600">' + fmtIn(it.price * it.qty, cur, r) + '</span></div>').join("") +
+    '</div>' +
+  '</div>';
 }
 
 function viewHome(){
