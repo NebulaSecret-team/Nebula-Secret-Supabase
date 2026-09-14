@@ -98,7 +98,7 @@ function adminDashboard(){
   const recentOrders = orders.slice(0, 6);
   const content =
     '<div class="stat-grid">' +
-      '<div class="stat-card"><span class="s-icon">' + IC.box + '</span><div class="s-label">Total Products</div><div class="s-value">' + products.length + '</div><div class="s-sub">' + (products.length - DEFAULT_PRODUCTS.length >= 0 ? "Including " + (products.length - DEFAULT_PRODUCTS.length) + " custom" : "Original catalog") + '</div></div>' +
+      '<div class="stat-card"><span class="s-icon">' + IC.box + '</span><div class="s-label">Total Products</div><div class="s-value">' + products.length + '</div><div class="s-sub">All products from catalog</div></div>' +
       '<div class="stat-card"><span class="s-icon">' + IC.tag + '</span><div class="s-label">Categories</div><div class="s-value">' + cats.length + '</div><div class="s-sub">Manageable in Categories</div></div>' +
       '<div class="stat-card"><span class="s-icon">' + IC.orders + '</span><div class="s-label">Orders</div><div class="s-value">' + orders.length + '</div><div class="s-sub"><a href="#/admin/orders" style="color:var(--accent)">View orders &amp; export Excel</a></div></div>' +
       '<div class="stat-card"><span class="s-icon">' + IC.chart + '</span><div class="s-label">Revenue</div><div class="s-value">' + fmt(revenue) + '</div><div class="s-sub">From ' + orders.filter(o => o.status !== "Cancelled").length + ' active orders</div></div>' +
