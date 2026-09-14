@@ -1047,7 +1047,10 @@ async function adminCustomers(){
       '<td>' + fmtD(a.created) + '</td>' +
       '<td>' + myOrders(a.email).length + '</td>' +
       '<td><select onchange="setCustomerTier(\'' + escJs(a.email) + '\', this.value)" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--card);color:var(--ink);cursor:pointer">' + tierOptions + '</select></td>' +
-      '<td style="text-align:right"><button class="btn sm ghost" onclick="adminResetCustomerPass(\'' + escJs(a.email) + '\')">Reset password</button></td>' +
+      '<td style="text-align:right;white-space:nowrap">' +
+        '<button class="btn sm ghost" onclick="adminResetCustomerPass(\'' + escJs(a.email) + '\')">Reset password</button> ' +
+        '<button class="btn sm ghost" style="color:#c0392b;border-color:#e0b4b0" onclick="deleteCustomerAccount(\'' + escJs(a.email) + '\')">Delete</button>' +
+      '</td>' +
     '</tr>';
   }).join("") : '<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:24px">No customer accounts yet — accounts appear here when customers create one on the Account page.</td></tr>';
   const content =
