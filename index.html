@@ -969,17 +969,38 @@ details.ct-block > .form-grid{padding:14px 16px}
 const SB_URL = "https://xwhhsoppcpkijxxychjm.supabase.co";
 const SB_KEY = "sb_publishable_2GnjItYkv_TRex8Z9YKTag_oUdiyHEk";
 let supabase = null;
+let supabaseAvailable = false;
 /* Debug logging disabled in production for security */
 const DEBUG = false;
 function dbg(...args){ if(DEBUG) console.log("[Supabase]", ...args); }
 try {
   if (window.supabase && window.supabase.createClient) {
-    supabase = window.supabase.createClient(SB_URL, SB_KEY);
+    supabase = window.supabase.createClient(SB_URL, SB_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    });
+    supabaseAvailable = true;
     dbg("Client created successfully");
+    /* Test connection with a simple query */
+    supabase.from('profiles').select('id').limit(1).then(({error}) => {
+      if(error) {
+        console.warn("[Supabase] Connection test failed (may be RLS or network):", error.message);
+      } else {
+        dbg("Connection test passed");
+      }
+    }).catch(e => {
+      console.warn("[Supabase] Connection test error:", e.message);
+    });
   } else {
     console.error("[Supabase] Library not loaded");
   }
-} catch(e) { console.error("[Supabase] Init failed"); }
+} catch(e) { 
+  console.error("[Supabase] Init failed:", e.message); 
+  supabaseAvailable = false;
+}
 
 /* HTML sanitizer - prevents XSS by only allowing safe tags and attributes */
 function sanitizeHTML(html) {

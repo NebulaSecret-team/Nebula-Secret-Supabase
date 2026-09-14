@@ -20,20 +20,26 @@
 let _currentAdminUser = null;
 
 /* Listen for auth state changes */
-if(typeof supabase !== 'undefined' && supabase.auth) {
-  supabase.auth.onAuthStateChange((event, session) => {
-    if(session && session.user) {
-      _currentAdminUser = session.user;
-    } else {
-      _currentAdminUser = null;
-    }
-  });
-  /* Get initial session */
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if(session && session.user) {
-      _currentAdminUser = session.user;
-    }
-  });
+if(typeof supabase !== 'undefined' && supabaseAvailable && supabase.auth) {
+  try {
+    supabase.auth.onAuthStateChange((event, session) => {
+      if(session && session.user) {
+        _currentAdminUser = session.user;
+      } else {
+        _currentAdminUser = null;
+      }
+    });
+    /* Get initial session - with error handling for CORS/domain issues */
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if(session && session.user) {
+        _currentAdminUser = session.user;
+      }
+    }).catch(e => {
+      console.warn("Failed to get initial Supabase Auth session (may be CORS or domain config):", e.message);
+    });
+  } catch(e) {
+    console.warn("Supabase Auth initialization failed:", e.message);
+  }
 }
 
 /* Get current admin display name */
@@ -1234,39 +1240,59 @@ async function doLogin(){
   }
   if(btn){ btn.disabled = true; btn.textContent = "Signing in..."; }
 
-  /* Method 1: Try Supabase Auth first */
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: p
-    });
-    if(!error && data && data.user){
-      /* Check if user has admin role in profiles table */
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('role, name, email')
-        .eq('email', data.user.email)
-        .single();
-      
-      if(!profileError && profileData && (profileData.role === 'admin' || profileData.role === 'superadmin')){
-        /* User is an admin, keep Supabase Auth session active */
-        showToast("Welcome, " + (profileData.name || data.user.email) + " — loading admin data...");
-        /* Reload all data with admin permissions (orders, accounts, quotes, etc.) */
+  let supabaseLoginFailed = false;
+  let supabaseErrorMsg = "";
+
+  /* Method 1: Try Supabase Auth first (only if Supabase is available) */
+  if(supabase && supabaseAvailable){
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: p
+      });
+      if(error){
+        supabaseLoginFailed = true;
+        supabaseErrorMsg = error.message || "Unknown error";
+        console.warn("Supabase Auth login failed:", supabaseErrorMsg);
+      } else if(!error && data && data.user){
+        /* Check if user has admin role in profiles table */
         try {
-          _cache.loaded = false;
-          await sbLoadAll();
-        } catch(e) {
-          console.warn("Failed to reload admin data:", e);
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('role, name, email')
+            .eq('email', data.user.email)
+            .single();
+          
+          if(!profileError && profileData && (profileData.role === 'admin' || profileData.role === 'superadmin')){
+            /* User is an admin, keep Supabase Auth session active */
+            showToast("Welcome, " + (profileData.name || data.user.email) + " — loading admin data...");
+            /* Reload all data with admin permissions (orders, accounts, quotes, etc.) */
+            try {
+              _cache.loaded = false;
+              await sbLoadAll();
+            } catch(e) {
+              console.warn("Failed to reload admin data:", e);
+            }
+            location.hash = "#/admin/dashboard";
+            return;
+          }else{
+            /* Not an admin, sign out and try legacy method */
+            await supabase.auth.signOut();
+            supabaseLoginFailed = true;
+            supabaseErrorMsg = "User does not have admin role";
+          }
+        } catch(profileErr) {
+          console.warn("Failed to check admin role:", profileErr.message);
+          /* Continue to legacy method */
         }
-        location.hash = "#/admin/dashboard";
-        return;
-      }else{
-        /* Not an admin, sign out and try legacy method */
-        await supabase.auth.signOut();
       }
+    } catch(e) {
+      supabaseLoginFailed = true;
+      supabaseErrorMsg = e.message || "Network or CORS error";
+      console.warn("Supabase Auth login exception, trying legacy method:", supabaseErrorMsg);
     }
-  } catch(e) {
-    console.warn("Admin login failed, trying legacy method");
+  } else {
+    console.warn("Supabase not available, skipping Supabase Auth login");
   }
 
   /* Method 2: Try legacy admin system (stored in site_settings) */
@@ -1300,9 +1326,32 @@ async function doLogin(){
     console.error("Legacy login error:", e);
   }
 
-  /* Both methods failed */
+  /* Both methods failed - provide detailed error message */
   const err = $("#loginErr");
-  err.textContent = "Invalid email or password.";
+  let errorMsg = "Invalid email or password.";
+  
+  /* If Supabase login failed, provide more helpful error message */
+  if(supabaseLoginFailed && supabaseErrorMsg){
+    if(supabaseErrorMsg.includes("Invalid login credentials") || 
+       supabaseErrorMsg.includes("Invalid password") ||
+       supabaseErrorMsg.includes("Email not confirmed")){
+      errorMsg = "Invalid email or password. Please check your credentials.";
+    } else if(supabaseErrorMsg.includes("CORS") || 
+              supabaseErrorMsg.includes("Network") ||
+              supabaseErrorMsg.includes("Failed to fetch")){
+      errorMsg = "Connection error. Please check your internet connection or try again later.";
+    } else {
+      errorMsg = "Login failed: " + supabaseErrorMsg;
+    }
+  }
+  
+  /* Add hint about custom domain configuration */
+  const currentDomain = window.location.hostname;
+  if(currentDomain !== 'localhost' && !currentDomain.includes('vercel.app')){
+    errorMsg += " If you are using a custom domain, please ensure it is configured in Supabase Auth settings (Redirect URLs and CORS Origins).";
+  }
+  
+  err.textContent = errorMsg;
   err.classList.add("show");
   if(btn){ btn.disabled = false; btn.textContent = "Sign in"; }
 }
@@ -1352,7 +1401,18 @@ function adminRoute(){
   };
 
   /* Method 1: Check Supabase Auth session */
-  supabase.auth.getSession().then(({ data: { session } }) => {
+  const checkSupabaseSession = () => {
+    if(!supabase || !supabaseAvailable){
+      console.warn("Supabase not available, skipping auth session check");
+      return Promise.resolve({ data: { session: null } });
+    }
+    return supabase.auth.getSession().catch(e => {
+      console.warn("Auth session check failed (may be CORS or domain config):", e.message);
+      return { data: { session: null } };
+    });
+  };
+
+  checkSupabaseSession().then(({ data: { session } }) => {
     if(session){
       /* Check if user has admin role */
       const role = session.user.app_metadata?.role || session.user.user_metadata?.role;
@@ -1372,18 +1432,8 @@ function adminRoute(){
       console.error("Legacy session check error:", e);
     }
 
-    /* No valid session */
+    /* No valid session - show login page without error */
     if(h === "#/admin"){ viewAdminLogin(); return; }
     viewAdminLogin("Please sign in to access the admin panel.");
-  }).catch(e => {
-    console.error("Auth session error:", e);
-    /* Fallback to legacy session check */
-    try{
-      if(typeof validateAdminSession === 'function' && validateAdminSession()){
-        renderAdminPage();
-        return;
-      }
-    }catch(e2){}
-    viewAdminLogin("Authentication error. Please try again.");
   });
 }
