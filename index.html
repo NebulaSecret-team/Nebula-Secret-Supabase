@@ -860,7 +860,7 @@ details.ct-block > .form-grid{padding:14px 16px}
       <a href="#/about?scroll=story">Our Story</a>
       <a href="#/about?scroll=mission">Our Mission</a>
       <a href="#/about?scroll=promise">Our Promise</a>
-      <a href="#/about?scroll=contact">Contact Us</a>
+      <a href="#/" onclick="setTimeout(function(){var el=document.getElementById('contact-section');if(el)el.scrollIntoView({behavior:'smooth'});},200);">Contact Us</a>
     </div>
     <div class="footer-col">
       <h4>Contact</h4>
@@ -2676,7 +2676,7 @@ function viewWhyUs(){
     '<div style="background:linear-gradient(135deg,var(--brand-light),var(--card));border:1px solid var(--line);border-radius:16px;padding:40px;text-align:center">' +
       '<h2 style="font-size:24px;margin:0 0 12px 0">Ready to Start Your Project?</h2>' +
       '<p style="color:var(--ink-soft);font-size:15px;margin:0 0 24px 0;max-width:600px;margin-left:auto;margin-right:auto">Contact us today for a free consultation and custom quote. Our team will help you find the perfect solution for your brand.</p>' +
-      '<a href="#/about?scroll=contact" style="display:inline-block;background:var(--brand);color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;transition:background .2s" onmouseover="this.style.background=\'var(--brand-dark)\'" onmouseout="this.style.background=\'var(--brand)\'">Get a Free Quote</a>' +
+      '<a href="#/" onclick="setTimeout(function(){var el=document.getElementById(\'contact-section\');if(el)el.scrollIntoView({behavior:\'smooth\'});},200);" style="display:inline-block;background:var(--brand);color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;transition:background .2s" onmouseover="this.style.background=\'var(--brand-dark)\'" onmouseout="this.style.background=\'var(--brand)\'">Get a Free Quote</a>' +
     '</div>' +
   '</div>';
   $("#app").innerHTML = html;
@@ -2690,7 +2690,6 @@ const BLOG_POSTS = [
     category: "OEM/ODM",
     date: "2024-01-15",
     readTime: "8 min",
-    image: "https://picsum.photos/seed/oem-skincare/600/400",
     excerpt: "Finding the right OEM skincare manufacturer is crucial for your brand's success. Learn what to look for, questions to ask, and red flags to avoid.",
     content: [
       "Choosing the right OEM skincare manufacturer is one of the most important decisions you'll make for your beauty brand. The manufacturer you partner with will directly impact product quality, cost, timeline, and ultimately your brand reputation.",
@@ -2706,7 +2705,6 @@ const BLOG_POSTS = [
     category: "OEM/ODM",
     date: "2024-01-22",
     readTime: "6 min",
-    image: "https://picsum.photos/seed/oem-vs-odm/600/400",
     excerpt: "Understanding the difference between OEM and ODM is essential when launching a private label beauty brand. Here's what you need to know.",
     content: [
       "If you're new to the beauty industry, the terms OEM and ODM can be confusing. Both refer to manufacturing partnerships, but they represent very different approaches to product development.",
@@ -2722,7 +2720,6 @@ const BLOG_POSTS = [
     category: "Business",
     date: "2024-02-05",
     readTime: "7 min",
-    image: "https://picsum.photos/seed/private-label/600/400",
     excerpt: "Thinking about launching your own skincare brand? These 10 essential tips will help you avoid common mistakes and set your brand up for success.",
     content: [
       "Launching a private label skincare brand is an exciting venture, but it requires careful planning and execution. The beauty industry is competitive, but with the right strategy, there's plenty of room for new brands to succeed.",
@@ -2738,7 +2735,6 @@ const BLOG_POSTS = [
     category: "OEM/ODM",
     date: "2024-02-19",
     readTime: "5 min",
-    image: "https://picsum.photos/seed/moq-cosmetic/600/400",
     excerpt: "Minimum Order Quantity (MOQ) is a critical factor when choosing a manufacturer. Learn how MOQs work and how to negotiate the best terms for your brand.",
     content: [
       "MOQ (Minimum Order Quantity) is one of the most important terms to understand when working with cosmetic manufacturers. It refers to the minimum number of units you must order for a particular product.",
@@ -2754,7 +2750,6 @@ const BLOG_POSTS = [
     category: "Product Development",
     date: "2024-03-04",
     readTime: "8 min",
-    image: "https://picsum.photos/seed/perfume-scent/600/400",
     excerpt: "A signature scent can set your brand apart. Learn the process of creating a custom perfume fragrance, from concept to finished product.",
     content: [
       "A signature perfume can be one of the most powerful brand differentiators in the beauty industry. Think of the most iconic luxury brands — many are instantly recognizable by their signature scents alone.",
@@ -2770,7 +2765,6 @@ const BLOG_POSTS = [
     category: "Wholesale",
     date: "2024-03-18",
     readTime: "6 min",
-    image: "https://picsum.photos/seed/body-care/600/400",
     excerpt: "Body care products are a staple in the beauty industry. This guide covers the most popular categories, trends, and tips for selecting the right products for your business.",
     content: [
       "Body care is one of the largest and fastest-growing segments in the beauty industry. From body washes and lotions to scrubs and serums, consumers are increasingly investing in comprehensive body care routines.",
@@ -2786,7 +2780,6 @@ const BLOG_POSTS = [
     category: "Packaging",
     date: "2024-04-01",
     readTime: "7 min",
-    image: "https://picsum.photos/seed/packaging-cosmetics/600/400",
     excerpt: "Packaging is often the first thing customers notice about your product. Explore the different packaging options available for private label cosmetics.",
     content: [
       "They say you shouldn't judge a book by its cover, but in the cosmetics industry, packaging can make or break a product. Your packaging is the customer's first physical interaction with your brand, and it plays a crucial role in purchasing decisions.",
@@ -2802,7 +2795,6 @@ const BLOG_POSTS = [
     category: "Quality",
     date: "2024-04-15",
     readTime: "6 min",
-    image: "https://picsum.photos/seed/quality-control/600/400",
     excerpt: "Quality control is non-negotiable in skincare manufacturing. Learn what quality measures to look for in a manufacturer and how to ensure your products meet the highest standards.",
     content: [
       "In the skincare industry, quality control is not just a nice-to-have — it's essential for protecting your customers and your brand reputation. A single quality issue can lead to product recalls, negative reviews, and lasting damage to your brand.",
@@ -2828,12 +2820,9 @@ function viewBlog(){
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:28px">' +
       BLOG_POSTS.map(post =>
         '<a href="#/blog/' + post.slug + '" style="background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:block;transition:transform .2s,box-shadow .2s;text-decoration:none;color:inherit" onmouseover="this.style.transform=\'translateY(-4px)\';this.style.boxShadow=\'0 8px 24px rgba(0,0,0,.1)\'" onmouseout="this.style.transform=\'\';this.style.box-shadow=\'\'">' +
-          (post.image
-            ? '<div style="height:180px;background-image:url(\'' + post.image + '\');background-size:cover;background-position:center;position:relative"><div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,rgba(0,0,0,0.1),rgba(0,0,0,0.3))"></div></div>'
-            : '<div style="height:180px;background:linear-gradient(135deg,var(--brand-light),var(--card));display:flex;align-items:center;justify-content:center;color:var(--brand)">' +
-                ic('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>') +
-              '</div>'
-          ) +
+          '<div style="height:180px;background:linear-gradient(135deg,var(--brand-light),var(--card));display:flex;align-items:center;justify-content:center;color:var(--brand)">' +
+            ic('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>') +
+          '</div>' +
           '<div style="padding:24px">' +
             '<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">' +
               '<span style="background:var(--brand-light);color:var(--brand);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600">' + post.category + '</span>' +
@@ -2874,7 +2863,7 @@ function viewBlogPost(slug){
     '</div>' +
     '<div style="margin-top:48px;padding-top:32px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">' +
       '<a href="#/blog" style="display:inline-flex;align-items:center;gap:8px;color:var(--brand);text-decoration:none;font-weight:600;font-size:15px">' + ic('<path d="m15 18-6-6 6-6"/>') + ' Back to All Articles</a>' +
-      '<a href="#/about?scroll=contact" style="display:inline-block;background:var(--brand);color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Contact Us</a>' +
+      '<a href="#/" onclick="setTimeout(function(){var el=document.getElementById(\'contact-section\');if(el)el.scrollIntoView({behavior:\'smooth\'});},200);" style="display:inline-block;background:var(--brand);color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Contact Us</a>' +
     '</div>' +
   '</div>';
   $("#app").innerHTML = html;
@@ -3042,57 +3031,6 @@ function viewInfo(page){
   $("#app").innerHTML =
   '<section class="info-hero"><div><h1>' + esc(title) + '</h1>' + (subtitle ? '<p>' + esc(subtitle) + '</p>' : '') + '</div></section>' +
   '<section class="info-section">' + back + sanitizeHTML(body) + '</section>';
-}
-
-function viewTrackOrder(){
-  const ic = (p) => '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
-  const html =
-  '<section class="info-hero"><div><h1>Track Your Order</h1><p>Enter your order number and email to check your order status</p></div></section>' +
-  '<section class="info-section">' +
-    '<div class="container" style="max-width:600px;margin:0 auto;padding:48px 24px">' +
-      '<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:32px">' +
-        '<div style="margin-bottom:20px">' +
-          '<label style="display:block;font-weight:600;margin-bottom:8px;font-size:14px">Order Number</label>' +
-          '<input type="text" id="trOrder" placeholder="e.g. NS-1234567" style="width:100%;padding:12px 16px;border:1px solid var(--line);border-radius:8px;font-size:15px;box-sizing:border-box">' +
-        '</div>' +
-        '<div style="margin-bottom:20px">' +
-          '<label style="display:block;font-weight:600;margin-bottom:8px;font-size:14px">Email Address</label>' +
-          '<input type="email" id="trEmail" placeholder="you@company.com" style="width:100%;padding:12px 16px;border:1px solid var(--line);border-radius:8px;font-size:15px;box-sizing:border-box">' +
-        '</div>' +
-        '<button onclick="trackOrderLookup()" style="width:100%;background:var(--brand);color:#fff;padding:14px;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer">' + ic('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>') + ' Track Order</button>' +
-        '<div id="trResult" style="margin-top:24px;display:none"></div>' +
-      '</div>' +
-      '<div style="margin-top:24px;padding:16px;background:var(--brand-light);border-radius:8px;font-size:13px;color:var(--ink-soft)">' +
-        '<strong>Need help?</strong> If you cannot find your order, contact us at <a href="mailto:sales@nebulasecret.com" style="color:var(--brand)">sales@nebulasecret.com</a> with your order number and we will be happy to help.' +
-      '</div>' +
-    '</div>' +
-  '</section>';
-  $("#app").innerHTML = html;
-}
-
-function trackOrderLookup(){
-  const id = (document.getElementById("trOrder").value || "").trim().toUpperCase();
-  const email = (document.getElementById("trEmail").value || "").trim().toLowerCase();
-  const result = document.getElementById("trResult");
-  if(!id || !email){ result.style.display = "block"; result.innerHTML = '<div class="track-result" style="color:#c0392b;font-weight:600">Please enter both your order number and email address.</div>'; return; }
-  const orders = getOrders();
-  const o = orders.find(x => x.id.toUpperCase() === id && x.customer.email.toLowerCase() === email);
-  if(!o){ result.style.display = "block"; result.innerHTML = '<div class="track-result" style="color:#c0392b;font-weight:600">No order found with these details. Please check your order number and email, or contact us at sales@nebulasecret.com.</div>'; return; }
-  const cur = o.cur || "EUR"; const r = o.rate ?? rateOf(cur);
-  result.style.display = "block";
-  result.innerHTML =
-  '<div class="track-result">' +
-    '<div class="tr-row"><span class="tr-label">Order Number</span><span class="tr-val">' + esc(o.id) + '</span></div>' +
-    '<div class="tr-row"><span class="tr-label">Date</span><span class="tr-val">' + fmtDT(o.date) + '</span></div>' +
-    '<div class="tr-row"><span class="tr-label">Customer</span><span class="tr-val">' + esc(o.customer.first + " " + o.customer.last) + '</span></div>' +
-    '<div class="tr-row"><span class="tr-label">Email</span><span class="tr-val">' + esc(o.customer.email) + '</span></div>' +
-    '<div class="tr-row"><span class="tr-label">Status</span><span class="tr-val" style="color:var(--brand)">' + esc(o.status || "New") + '</span></div>' +
-    '<div class="tr-row"><span class="tr-label">Items</span><span class="tr-val">' + o.items.reduce((s,i) => s + i.qty, 0) + '</span></div>' +
-    '<div class="tr-row"><span class="tr-label">Total</span><span class="tr-val">' + fmtIn(o.total, cur, r) + ' (' + cur + ')</span></div>' +
-    '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)"><strong style="font-size:13px">Items:</strong>' +
-      o.items.map(it => '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px"><span>' + esc(it.name) + ' × ' + it.qty + '</span><span style="font-weight:600">' + fmtIn(it.price * it.qty, cur, r) + '</span></div>').join("") +
-    '</div>' +
-  '</div>';
 }
 
 function viewHome(){
@@ -4149,10 +4087,6 @@ function storeRoute(){
     viewBlogPost(h.split("/")[2] || "");
   } else if(h.startsWith("#/blog")){
     viewBlog();
-  } else if(h.startsWith("#/track")){
-    viewTrackOrder();
-  } else if(h.startsWith("#/faq")){
-    viewInfo("faq");
   } else if(h.startsWith("#/info/")){
     viewInfo(h.split("/")[2] || "");
   } else {
