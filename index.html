@@ -2444,6 +2444,9 @@ async function placeOrder(){
   if(!first || !last){ showToast("Please enter your first and last name"); return; }
   if(!email || !/.+@.+\..+/.test(email)){ showToast("Please enter a valid email address"); return; }
   if(!cart.length){ showToast("Your cart is empty"); return; }
+  
+  console.log("placeOrder: starting order placement for", email, "items:", cart.length);
+  
   const th = getTheme();
   const o = {
     id: genOrderId(),
@@ -2461,11 +2464,28 @@ async function placeOrder(){
     notes: [],
     statusHistory: [{ status: "New", date: new Date().toISOString(), note: "Order placed" }]
   };
+  
+  console.log("placeOrder: order object created, id:", o.id, "total:", o.total);
+  
   const orders = getOrders();
+  console.log("placeOrder: current orders count:", orders.length);
   orders.unshift(o);
+  console.log("placeOrder: new orders count:", orders.length);
+  
   const saved = await saveOrders(orders);
-  console.log("Order saved to Supabase:", saved, "order id:", o.id);
+  console.log("placeOrder: saveOrders result:", saved, "order id:", o.id);
+  
+  if(!saved){
+    console.error("placeOrder: Failed to save order to Supabase!");
+    showToast("Failed to save order. Please try again.");
+    // Revert the order from local cache
+    const idx = orders.findIndex(x => x.id === o.id);
+    if(idx >= 0) orders.splice(idx, 1);
+    return;
+  }
+  
   lastOrder = o;
+  console.log("placeOrder: order placement complete, id:", o.id);
   // clear cart
   cart = []; saveCart(); updateCartUI();
   // show confirmation
@@ -3619,9 +3639,14 @@ async function acctRegister(){
   if(!email || !/.+@.+\..+/.test(email)){ err.textContent = "Please enter a valid email"; return; }
   if(pass.length < 6){ err.textContent = "Password must be at least 6 characters"; return; }
   
+  console.log("acctRegister: starting registration for", email);
+  
   /* Method 1: Try Supabase Auth first */
+  let supabaseAuthSuccess = false;
+  let supabaseUserId = null;
   try {
     if(supabase){
+      console.log("acctRegister: trying Supabase Auth signup");
       const { data, error } = await supabase.auth.signUp({
         email,
         password: pass,
@@ -3630,44 +3655,56 @@ async function acctRegister(){
         }
       });
       if(!error && data && data.user){
-        /* Also save to legacy accounts for backward compatibility */
-        const accs = getAccounts();
-        if(!accs.some(a => a.email === email)){
-          const hash = await hashPass(pass);
-          accs.push({ name, email, pass: hash, created: new Date().toISOString() });
-          const saved = await saveAccounts(accs);
-          console.log("Account saved to Supabase:", saved, "email:", email);
-          setSession({ name, email, supabaseAuth: true, userId: data.user.id });
-          updateAcctLabel();
-          showToast("Welcome, " + name.split(" ")[0] + "!");
-          route();
-          return;
+        console.log("acctRegister: Supabase Auth signup success, user id:", data.user.id);
+        supabaseAuthSuccess = true;
+        supabaseUserId = data.user.id;
+      } else if(error) {
+        console.log("acctRegister: Supabase Auth signup error:", error.message, error.code);
+        if(error.message === "User already registered"){
+          console.log("acctRegister: User already registered, will try to sign in");
+          // Try to sign in instead
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password: pass });
+          if(!signInError && signInData && signInData.user){
+            console.log("acctRegister: Sign in success for existing user");
+            supabaseAuthSuccess = true;
+            supabaseUserId = signInData.user.id;
+          } else {
+            console.log("acctRegister: Sign in failed for existing user:", signInError?.message);
+          }
         }
-        setSession({ name, email, supabaseAuth: true, userId: data.user.id });
-        updateAcctLabel();
-        showToast("Welcome, " + name.split(" ")[0] + "!");
-        route();
-        return;
-      }
-      if(error && error.message !== "User already registered"){
-        console.log("Supabase Auth signup failed, trying legacy method:", error.message);
       }
     }
   } catch(e) {
-    console.log("Supabase Auth signup exception, trying legacy method:", e.message);
+    console.log("acctRegister: Supabase Auth signup exception:", e.message);
   }
   
-  /* Method 2: Try legacy account system */
+  /* Always save to legacy accounts for backward compatibility */
+  console.log("acctRegister: saving to legacy accounts");
   const accs = getAccounts();
-  if(accs.some(a => a.email === email)){ err.textContent = "An account with this email already exists — sign in instead"; return; }
-  const hash = await hashPass(pass);
-  accs.push({ name, email, pass: hash, created: new Date().toISOString() });
-  const saved = await saveAccounts(accs);
-  console.log("Legacy account saved to Supabase:", saved, "email:", email);
-  setSession({ name, email });
+  if(!accs.some(a => a.email === email)){
+    const hash = await hashPass(pass);
+    accs.push({ name, email, pass: hash, created: new Date().toISOString() });
+    const saved = await saveAccounts(accs);
+    console.log("acctRegister: legacy account saved to Supabase:", saved, "email:", email, "count:", accs.length);
+    if(!saved){
+      console.error("acctRegister: Failed to save account to Supabase!");
+      err.textContent = "Failed to save account. Please try again.";
+      return;
+    }
+  } else {
+    console.log("acctRegister: account already exists in legacy accounts");
+  }
+  
+  /* Set session and redirect */
+  if(supabaseAuthSuccess){
+    setSession({ name, email, supabaseAuth: true, userId: supabaseUserId });
+  } else {
+    setSession({ name, email });
+  }
   updateAcctLabel();
   showToast("Welcome, " + name.split(" ")[0] + "!");
   route();
+  console.log("acctRegister: registration complete for", email);
 }
 async function acctLogin(){
   const email = $("#acEmail").value.trim().toLowerCase();
