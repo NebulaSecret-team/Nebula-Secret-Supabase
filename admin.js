@@ -100,29 +100,91 @@ function adminDashboard(){
   
   // Build recent activity feed
   const activities = [];
-  // Recent products
-  products.slice(-5).reverse().forEach(p => {
-    activities.push({ type: 'product', icon: IC.box, text: 'Product added: <strong>' + esc(p.n) + '</strong>', time: p.createdAt || p.updatedAt || Date.now(), color: 'var(--accent)' });
+  
+  // 1. Order status changes (from statusHistory)
+  orders.forEach(o => {
+    if (o.statusHistory && o.statusHistory.length) {
+      o.statusHistory.forEach(h => {
+        const statusColor = orderStatusColor(h.status) || 'gray';
+        activities.push({ 
+          type: 'status', 
+          icon: IC.sync, 
+          text: 'Order <strong>' + esc(o.id) + '</strong> → <span class="pill ' + statusColor + '" style="font-size:10px;padding:2px 8px">' + esc(h.status) + '</span>', 
+          time: h.date || o.date, 
+          color: '#8b5cf6' 
+        });
+      });
+    } else {
+      // No status history - show order placed as initial status
+      activities.push({ 
+        type: 'order', 
+        icon: IC.orders, 
+        text: 'Order <strong>' + esc(o.id) + '</strong> placed by ' + esc(custName(o)), 
+        time: o.date, 
+        color: '#3b82f6' 
+      });
+    }
   });
-  // Recent orders
-  orders.slice(0, 5).forEach(o => {
-    activities.push({ type: 'order', icon: IC.orders, text: 'Order <strong>' + esc(o.id) + '</strong> from ' + esc(custName(o)), time: o.date, color: '#3b82f6' });
-  });
-  // Recent accounts
-  if (accounts && accounts.length) {
-    accounts.slice(-5).reverse().forEach(a => {
-      activities.push({ type: 'account', icon: IC.user, text: 'Customer registered: <strong>' + esc(a.name || a.email || a.u) + '</strong>', time: a.createdAt || a.ts || Date.now(), color: '#10b981' });
-    });
-  }
-  // Recent quotes
+  
+  // 2. Quote status changes
   if (quotes && quotes.length) {
-    quotes.slice(-5).reverse().forEach(q => {
-      activities.push({ type: 'quote', icon: IC.doc, text: 'Quote request: <strong>' + esc(q.id || 'New') + '</strong> (' + esc(q.status || 'Pending') + ')', time: q.date || q.createdAt || Date.now(), color: '#f59e0b' });
+    quotes.forEach(q => {
+      const qStatus = q.status || 'Pending';
+      const qColor = qStatus === 'Accepted' ? '#10b981' : (qStatus === 'Rejected' ? '#ef4444' : '#f59e0b');
+      activities.push({ 
+        type: 'quote', 
+        icon: IC.doc, 
+        text: 'Quote <strong>' + esc(q.id || 'New') + '</strong> → <span style="color:' + qColor + ';font-weight:600">' + esc(qStatus) + '</span>' + (q.customerEmail ? ' by ' + esc(q.customerEmail) : ''), 
+        time: q.updatedAt || q.date || q.createdAt || Date.now(), 
+        color: qColor 
+      });
     });
   }
-  // Sort by time (newest first) and take top 8
+  
+  // 3. Customer logins (from lastLogin)
+  if (accounts && accounts.length) {
+    accounts.forEach(a => {
+      if (a.lastLogin) {
+        activities.push({ 
+          type: 'login', 
+          icon: IC.user, 
+          text: 'Customer <strong>' + esc(a.name || a.email || a.u) + '</strong> signed in', 
+          time: a.lastLogin, 
+          color: '#06b6d4' 
+        });
+      }
+    });
+  }
+  
+  // 4. Customer registrations
+  if (accounts && accounts.length) {
+    accounts.forEach(a => {
+      if (a.createdAt || a.ts) {
+        activities.push({ 
+          type: 'account', 
+          icon: IC.user, 
+          text: 'New customer registered: <strong>' + esc(a.name || a.email || a.u) + '</strong>', 
+          time: a.createdAt || a.ts, 
+          color: '#10b981' 
+        });
+      }
+    });
+  }
+  
+  // 5. Product additions
+  products.forEach(p => {
+    activities.push({ 
+      type: 'product', 
+      icon: IC.box, 
+      text: 'Product added: <strong>' + esc(p.n) + '</strong>', 
+      time: p.createdAt || p.updatedAt || Date.now(), 
+      color: 'var(--accent)' 
+    });
+  });
+  
+  // Sort by time (newest first) and take top 12
   activities.sort((a, b) => new Date(b.time) - new Date(a.time));
-  const recentActivity = activities.slice(0, 8);
+  const recentActivity = activities.slice(0, 12);
   
   const content =
     '<div class="stat-grid">' +

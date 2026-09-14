@@ -3853,6 +3853,12 @@ async function acctLogin(){
         if(i >= 0){ all[i].pass = await hashPass(pass); saveAccounts(all); }
       }
     }catch(e){ /* Ignore upgrade errors */ }
+    /* Record last login time */
+    try{
+      const all = getAccounts();
+      const i = all.findIndex(a => a.email === email);
+      if(i >= 0){ all[i].lastLogin = new Date().toISOString(); saveAccounts(all); }
+    }catch(e){ /* Ignore login time recording errors */ }
     setSession({ name: acc.name, email: acc.email, ts: Date.now() });
     updateAcctLabel();
     showToast("Signed in as " + acc.name.split(" ")[0]);
