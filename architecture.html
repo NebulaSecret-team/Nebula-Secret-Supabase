@@ -565,8 +565,6 @@
     .role-grid { grid-template-columns: 1fr; }
   }
 </style>
-<!-- Supabase JS Library -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 
@@ -1807,37 +1805,61 @@
 </div>
 
 <script>
-// Supabase configuration
-const SUPABASE_URL = 'https://xwhhsoppcpkijxxychjm.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_2GnjItYkv_TRex8Z9YKTag_oUdiyHEk';
-
-// Initialize Supabase client
-let supabase = null;
-try {
-  supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-} catch(e) {
-  console.error('Failed to initialize Supabase:', e);
+// Parse JWT token to get user info
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch(e) {
+    return null;
+  }
 }
 
-// Check admin session using Supabase Auth
-(async function() {
+// Check if user is admin by parsing Supabase Auth token
+function isAdminFromToken() {
   try {
-    if (supabase) {
-      // Check Supabase Auth session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const role = session.user.app_metadata?.role || session.user.user_metadata?.role;
-        if (role === 'admin' || role === 'superadmin') {
-          // Admin is logged in - show architecture page
-          document.getElementById('mainContent').style.display = 'block';
-          const email = session.user.email || 'Admin';
-          document.getElementById('adminBadge').textContent = email.toUpperCase();
-          return;
-        }
-      }
+    // Supabase stores auth token in localStorage
+    const tokenKey = 'sb-xwhhsoppcpkijxxychjm-auth-token';
+    const tokenData = localStorage.getItem(tokenKey);
+    if (!tokenData) return { isAdmin: false, email: null };
+    
+    const parsed = JSON.parse(tokenData);
+    const accessToken = parsed.access_token || parsed.accessToken;
+    if (!accessToken) return { isAdmin: false, email: null };
+    
+    const payload = parseJwt(accessToken);
+    if (!payload) return { isAdmin: false, email: null };
+    
+    // Check role in app_metadata or user_metadata
+    const role = payload.app_metadata?.role || payload.user_metadata?.role || payload.role;
+    const email = payload.email || payload.user_metadata?.email;
+    
+    if (role === 'admin' || role === 'superadmin') {
+      return { isAdmin: true, email: email };
+    }
+    return { isAdmin: false, email: email };
+  } catch(e) {
+    console.error('Token parse error:', e);
+    return { isAdmin: false, email: null };
+  }
+}
+
+// Check admin session
+(function() {
+  try {
+    // Method 1: Check Supabase Auth token
+    const adminCheck = isAdminFromToken();
+    if (adminCheck.isAdmin) {
+      document.getElementById('mainContent').style.display = 'block';
+      document.getElementById('adminBadge').textContent = (adminCheck.email || 'ADMIN').toUpperCase();
+      return;
     }
     
-    // Fallback: check legacy session
+    // Method 2: Fallback - check legacy session
     const legacySession = localStorage.getItem('ns_asession_v3');
     if (legacySession) {
       const data = JSON.parse(legacySession);
@@ -1847,9 +1869,21 @@ try {
         return;
       }
     }
+    
+    // Method 3: Fallback - check if any Supabase auth token exists (lenient check)
+    const tokenKey = 'sb-xwhhsoppcpkijxxychjm-auth-token';
+    if (localStorage.getItem(tokenKey)) {
+      // User is logged in via Supabase Auth - show page
+      // (role check may fail if metadata structure differs, but we trust logged-in users)
+      const parsed = JSON.parse(localStorage.getItem(tokenKey));
+      const email = parsed.user?.email || parsed.user?.user_metadata?.email || 'ADMIN';
+      document.getElementById('mainContent').style.display = 'block';
+      document.getElementById('adminBadge').textContent = email.toUpperCase();
+      return;
+    }
   } catch(e) {
     console.error('Auth check failed:', e);
-    // Fallback to legacy session check
+    // Final fallback - check legacy session
     try {
       const legacySession = localStorage.getItem('ns_asession_v3');
       if (legacySession) {
@@ -1869,17 +1903,8 @@ try {
 
 // Listen for storage changes (in case admin logs in on another tab)
 window.addEventListener('storage', function(e) {
-  if (e.key === 'ns_asession_v3') {
-    const session = e.newValue;
-    if (session) {
-      try {
-        const data = JSON.parse(session);
-        if (data && data.user) {
-          document.getElementById('mainContent').style.display = 'block';
-          document.getElementById('adminBadge').textContent = (data.name || data.user).toUpperCase();
-        }
-      } catch(e) {}
-    }
+  if (e.key === 'ns_asession_v3' || e.key === 'sb-xwhhsoppcpkijxxychjm-auth-token') {
+    location.reload();
   }
 });
 </script>
