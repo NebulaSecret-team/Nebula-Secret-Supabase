@@ -860,30 +860,55 @@ function adminTheme(){
   $("#adminTitle").textContent = "Theme";
 }
 function adminEmails(){
+  const mc = getMailCfg();
   const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Server-side email via Vercel Edge Function — managed entirely by env vars</div></div></div>' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Auto-send every new order to your inbox — Vercel Edge Function (recommended) or EmailJS direct</div></div></div>' +
     '<div class="panel-body">' +
       '<div class="form-grid">' +
-        '<div class="field full" id="emailStatus"><label>Status</label><div style="padding:10px;border-radius:8px;background:#f0f0f0;color:#666" id="emailStatusText">Checking...</div></div>' +
+        '<div class="field full" id="emailStatus"><label>Server Status (Vercel Edge Function)</label><div style="padding:10px;border-radius:8px;background:#f0f0f0;color:#666" id="emailStatusText">Checking...</div></div>' +
         '<div class="field full" id="emailParams"><label>Vercel Environment Variables</label><div style="padding:10px;border-radius:8px;background:#f8f9fa;font-family:monospace;font-size:12px" id="emailParamsList">Loading...</div></div>' +
       '</div>' +
-      '<button class="btn ghost" style="margin-top:4px" onclick="sendTestOrderEmail()">Send Test Email</button>' +
+      '<hr style="margin:20px 0;border:none;border-top:1px solid #e0e0e0">' +
+      '<h4 style="margin:0 0 12px 0">EmailJS Settings (Fallback — used if Edge Function is unavailable)</h4>' +
+      '<div class="form-grid">' +
+        '<div class="field full"><label>Email provider</label><select id="mailProvider"><option value="emailjs"' + (mc.provider === "emailjs" ? " selected" : "") + '>EmailJS (recommended — reliable, no ads, multiple recipients)</option><option value="formsubmit"' + (mc.provider !== "emailjs" ? " selected" : "") + '>FormSubmit (free — single inbox, needs one-time activation)</option></select></div>' +
+        '<div class="field full" id="mailToWrap"><label>Recipients (separate multiple emails with comma)</label><input id="mailTo" type="text" value="' + esc(mc.mailTo || "") + '" placeholder="sales@yourcompany.com, manager@yourcompany.com"></div>' +
+        '<div class="field full" id="emailjsWrap">' +
+          '<div class="form-hint" style="margin-bottom:8px"><b>EmailJS setup (5 min, free):</b> 1) Sign up at <b>emailjs.com</b> → 2) Add your email service → 3) Create an Email Template with To Email <code>{{to_email}}</code> → 4) Paste the three keys below.</div>' +
+          '<div class="form-hint" style="margin-bottom:12px;padding:12px;background:#fff3cd;border:1px solid #ffeaa7;border-radius:8px"><b>⚠️ SECURITY: Configure Domain Whitelist</b><br>To prevent others from abusing your EmailJS quota, you MUST add your domain to the whitelist:<br>1. Go to <a href="https://dashboard.emailjs.com/admin/account" target="_blank" style="color:#0066cc;text-decoration:underline">EmailJS Dashboard → Account Settings</a><br>2. Find <b>Domains</b> section → Click <b>Add Domain</b><br>3. Add: <code>nebula-secret-supabase.vercel.app</code> (and your custom domain if any)<br>4. Click <b>Save</b><br><b>Current domain:</b> <code>' + esc(window.location.hostname) + '</code></div>' +
+          '<div class="form-grid">' +
+            '<div class="field"><label>Service ID</label><input id="mailSvc" type="text" value="' + esc(mc.serviceId || "") + '" placeholder="service_xxxxxxx"></div>' +
+            '<div class="field"><label>Order Template ID</label><input id="mailTpl" type="text" value="' + esc(mc.templateId || "") + '" placeholder="template_xxxxxxx"></div>' +
+            '<div class="field"><label>Contact Form Template ID</label><input id="mailContactTpl" type="text" value="' + esc(mc.contactTemplateId || "") + '" placeholder="template_xxxxxxx (leave empty to use order template)"></div>' +
+            '<div class="field full"><label>Public Key</label><input id="mailKey" type="text" value="' + esc(mc.publicKey || "") + '" placeholder="xxxxxxx"></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="field full" id="formsubmitWrap" style="display:none"><label>FormSubmit inbox (single email)</label><input id="mailEmail" type="email" value="' + esc(mc.email || "") + '" placeholder="you@yourstore.com"></div>' +
+        '<div class="field full"><label>Enable auto email</label><select id="mailEnabled"><option value="1"' + (mc.enabled ? " selected" : "") + '>On — send order emails automatically</option><option value="0"' + (!mc.enabled ? " selected" : "") + '>Off — keep manual email button only</option></select></div>' +
+        '<div class="field full"><div class="form-hint" id="mailHelp"><b>EmailJS:</b> after saving, click <b>Send Test Email</b> — it sends straight to the recipients above, no activation step. <b>FormSubmit:</b> you must first confirm the one-time verification email FormSubmit sends to your inbox (check spam).</div></div>' +
+      '</div>' +
+      '<button class="btn" style="margin-top:4px" onclick="saveMailForm()">Save Email Settings</button>' +
+      '<button class="btn ghost" style="margin-top:4px;margin-left:8px" onclick="sendTestOrderEmail()">Send Test Email</button>' +
+      '<div class="form-hint" style="margin-top:10px"><b>Still not receiving order emails?</b> (1) Save settings, keep <b>Enable auto email</b> On; (2) click <b>Send Test Email</b>; (3) EmailJS users: watch for the toast error message and check your template/service keys. FormSubmit users: check spam folder for the verification link and click it once. Orders are always saved in Admin → Orders and downloadable as Excel/CSV regardless of email.</div>' +
     '</div></div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Order Emails";
+  toggleMailProvider();
+  const mp = $("#mailProvider");
+  if(mp) mp.onchange = toggleMailProvider;
   /* Check server config status */
   fetch("/api/email-config").then(r => r.json()).then(cfg => {
     const el = $("#emailStatusText");
     if(!el) return;
     if(cfg.enabled){
       el.style.background = "#d4edda"; el.style.color = "#155724";
-      el.innerHTML = "<b>Email is enabled.</b> Orders and contact forms are sent automatically.";
+      el.innerHTML = "<b>Email is enabled.</b> Orders and contact forms are sent automatically via Vercel Edge Function.";
     }else if(cfg.configured){
       el.style.background = "#fff3cd"; el.style.color = "#856404";
       el.innerHTML = "<b>Email keys are set but MAIL_ENABLED is false.</b> Set MAIL_ENABLED=true in Vercel env vars to enable.";
     }else{
       el.style.background = "#f8d7da"; el.style.color = "#721c24";
-      el.innerHTML = "<b>Email not configured.</b> Set the required env vars in Vercel dashboard.";
+      el.innerHTML = "<b>Email not configured.</b> Set the required env vars in Vercel dashboard, or use EmailJS fallback settings below.";
     }
     /* Show parameter status */
     const pl = $("#emailParamsList");
@@ -1436,4 +1461,104 @@ function adminRoute(){
     if(h === "#/admin"){ viewAdminLogin(); return; }
     viewAdminLogin("Please sign in to access the admin panel.");
   });
+}
+
+/* ============ Email Configuration (Fallback for Vercel Edge Function) ============ */
+const MAIL_CFG_KEY = "ns_mail_cfg";
+
+function getMailCfg(){
+  try{
+    const raw = localStorage.getItem(MAIL_CFG_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return {
+    provider: "emailjs",
+    mailTo: "",
+    serviceId: "",
+    templateId: "",
+    contactTemplateId: "",
+    publicKey: "",
+    email: "",
+    enabled: false
+  };
+}
+
+function saveMailCfg(cfg){
+  try{
+    localStorage.setItem(MAIL_CFG_KEY, JSON.stringify(cfg));
+  }catch(e){
+    console.error("Failed to save mail config:", e);
+  }
+}
+
+function mailRecipients(cfg){
+  if(!cfg || !cfg.mailTo) return [];
+  return cfg.mailTo.split(",").map(s => s.trim()).filter(s => s && /.+@.+\..+/.test(s));
+}
+
+function toggleMailProvider(){
+  const p = ($("#mailProvider") || {}).value || "emailjs";
+  const ejw = $("#emailjsWrap"), fsw = $("#formsubmitWrap"), mtw = $("#mailToWrap");
+  if(ejw) ejw.style.display = p === "emailjs" ? "" : "none";
+  if(fsw) fsw.style.display = p === "formsubmit" ? "" : "none";
+  if(mtw) mtw.style.display = p === "emailjs" ? "" : "none";
+  const help = $("#mailHelp");
+  if(help) help.innerHTML = p === "emailjs"
+    ? "<b>EmailJS:</b> after saving, click <b>Send Test Email</b> — it sends straight to the recipients above, no activation step needed."
+    : "<b>FormSubmit:</b> you must first click the one-time verification link FormSubmit emails to your inbox (check spam).";
+}
+
+function saveMailForm(){
+  const cfg = getMailCfg();
+  cfg.provider = $("#mailProvider").value;
+  cfg.mailTo = ($("#mailTo") ? $("#mailTo").value : "").trim();
+  cfg.serviceId = ($("#mailSvc") ? $("#mailSvc").value : "").trim();
+  cfg.templateId = ($("#mailTpl") ? $("#mailTpl").value : "").trim();
+  cfg.contactTemplateId = ($("#mailContactTpl") ? $("#mailContactTpl").value : "").trim();
+  cfg.publicKey = ($("#mailKey") ? $("#mailKey").value : "").trim();
+  const email = ($("#mailEmail") ? $("#mailEmail").value : "").trim();
+  if(email && !/.+@.+\..+/.test(email)){ showToast("Please enter a valid email address"); return; }
+  cfg.email = email;
+  cfg.enabled = $("#mailEnabled").value === "1";
+  saveMailCfg(cfg);
+  if(cfg.provider === "emailjs"){
+    const recipients = mailRecipients(cfg);
+    showToast(cfg.enabled && recipients.length ? "EmailJS saved — click Send Test Email to verify" : "Email settings saved");
+  }else{
+    showToast(cfg.enabled && cfg.email ? "Email service on — place a test order to activate FormSubmit" : "Email settings saved");
+  }
+}
+
+async function sendTestOrderEmail(){
+  const cfg = getMailCfg();
+  if(!cfg || !cfg.enabled){ showToast("Enable auto email first, then Save Email Settings"); return; }
+  const recipients = mailRecipients(cfg);
+  if(cfg.provider === "emailjs"){
+    if(!cfg.serviceId || !cfg.templateId || !cfg.publicKey){ showToast("Fill in EmailJS Service ID, Template ID and Public Key first"); return; }
+  }else{
+    if(!cfg.email){ showToast("Enter your FormSubmit inbox email first"); return; }
+  }
+  const n = Math.floor(1000000 + Math.random() * 9000000);
+  const test = {
+    id: "NS-" + n,
+    date: new Date().toISOString(),
+    cur: curCode, rate: rateOf(curCode),
+    customer: { first:"Test", last:"Order", email: cfg.provider === "emailjs" ? (recipients[0] || "") : cfg.email, address:"", country:"Hong Kong SAR", phone:"", contact:"" },
+    items: [{ id:"3", name:"Sample Product", cat:"other", price: 10, qty: 1 }],
+    total: 10, status:"New"
+  };
+  showToast("Sending test order email…");
+  const r = await sendOrderEmail(test, cfg);
+  if(r.ok){
+    showToast(cfg.provider === "emailjs" ? "Test email sent to " + recipients.join(", ") : "Test email sent — confirm the FormSubmit activation link in your inbox");
+  }else{
+    const errMap = {
+      "emailjs-config": "EmailJS keys incomplete — fill Service ID, Template ID and Public Key",
+      "emailjs-error": "EmailJS error: " + (r.detail || "check keys & template"),
+      "sdk-missing": "EmailJS library failed to load — check internet connection",
+      "not-configured": "Email not enabled — enable auto email and save first",
+      "network": "Network error — check your connection and try again"
+    };
+    showToast(errMap[r.reason] || ("Email failed — " + (r.reason || "unknown error")));
+  }
 }
