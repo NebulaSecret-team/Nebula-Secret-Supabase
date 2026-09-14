@@ -3788,7 +3788,7 @@ async function acctRegister(){
   const accs = getAccounts();
   if(!accs.some(a => a.email === email)){
     const hash = await hashPass(pass);
-    accs.push({ name, email, pass: hash, created: new Date().toISOString() });
+    accs.push({ name, email, pass: hash, created: new Date().toISOString(), tier: 'new' });
     const saved = await saveAccounts(accs);
     console.log("acctRegister: legacy account saved to Supabase:", saved, "email:", email, "count:", accs.length);
     if(!saved){
@@ -3859,6 +3859,8 @@ async function acctLogin(){
 function accountSignedIn(s){
   const orders = myOrders(s.email);
   const quotes = myQuotes(s.email);
+  const customerTier = getCurrentCustomerTier();
+  const customerDiscount = customerTier.discount || 0;
   const orderHtml = orders.length
     ? orders.map(o => {
         const cur = o.cur || "EUR";
@@ -3884,13 +3886,28 @@ function accountSignedIn(s){
         '</div>';
       }).join("")
     : '<p style="color:var(--ink-soft);font-size:13.5px">You have no quote requests yet — <a href="#/shop" style="color:var(--brand-dark);font-weight:600">browse products</a> and request a quote from your cart.</p>';
+  
+  /* Customer tier badge */
+  const tierBadge = customerDiscount > 0 
+    ? '<div style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,' + customerTier.color + ',rgba(37,186,181,0.8));color:white;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;margin-bottom:12px">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' +
+        customerTier.name + ' — ' + customerDiscount + '% discount applied' +
+      '</div>'
+    : '<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(107,114,128,0.1);color:var(--ink-soft);padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;margin-bottom:12px">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
+        customerTier.name + ' — standard wholesale pricing' +
+      '</div>';
+  
   return '<div class="acct-card">' +
     '<h2>Hello, ' + esc(s.name.split(" ")[0]) + '</h2>' +
     '<p class="sub">' + esc(s.email) + '</p>' +
+    tierBadge +
     '<div class="acct-row"><span class="k">Signed in as</span><span class="v">' + esc(s.name) + '</span></div>' +
     '<div class="acct-row"><span class="k">Email</span><span class="v">' + esc(s.email) + '</span></div>' +
+    '<div class="acct-row"><span class="k">Customer Tier</span><span class="v"><b style="color:' + customerTier.color + '">' + esc(customerTier.name) + '</b>' + (customerDiscount > 0 ? ' (' + customerDiscount + '% off)' : '') + '</span></div>' +
     '<div class="acct-row"><span class="k">Orders</span><span class="v">' + orders.length + '</span></div>' +
     '<div class="acct-row"><span class="k">Quotes</span><span class="v">' + quotes.length + '</span></div>' +
+    (customerDiscount > 0 ? '<div style="background:rgba(37,186,181,0.08);border:1px solid rgba(37,186,181,0.2);border-radius:8px;padding:12px;margin-top:12px;font-size:13px;color:var(--ink)"><b style="color:#25bab5">✓ Tier discount active:</b> Your ' + customerDiscount + '% discount is automatically applied to all product prices and your cart total.</div>' : '') +
     '<div style="display:flex;gap:10px;margin-top:18px">' +
       '<button class="btn" onclick="changePassOpen()">Change password</button>' +
       '<button class="btn ghost" onclick="acctLogout()">Sign out</button>' +
