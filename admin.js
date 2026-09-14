@@ -171,15 +171,17 @@ function adminDashboard(){
     });
   }
   
-  // 5. Product additions
+  // 5. Product additions (only show products that actually have createdAt)
   products.forEach(p => {
-    activities.push({ 
-      type: 'product', 
-      icon: IC.box, 
-      text: 'Product added: <strong>' + esc(p.n) + '</strong>', 
-      time: p.createdAt || p.updatedAt || Date.now(), 
-      color: 'var(--accent)' 
-    });
+    if (p.createdAt) {
+      activities.push({ 
+        type: 'product', 
+        icon: IC.box, 
+        text: 'Product added: <strong>' + esc(p.n) + '</strong>', 
+        time: p.createdAt, 
+        color: 'var(--accent)' 
+      });
+    }
   });
   
   // Sort by time (newest first) and take top 12
@@ -902,7 +904,9 @@ function saveProductForm(id){
     priceTiers: priceTiers,
     i: img || PLACEHOLDER,
     d: desc,
-    l: ORIGIN
+    l: ORIGIN,
+    createdAt: existing ? (existing.createdAt || new Date().toISOString()) : new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
   if(existing){ Object.assign(existing, rec); }
   else { products.push(rec); }
