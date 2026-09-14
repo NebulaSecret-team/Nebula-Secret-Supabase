@@ -1774,13 +1774,17 @@ function recordEmailSend(){
 function validateEmailDomain(){
   const allowedDomains = [
     'nebula-secret-supabase.vercel.app',
+    'nebula-secret-supabase-uat.vercel.app',
     'nebulasecret.com',
     'www.nebulasecret.com',
+    'uat.nebulasecret.com',
     'localhost',
     '127.0.0.1'
   ];
   const currentDomain = window.location.hostname;
-  return allowedDomains.includes(currentDomain) || currentDomain.endsWith('.vercel.app');
+  return allowedDomains.includes(currentDomain) || 
+         currentDomain.endsWith('.vercel.app') || 
+         currentDomain.endsWith('.nebulasecret.com');
 }
 
 

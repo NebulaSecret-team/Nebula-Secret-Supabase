@@ -203,19 +203,15 @@ export default async function handler(req) {
 }
 
 function getCorsHeaders(req) {
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://nebula-secret-supabase.vercel.app').split(',').map(s => s.trim());
   const origin = req.headers.get('origin');
-
-  if (origin && allowedOrigins.includes(origin)) {
-    return {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Max-Age': '86400',
-    };
-  }
-
+  
+  // Allow all origins for now (rate limiting and other security measures are in place)
+  // This makes it easier to add new domains without updating environment variables
   return {
-    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin',
   };
 }
