@@ -271,7 +271,7 @@ function adminDashboard(){
             recentActivity.map(a => {
               const timeAgo = formatTimeAgo(a.time);
               return '<div style="display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid var(--line);transition:background .15s" onmouseover="this.style.background=\'var(--bg-soft)\'" onmouseout="this.style.background=\'transparent\'">' +
-                '<div style="width:32px;height:32px;border-radius:8px;background:' + a.color + '15;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:' + a.color + ';font-size:14px">' + a.icon + '</div>' +
+                '<div style="width:32px;height:32px;border-radius:8px;background:' + a.color + '15;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:' + a.color + ';stroke:' + a.color + ';font-size:14px">' + a.icon.replace('<svg', '<svg width="18" height="18"') + '</div>' +
                 '<div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--ink);line-height:1.35">' + a.text + '</div>' +
                 '<div style="font-size:11px;color:var(--ink-soft);margin-top:1px">' + timeAgo + '</div></div>' +
                 '<span class="pill ' + a.type + '" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;flex-shrink:0;padding:3px 8px">' + a.type + '</span>' +
