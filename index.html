@@ -1624,6 +1624,35 @@ async function syncAuthSession(){
   try {
     await getSessionAsync();
     if(typeof updateAcctLabel === 'function') updateAcctLabel();
+    
+    /* Listen for auth state changes (including password recovery) */
+    if(supabase && !window._authListenerSetup){
+      window._authListenerSetup = true;
+      supabase.auth.onAuthStateChange((event, session) => {
+        console.log("Auth state change:", event, session?.user?.email);
+        if(event === 'PASSWORD_RECOVERY'){
+          /* User clicked password reset link - show new password form */
+          console.log("Password recovery detected - showing new password form");
+          window._passwordRecovery = true;
+          /* If we're on the account page, refresh to show new password form */
+          if(location.hash.startsWith('#/account')){
+            setTimeout(() => {
+              if(typeof showNewPasswordForm === 'function') showNewPasswordForm();
+            }, 300);
+          }
+        }
+        if(event === 'SIGNED_IN' && session?.user){
+          const name = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User';
+          setSession({ name, email: session.user.email, supabaseAuth: true, userId: session.user.id });
+          if(typeof updateAcctLabel === 'function') updateAcctLabel();
+        }
+        if(event === 'SIGNED_OUT'){
+          /* Clear local session */
+          try{ localStorage.removeItem(LS.session); }catch(e){}
+          if(typeof updateAcctLabel === 'function') updateAcctLabel();
+        }
+      });
+    }
   } catch(e) {
     console.warn("Auth session sync failed:", e);
   }
@@ -3700,7 +3729,14 @@ function viewAccount(){
   const s = getSession();
   /* Check for password reset mode or Supabase Auth recovery callback */
   const hash = location.hash || "";
-  const isResetMode = hash.includes("reset=1") || hash.includes("type=recovery");
+  const search = location.search || "";
+  /* Detect password recovery from: URL params, hash params, or auth listener flag */
+  const isResetMode = hash.includes("reset=1") || 
+                      hash.includes("type=recovery") || 
+                      search.includes("type=recovery") ||
+                      search.includes("access_token") ||
+                      hash.includes("access_token") ||
+                      window._passwordRecovery === true;
   /* Always show reset view if in reset mode, even if signed in */
   const inner = isResetMode ? accountResetView() : (s ? accountSignedIn(s) : accountSignIn());
   $("#app").innerHTML = '<section class="block"><div class="page"><div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<span class="cur">My Account</span></div><div class="acct-wrap">' + inner + '</div></div></section>';
@@ -3710,7 +3746,7 @@ function viewAccount(){
     sbRefreshKey("quotes").catch(()=>{});
   }
   /* If this is a Supabase Auth recovery callback, show new password form */
-  if(isResetMode && hash.includes("type=recovery")){
+  if(isResetMode && (hash.includes("type=recovery") || search.includes("type=recovery") || hash.includes("access_token") || search.includes("access_token") || window._passwordRecovery)){
     setTimeout(() => showNewPasswordForm(), 500);
   }
 }
@@ -3856,22 +3892,26 @@ async function sendResetEmail(){
   
   try {
     if(supabase){
+      /* Build redirect URL - use current origin */
       const redirectUrl = window.location.origin + window.location.pathname + "#/account?reset=1";
+      console.log("Sending reset email to:", email, "with redirectTo:", redirectUrl);
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl
       });
       if(error){
+        console.error("Reset password error:", error);
         err.textContent = "Failed to send reset email: " + error.message;
         if(btn){ btn.disabled = false; btn.textContent = "📧 Send Reset Link"; }
         return;
       }
+      console.log("Reset email sent successfully");
       window._resetEmail = email;
       _resetState = "sent";
       viewAccount();
       return;
     }
   } catch(e) {
-    console.error("Reset password error:", e);
+    console.error("Reset password exception:", e);
   }
   
   /* Fallback: legacy account system */
