@@ -1602,7 +1602,8 @@ async function getSessionAsync(){
         name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
         email: user.email,
         supabaseAuth: true,
-        userId: user.id
+        userId: user.id,
+        role: user.app_metadata?.role || user.user_metadata?.role || 'customer'
       };
       setSession(s);
       return s;
@@ -3954,8 +3955,10 @@ function viewCustomerQuote(id){
   }
   const quoteEmail = String(qCustEmail(q)).toLowerCase();
   const userEmail = String(s.email).toLowerCase();
-  if(quoteEmail && quoteEmail !== userEmail){
+  const isAdminUser = s.role === 'admin' || s.role === 'superadmin';
+  if(quoteEmail && quoteEmail !== userEmail && !isAdminUser){
     showToast("This quote belongs to another account");
+    location.hash = "#/account";
     return;
   }
   /* Use customer's selected currency for display (like orders) */
@@ -4159,7 +4162,8 @@ function viewCustomerOrder(id){
   }
   const o = findOrderById(id);
   const s = getSession();
-  if(!o || !s || String(custEmail(o)).toLowerCase() !== String(s.email).toLowerCase()){
+  const isAdminUser = s && (s.role === 'admin' || s.role === 'superadmin');
+  if(!o || !s || (String(custEmail(o)).toLowerCase() !== String(s.email).toLowerCase() && !isAdminUser)){
     /* Data may not be loaded yet on direct navigation (boot route() runs before
        sbLoadAll finishes) — stay on this hash; the post-load route() will retry. */
     if(!_cache.loaded) return;
