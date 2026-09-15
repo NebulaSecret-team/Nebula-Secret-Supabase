@@ -3701,10 +3701,11 @@ function viewAccount(){
   /* Check for password reset mode or Supabase Auth recovery callback */
   const hash = location.hash || "";
   const isResetMode = hash.includes("reset=1") || hash.includes("type=recovery");
-  const inner = s ? accountSignedIn(s) : (isResetMode ? accountResetView() : accountSignIn());
+  /* Always show reset view if in reset mode, even if signed in */
+  const inner = isResetMode ? accountResetView() : (s ? accountSignedIn(s) : accountSignIn());
   $("#app").innerHTML = '<section class="block"><div class="page"><div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<span class="cur">My Account</span></div><div class="acct-wrap">' + inner + '</div></div></section>';
   /* Refresh latest orders & quotes from Supabase when signed in */
-  if(s && supabase){
+  if(s && supabase && !isResetMode){
     sbRefreshKey("orders").catch(()=>{});
     sbRefreshKey("quotes").catch(()=>{});
   }
