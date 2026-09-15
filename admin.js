@@ -303,18 +303,7 @@ function adminDashboard(){
         recentOrders.map(o => '<tr><td style="font-weight:600">' + esc(o.id) + '</td><td style="white-space:nowrap">' + new Date(o.date).toLocaleDateString() + '</td><td>' + esc(custName(o)) + '</td><td>' + o.items.reduce((s,i) => s + i.qty, 0) + '</td><td>' + fmt(o.total) + '</td><td><span class="pill ' + orderStatusColor(o.status) + '">' + esc(o.status) + '</span></td></tr>').join("") +
         '</tbody></table></div>'
       : '<div class="panel-body"><div style="font-size:13.5px;color:var(--ink-soft);padding:8px 0">No orders yet. Place an order on the storefront and it will appear here.</div></div>') +
-    '</div>' +
-    // Quick Actions
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Quick Actions</h3><div class="ph-sub">Common admin tasks</div></div></div>' +
-    '<div class="panel-body" style="display:flex;gap:10px;flex-wrap:wrap">' +
-      '<button class="btn sm" onclick="location.hash=\'#/admin/products\'">' + IC.plus + ' Add Product</button>' +
-      '<button class="btn sm ghost" onclick="location.hash=\'#/admin/orders\'">' + IC.orders + ' View Orders</button>' +
-      '<button class="btn sm ghost" onclick="location.hash=\'#/admin/categories\'">Manage Categories</button>' +
-      '<button class="btn sm ghost" onclick="location.hash=\'#/admin/quotes\'">' + IC.doc + ' Quotes & Enquiries</button>' +
-      '<button class="btn sm ghost" onclick="location.hash=\'#/admin/theme\'">Customize Theme</button>' +
-      '<button class="btn sm ghost" onclick="location.hash=\'/architecture.html\'">' + IC.info + ' System Architecture</button>' +
-      '<button class="btn sm ghost" style="color:#c0392b;border-color:#e5b4ad" onclick="resetStoreData()">Reset Store Data</button>' +
-    '</div></div>';
+    '</div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Dashboard";
 }
