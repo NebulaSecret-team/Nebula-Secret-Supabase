@@ -1921,7 +1921,7 @@ async function sendViaEmailJS(o){
   try{
     /* Security check 1: Validate domain */
     if(!validateEmailDomain()){
-      return {ok:false, reason:"invalid-domain", detail:"Email sending is not allowed from this domain. Please configure domain whitelist in EmailJS dashboard."};
+      return {ok:false, reason:"invalid-domain", detail:"Email sending is not allowed from this domain. Please contact site administrator."};
     }
     
     /* Security check 2: Rate limiting */
@@ -1937,7 +1937,7 @@ async function sendViaEmailJS(o){
       body: JSON.stringify({ type: "order", params })
     });
     const j = await resp.json();
-    if(!resp.ok || j.error) return {ok:false, reason:"emailjs-error", detail: j.error || ("HTTP " + resp.status)};
+    if(!resp.ok || j.error) return {ok:false, reason:"email-error", detail: j.error || ("HTTP " + resp.status)};
     
     /* Record successful send for rate limiting */
     recordEmailSend();
@@ -2088,7 +2088,7 @@ function orderEmailText(o, storeName){
 async function mailOrder(o){
   const cfg = await getEmailConfig();
   if(!cfg.enabled){
-    showToast("Order email not configured — set MAIL_ENABLED and EmailJS env vars in Vercel");
+    showToast("Order email not configured — set MAIL_ENABLED and Resend env vars in Vercel");
     return;
   }
   const st = $("#ocEmailState");
@@ -2623,7 +2623,7 @@ async function placeOrder(){
       });
     }else{
       const st = $("#ocEmailState");
-      if(st) st.textContent = "Order saved. Email not configured — set MAIL_ENABLED and EmailJS env vars in Vercel.";
+      if(st) st.textContent = "Order saved. Email not configured — set MAIL_ENABLED and Resend env vars in Vercel.";
     }
   });
   $("#orderModal").classList.add("open");
