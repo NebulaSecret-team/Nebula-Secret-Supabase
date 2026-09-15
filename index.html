@@ -616,9 +616,14 @@ table.admin-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .acct-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px;margin-bottom:18px}
 .acct-card h2{font-size:21px;font-weight:700;margin-bottom:4px}
 .acct-card .sub{color:var(--ink-soft);font-size:13.5px;margin-bottom:18px}
-.acct-tabs{display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid var(--line);padding-bottom:14px}
-.acct-tabs button{flex:1;padding:11px;border-radius:9px;border:1px solid var(--line-dark);background:var(--card);font-size:14px;font-weight:600;color:var(--ink);transition:all .18s}
-.acct-tabs button.active{background:var(--brand);border-color:var(--brand);color:#fff}
+.acct-tabs{display:flex;gap:10px;margin-bottom:24px;background:var(--bg-soft);padding:6px;border-radius:12px;border:1px solid var(--line)}
+.acct-tabs button{flex:1;padding:14px 16px;border-radius:9px;border:2px solid transparent;background:transparent;font-size:14px;font-weight:600;color:var(--ink-soft);transition:all .2s;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.acct-tabs button:hover{background:var(--card);color:var(--ink);transform:translateY(-1px)}
+.acct-tabs button.active{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+.acct-tabs button .tab-icon{font-size:18px}
+.acct-tabs button .tab-text{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
+.acct-tabs button .tab-title{font-size:14px;font-weight:700}
+.acct-tabs button .tab-desc{font-size:11px;font-weight:400;opacity:0.8}
 .acct-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
 .acct-row:last-child{border-bottom:none}
 .acct-row .k{font-size:12.5px;color:var(--ink-soft);font-weight:600;letter-spacing:.03em}
@@ -3712,20 +3717,42 @@ function accountSignIn(){
   return '<div class="acct-card">' +
     '<h2>My Account</h2>' +
     '<p class="sub">Sign in to track orders, manage your details and check out faster.</p>' +
-    '<div class="acct-tabs"><button class="active" id="tabLogin" onclick="acctTab(\'login\')">Sign in</button><button id="tabReg" onclick="acctTab(\'register\')">Create account</button></div>' +
+    '<div class="acct-tabs">' +
+      '<button class="active" id="tabLogin" onclick="acctTab(\'login\')">' +
+        '<span class="tab-icon">🔐</span>' +
+        '<span class="tab-text"><span class="tab-title">Sign in</span><span class="tab-desc">Existing customer</span></span>' +
+      '</button>' +
+      '<button id="tabReg" onclick="acctTab(\'register\')">' +
+        '<span class="tab-icon">✨</span>' +
+        '<span class="tab-text"><span class="tab-title">Create account</span><span class="tab-desc">New customer</span></span>' +
+      '</button>' +
+    '</div>' +
     '<div id="acctLogin">' +
       '<div class="field"><label>Email</label><input id="acEmail" type="email" placeholder="you@example.com"></div>' +
       '<div class="field"><label>Password</label><input id="acPass" type="password" placeholder="Your password"></div>' +
       '<p id="acctErr" style="color:var(--danger);font-size:13px;min-height:18px;margin-bottom:6px"></p>' +
-      '<button class="btn full" onclick="acctLogin()">Sign in</button>' +
-      '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:12px">For admin, please use the Admin Center in the top bar.</p>' +
+      '<button class="btn full" onclick="acctLogin()">🔐 Sign in</button>' +
+      '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">' +
+        'Forgot your password? <a href="#/account?reset=1" style="color:var(--brand);font-weight:600">Reset here</a><br>' +
+        '<span style="font-size:11px;opacity:0.8">For admin, please use the Admin Center in the top bar.</span>' +
+      '</p>' +
     '</div>' +
     '<div id="acctReg" style="display:none">' +
       '<div class="field"><label>Full name</label><input id="regName" type="text" placeholder="Jane Doe"></div>' +
       '<div class="field"><label>Email</label><input id="regEmail" type="email" placeholder="you@example.com"></div>' +
-      '<div class="field"><label>Password (min 6 characters)</label><input id="regPass" type="password" placeholder="Create a password"></div>' +
+      '<div class="field"><label>Password (min 6 characters)</label><input id="regPass" type="password" placeholder="Create a secure password"></div>' +
+      '<div style="background:var(--bg-soft);padding:12px;border-radius:8px;margin-bottom:16px;font-size:12px;color:var(--ink-soft)">' +
+        '✅ Create an account to:<br>' +
+        '• Track your orders and shipping status<br>' +
+        '• Save your shipping details for faster checkout<br>' +
+        '• Access exclusive wholesale pricing and quotes<br>' +
+        '• Manage your account preferences' +
+      '</div>' +
       '<p id="acctErr2" style="color:var(--danger);font-size:13px;min-height:18px;margin-bottom:6px"></p>' +
-      '<button class="btn full" onclick="acctRegister()">Create account</button>' +
+      '<button class="btn full" onclick="acctRegister()">✨ Create account</button>' +
+      '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">' +
+        'Already have an account? <a href="#" onclick="acctTab(\'login\');return false;" style="color:var(--brand);font-weight:600">Sign in here</a>' +
+      '</p>' +
     '</div>' +
   '</div>';
 }
@@ -3826,6 +3853,20 @@ async function acctLogin(){
         const name = data.user.user_metadata?.name || email.split('@')[0];
         setSession({ name, email, supabaseAuth: true, userId: data.user.id });
         updateAcctLabel();
+        /* Record last login time for Supabase Auth users too */
+        try{
+          const all = getAccounts();
+          const i = all.findIndex(a => a.email === email);
+          if(i >= 0){ 
+            all[i].lastLogin = new Date().toISOString(); 
+            all[i].name = all[i].name || name;
+            saveAccounts(all); 
+          } else {
+            /* Add to legacy accounts for tracking if not exists */
+            all.push({ name, email, pass: 'supabase_auth', created: new Date().toISOString(), lastLogin: new Date().toISOString(), tier: 'new' });
+            saveAccounts(all);
+          }
+        }catch(e){ /* Ignore login time recording errors */ }
         showToast("Signed in as " + name.split(" ")[0]);
         route();
         return;

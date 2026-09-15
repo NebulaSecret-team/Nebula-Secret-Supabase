@@ -207,44 +207,47 @@ function adminDashboard(){
     });
   }
   
-  // 3. Customer logins (from lastLogin)
+  // 3. Customer logins (from lastLogin or last_login)
   if (accounts && accounts.length) {
     accounts.forEach(a => {
-      if (a.lastLogin) {
+      const loginTime = a.lastLogin || a.last_login || a.lastSignIn;
+      if (loginTime) {
         activities.push({ 
           type: 'login', 
           icon: IC.user, 
           text: 'Customer <strong>' + esc(a.name || a.email || a.u) + '</strong> signed in', 
-          time: a.lastLogin, 
+          time: loginTime, 
           color: '#06b6d4' 
         });
       }
     });
   }
   
-  // 4. Customer registrations
+  // 4. Customer registrations (support multiple field names)
   if (accounts && accounts.length) {
     accounts.forEach(a => {
-      if (a.createdAt || a.ts) {
+      const regTime = a.createdAt || a.ts || a.created || a.created_at || a.registeredAt;
+      if (regTime) {
         activities.push({ 
           type: 'account', 
           icon: IC.user, 
           text: 'New customer registered: <strong>' + esc(a.name || a.email || a.u) + '</strong>', 
-          time: a.createdAt || a.ts, 
+          time: regTime, 
           color: '#10b981' 
         });
       }
     });
   }
   
-  // 5. Product additions (only show products that actually have createdAt)
+  // 5. Product additions (support multiple field names)
   products.forEach(p => {
-    if (p.createdAt) {
+    const prodTime = p.createdAt || p.created_at || p.created || p.addedAt || p.dateAdded;
+    if (prodTime) {
       activities.push({ 
         type: 'product', 
         icon: IC.box, 
-        text: 'Product added: <strong>' + esc(p.n) + '</strong>', 
-        time: p.createdAt, 
+        text: 'Product added: <strong>' + esc(p.n || p.name) + '</strong>', 
+        time: prodTime, 
         color: accentColor 
       });
     }
@@ -1952,13 +1955,50 @@ function adminRoute(){
     else if(page === "content") adminContent();
 
     else {
-      /* Unknown page - show friendly 404 instead of login screen */
+      /* Unknown page - show friendly 404 with quick links and auto-redirect */
       const content = '<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px">' +
-        '<div style="font-size:48px;margin-bottom:16px">🔍</div>' +
-        '<h3 style="margin-bottom:8px">Page Not Found</h3>' +
-        '<p style="color:var(--ink-soft);margin-bottom:24px">The page <strong>"' + esc(page) + '"</strong> does not exist.</p>' +
-        '<a href="#/admin/dashboard" class="btn">Go to Dashboard</a>' +
-      '</div></div>';
+        '<div style="font-size:72px;margin-bottom:20px">🔍</div>' +
+        '<h2 style="margin-bottom:12px;font-size:28px">Page Not Found</h2>' +
+        '<p style="color:var(--ink-soft);margin-bottom:8px;font-size:15px">The page <strong style="color:var(--accent)">"' + esc(page) + '"</strong> does not exist.</p>' +
+        '<p style="color:var(--ink-soft);margin-bottom:32px;font-size:13px">You will be automatically redirected to Dashboard in <span id="redirectCountdown" style="font-weight:600;color:var(--accent)">5</span> seconds.</p>' +
+        '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:40px">' +
+          '<a href="#/admin/dashboard" class="btn" onclick="stopRedirect()">🏠 Dashboard</a>' +
+          '<a href="#/admin/products" class="btn ghost" onclick="stopRedirect()">📦 Products</a>' +
+          '<a href="#/admin/orders" class="btn ghost" onclick="stopRedirect()">📋 Orders</a>' +
+          '<a href="#/admin/customers" class="btn ghost" onclick="stopRedirect()">👥 Customers</a>' +
+        '</div>' +
+        '<div style="border-top:1px solid var(--line);padding-top:24px;margin-top:24px">' +
+          '<p style="font-size:12px;color:var(--ink-soft)">Quick Links:</p>' +
+          '<div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:12px">' +
+            '<a href="#/admin/categories" style="color:var(--accent);font-size:13px;text-decoration:none">Categories</a>' +
+            '<a href="#/admin/quotes" style="color:var(--accent);font-size:13px;text-decoration:none">Quotes & Enquiries</a>' +
+            '<a href="#/admin/theme" style="color:var(--accent);font-size:13px;text-decoration:none">Theme</a>' +
+            '<a href="#/admin/content" style="color:var(--accent);font-size:13px;text-decoration:none">Site Content</a>' +
+            '<a href="#/admin/emails" style="color:var(--accent);font-size:13px;text-decoration:none">Order Emails</a>' +
+          '</div>' +
+        '</div>' +
+      '</div></div>' +
+      '<script>' +
+        'var redirectTimer = null;' +
+        'var countdown = 5;' +
+        'function startRedirect(){' +
+          'redirectTimer = setInterval(function(){' +
+            'countdown--;' +
+            'var el = document.getElementById("redirectCountdown");' +
+            'if(el) el.textContent = countdown;' +
+            'if(countdown <= 0){' +
+              'clearInterval(redirectTimer);' +
+              'window.location.hash = "#/admin/dashboard";' +
+            '}' +
+          '}, 1000);' +
+        '}' +
+        'function stopRedirect(){' +
+          'if(redirectTimer) clearInterval(redirectTimer);' +
+          'var el = document.getElementById("redirectCountdown");' +
+          'if(el) el.parentElement.innerHTML = "Redirect cancelled.";' +
+        '}' +
+        'startRedirect();' +
+      '</script>';
       renderAdminShell(content);
       $("#adminTitle").textContent = "Page Not Found";
     }
