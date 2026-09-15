@@ -142,6 +142,16 @@ function adminDashboard(){
   const revenue = orders.filter(o => o.status !== "Cancelled").reduce((s,o) => s + Number(o.total || 0), 0);
   const recentOrders = orders.slice(0, 6);
   
+  // Get actual accent color for activity icons
+  let accentColor = '#8b5cf6';
+  try {
+    const styles = getComputedStyle(document.documentElement);
+    const cssAccent = styles.getPropertyValue('--accent').trim();
+    if (cssAccent && cssAccent.startsWith('#')) {
+      accentColor = cssAccent;
+    }
+  } catch(e) {}
+  
   // Build recent activity feed
   const activities = [];
   
@@ -235,7 +245,7 @@ function adminDashboard(){
         icon: IC.box, 
         text: 'Product added: <strong>' + esc(p.n) + '</strong>', 
         time: p.createdAt, 
-        color: 'var(--accent)' 
+        color: accentColor 
       });
     }
   });

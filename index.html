@@ -790,9 +790,6 @@ details.ct-block > .form-grid{padding:14px 16px}
 <!-- ================= HEADER ================= -->
 <header class="site-header" id="siteHeader">
   <div class="header-inner">
-    <button class="menu-toggle" id="menuToggle" aria-label="Menu">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg>
-    </button>
     <a class="brand" href="#/" data-nav="home">
       <img src="images/Neubla_logo_black_1729172124.png" alt="Nebula Secret">
       <span class="brand-name" id="brandName">Nebula Secret<small>Wholesale &amp; OEM/ODM</small></span>
@@ -4402,10 +4399,6 @@ $("#searchInput").addEventListener("keydown", e => {
 $("#cartBtn").addEventListener("click", openCart);
 $("#cartClose").addEventListener("click", closeCart);
 $("#drawerBackdrop").addEventListener("click", closeCart);
-$("#menuToggle").addEventListener("click", () => {
-  const mm = document.querySelector("#allCats");
-  if(mm) mm.classList.toggle("open");
-});
 document.addEventListener("click", e => {
   const t = e.target;
   if(!t || !t.closest) return;
