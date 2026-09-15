@@ -3698,12 +3698,19 @@ function setQtyInput(v){
 /* ============ Customer account (register / login / change password / my orders) ============ */
 function viewAccount(){
   const s = getSession();
-  const inner = s ? accountSignedIn(s) : accountSignIn();
+  /* Check for password reset mode or Supabase Auth recovery callback */
+  const hash = location.hash || "";
+  const isResetMode = hash.includes("reset=1") || hash.includes("type=recovery");
+  const inner = s ? accountSignedIn(s) : (isResetMode ? accountResetView() : accountSignIn());
   $("#app").innerHTML = '<section class="block"><div class="page"><div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<span class="cur">My Account</span></div><div class="acct-wrap">' + inner + '</div></div></section>';
   /* Refresh latest orders & quotes from Supabase when signed in */
   if(s && supabase){
     sbRefreshKey("orders").catch(()=>{});
     sbRefreshKey("quotes").catch(()=>{});
+  }
+  /* If this is a Supabase Auth recovery callback, show new password form */
+  if(isResetMode && hash.includes("type=recovery")){
+    setTimeout(() => showNewPasswordForm(), 500);
   }
 }
 /* Refresh a single key from Supabase and update cache */
@@ -3763,6 +3770,201 @@ function acctTab(which){
   l.classList.toggle("active", isLogin); r.classList.toggle("active", !isLogin);
   li.style.display = isLogin ? "" : "none"; ri.style.display = isLogin ? "none" : "";
 }
+
+/* ============ Password Reset Functions ============ */
+let _resetState = "email"; // email, sent, newpassword, success
+
+function accountResetView(){
+  if(_resetState === "sent") return accountResetSent();
+  if(_resetState === "newpassword") return accountResetNewPassword();
+  if(_resetState === "success") return accountResetSuccess();
+  return accountResetForm();
+}
+
+function accountResetForm(){
+  return '<div class="acct-card">' +
+    '<h2>Reset Password</h2>' +
+    '<p class="sub">Enter your email address and we\'ll send you a link to reset your password.</p>' +
+    '<div id="resetForm">' +
+      '<div class="field"><label>Email</label><input id="resetEmail" type="email" placeholder="you@example.com"></div>' +
+      '<p id="resetErr" style="color:var(--danger);font-size:13px;min-height:18px;margin-bottom:6px"></p>' +
+      '<button class="btn full" onclick="sendResetEmail()">📧 Send Reset Link</button>' +
+      '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">' +
+        'Remember your password? <a href="#/account" style="color:var(--brand);font-weight:600">Sign in here</a>' +
+      '</p>' +
+    '</div>' +
+  '</div>';
+}
+
+function accountResetSent(){
+  const email = window._resetEmail || "";
+  return '<div class="acct-card" style="text-align:center">' +
+    '<div style="font-size:48px;margin-bottom:16px">📬</div>' +
+    '<h2>Check Your Email</h2>' +
+    '<p class="sub">We\'ve sent a password reset link to <strong>' + esc(email) + '</strong></p>' +
+    '<div style="background:var(--bg-soft);padding:16px;border-radius:8px;margin:20px 0;text-align:left;font-size:13px;color:var(--ink-soft)">' +
+      '<p style="margin:0 0 8px 0"><strong>📝 Next steps:</strong></p>' +
+      '<ol style="margin:0;padding-left:20px">' +
+        '<li style="margin-bottom:4px">Check your email inbox (and spam folder)</li>' +
+        '<li style="margin-bottom:4px">Click the "Reset Password" link in the email</li>' +
+        '<li style="margin-bottom:4px">Enter your new password on the page that opens</li>' +
+      '</ol>' +
+    '</div>' +
+    '<p style="font-size:12px;color:var(--ink-soft);margin-bottom:16px">The reset link will expire in 1 hour.</p>' +
+    '<button class="btn full ghost" onclick="backToResetForm()">← Back to Reset Form</button>' +
+    '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">' +
+      'Didn\'t receive the email? <a href="#" onclick="resendResetEmail();return false;" style="color:var(--brand);font-weight:600">Resend link</a>' +
+    '</p>' +
+  '</div>';
+}
+
+function accountResetNewPassword(){
+  return '<div class="acct-card">' +
+    '<h2>Set New Password</h2>' +
+    '<p class="sub">Enter your new password below. Your password must be at least 6 characters.</p>' +
+    '<div id="newPasswordForm">' +
+      '<div class="field"><label>New Password</label><input id="newPass" type="password" placeholder="Enter new password"></div>' +
+      '<div class="field"><label>Confirm Password</label><input id="confirmPass" type="password" placeholder="Confirm new password"></div>' +
+      '<div id="passStrength" style="font-size:12px;margin-bottom:12px"></div>' +
+      '<p id="newPassErr" style="color:var(--danger);font-size:13px;min-height:18px;margin-bottom:6px"></p>' +
+      '<button class="btn full" onclick="updatePassword()">🔐 Update Password</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function accountResetSuccess(){
+  return '<div class="acct-card" style="text-align:center">' +
+    '<div style="font-size:48px;margin-bottom:16px">✅</div>' +
+    '<h2>Password Updated!</h2>' +
+    '<p class="sub">Your password has been successfully updated. You can now sign in with your new password.</p>' +
+    '<div style="margin:24px 0">' +
+      '<button class="btn full" onclick="goToSignIn()">🔐 Sign In Now</button>' +
+    '</div>' +
+    '<p style="font-size:12px;color:var(--ink-soft)">If you have any issues signing in, please contact customer support.</p>' +
+  '</div>';
+}
+
+async function sendResetEmail(){
+  const email = $("#resetEmail").value.trim().toLowerCase();
+  const err = $("#resetErr");
+  if(!email || !/.+@.+\..+/.test(email)){ err.textContent = "Please enter a valid email address"; return; }
+  
+  err.textContent = "";
+  const btn = document.querySelector("#resetForm button");
+  if(btn){ btn.disabled = true; btn.textContent = "Sending..."; }
+  
+  try {
+    if(supabase){
+      const redirectUrl = window.location.origin + window.location.pathname + "#/account?reset=1";
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl
+      });
+      if(error){
+        err.textContent = "Failed to send reset email: " + error.message;
+        if(btn){ btn.disabled = false; btn.textContent = "📧 Send Reset Link"; }
+        return;
+      }
+      window._resetEmail = email;
+      _resetState = "sent";
+      viewAccount();
+      return;
+    }
+  } catch(e) {
+    console.error("Reset password error:", e);
+  }
+  
+  /* Fallback: legacy account system */
+  const acc = getAccounts().find(a => a.email === email);
+  if(!acc){
+    err.textContent = "No account found with this email address";
+    if(btn){ btn.disabled = false; btn.textContent = "📧 Send Reset Link"; }
+    return;
+  }
+  
+  /* For legacy accounts, show a message that reset is not available */
+  err.textContent = "Password reset for this account requires email verification. Please contact customer support.";
+  if(btn){ btn.disabled = false; btn.textContent = "📧 Send Reset Link"; }
+}
+
+function resendResetEmail(){
+  if(window._resetEmail){
+    $("#resetEmail").value = window._resetEmail;
+    _resetState = "email";
+    viewAccount();
+    setTimeout(() => sendResetEmail(), 300);
+  }
+}
+
+function backToResetForm(){
+  _resetState = "email";
+  viewAccount();
+}
+
+function goToSignIn(){
+  _resetState = "email";
+  location.hash = "#/account";
+}
+
+function showNewPasswordForm(){
+  _resetState = "newpassword";
+  viewAccount();
+  /* Add password strength indicator */
+  setTimeout(() => {
+    const newPass = $("#newPass");
+    if(newPass){
+      newPass.addEventListener("input", function(){
+        const pass = this.value;
+        const strengthEl = $("#passStrength");
+        if(!strengthEl) return;
+        if(pass.length === 0){ strengthEl.textContent = ""; return; }
+        let strength = 0;
+        if(pass.length >= 6) strength++;
+        if(pass.length >= 10) strength++;
+        if(/[A-Z]/.test(pass)) strength++;
+        if(/[0-9]/.test(pass)) strength++;
+        if(/[^A-Za-z0-9]/.test(pass)) strength++;
+        const levels = ["Very Weak", "Weak", "Fair", "Good", "Strong", "Very Strong"];
+        const colors = ["#e74c3c", "#e67e22", "#f39c12", "#27ae60", "#2ecc71", "#27ae60"];
+        strengthEl.innerHTML = '<span style="color:' + colors[Math.min(strength, 5)] + '">Password strength: ' + levels[Math.min(strength, 5)] + '</span>';
+      });
+    }
+  }, 100);
+}
+
+async function updatePassword(){
+  const newPass = $("#newPass").value;
+  const confirmPass = $("#confirmPass").value;
+  const err = $("#newPassErr");
+  
+  if(!newPass || newPass.length < 6){ err.textContent = "Password must be at least 6 characters"; return; }
+  if(newPass !== confirmPass){ err.textContent = "Passwords do not match"; return; }
+  
+  err.textContent = "";
+  const btn = document.querySelector("#newPasswordForm button");
+  if(btn){ btn.disabled = true; btn.textContent = "Updating..."; }
+  
+  try {
+    if(supabase){
+      const { data, error } = await supabase.auth.updateUser({ password: newPass });
+      if(error){
+        err.textContent = "Failed to update password: " + error.message;
+        if(btn){ btn.disabled = false; btn.textContent = "🔐 Update Password"; }
+        return;
+      }
+      /* Sign out after password reset */
+      await supabase.auth.signOut();
+      _resetState = "success";
+      viewAccount();
+      return;
+    }
+  } catch(e) {
+    console.error("Update password error:", e);
+  }
+  
+  err.textContent = "Failed to update password. Please try again.";
+  if(btn){ btn.disabled = false; btn.textContent = "🔐 Update Password"; }
+}
+
 async function acctRegister(){
   const name = $("#regName").value.trim();
   const email = $("#regEmail").value.trim().toLowerCase();
