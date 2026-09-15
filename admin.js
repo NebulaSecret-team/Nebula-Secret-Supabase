@@ -250,9 +250,13 @@ function adminDashboard(){
     }
   });
   
-  // Sort by time (newest first) and take top 12
+  // Sort by time (newest first) and take top 50 for filtering
   activities.sort((a, b) => new Date(b.time) - new Date(a.time));
+  window._dashboardActivities = activities; // Save for filtering
   const recentActivity = activities.slice(0, 12);
+  
+  // Get unique activity types for filter
+  const activityTypes = [...new Set(activities.map(a => a.type))].sort();
   
   const content =
     '<div class="stat-grid">' +
@@ -264,8 +268,12 @@ function adminDashboard(){
       '<div class="stat-card"><span class="s-icon">' + IC.doc + '</span><div class="s-label">Quotes</div><div class="s-value">' + (quotes.length || 0) + '</div><div class="s-sub"><a href="#/admin/quotes" style="color:var(--accent)">View quotes &amp; enquiries</a></div></div>' +
     '</div>' +
     // Recent Activity
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Recent Activity</h3><div class="ph-sub">Latest additions and changes across your store</div></div></div>' +
-    '<div class="panel-body" style="padding:0">' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Recent Activity</h3><div class="ph-sub">Latest additions and changes across your store</div></div>' +
+    '<select id="activityFilter" onchange="filterDashboardActivity(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--ink);cursor:pointer">' +
+      '<option value="all">All Types</option>' +
+      activityTypes.map(t => '<option value="' + t + '">' + t.charAt(0).toUpperCase() + t.slice(1) + '</option>').join("") +
+    '</select></div>' +
+    '<div class="panel-body" style="padding:0" id="activityList">' +
       (recentActivity.length
         ? '<div style="display:flex;flex-direction:column;gap:0">' +
             recentActivity.map(a => {
@@ -683,6 +691,7 @@ function exportItemsCSV(){
 /* ---- Products admin ---- */
 function adminProducts(){
   const products = getProducts();
+  const cats = getCats();
   const content =
     '<div class="admin-panel"><div class="panel-head"><div><h3>Products</h3><div class="ph-sub">' + products.length + ' products · add, edit or remove items</div></div><button class="btn sm" onclick="openProductForm()">' + IC.plus + ' Add Product</button></div>' +
     '<div class="panel-body" style="padding:16px;border-bottom:1px solid var(--border)">' +
@@ -692,29 +701,47 @@ function adminProducts(){
         '</label>' +
         '<span id="selectedCount" style="font-size:13px;color:var(--ink-soft)">0 selected</span>' +
         '<div style="flex:1"></div>' +
+        '<select id="productCategoryFilter" onchange="filterProductsByCategory(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--ink);cursor:pointer">' +
+          '<option value="all">All Categories</option>' +
+          cats.map(c => '<option value="' + c.cs + '">' + esc(c.c) + ' (' + products.filter(p => p.cs === c.cs).length + ')</option>').join("") +
+        '</select>' +
         '<button class="btn sm ghost" onclick="openBulkEditModal()" id="bulkEditBtn" disabled style="opacity:0.5;cursor:not-allowed">' + IC.edit + ' Bulk Edit MOQ & Price</button>' +
       '</div>' +
     '</div>' +
-    '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th style="width:40px"><input type="checkbox" id="selectAllHeader" onchange="toggleSelectAllProducts(this)" style="width:16px;height:16px;cursor:pointer"></th><th></th><th>Name</th><th>Category</th><th>Price</th><th>MOQ</th><th>Rating</th><th>Actions</th></tr></thead><tbody>' +
-    products.slice().reverse().map(p => {
-      const rt = productRating(p);
-      const moq = p.priceTiers && p.priceTiers.length ? p.priceTiers[0].minQty : 1;
-      return '<tr data-product-id="' + p.id + '"><td><input type="checkbox" class="product-checkbox" value="' + p.id + '" onchange="updateSelectedCount()" style="width:16px;height:16px;cursor:pointer"></td>' +
-        '<td><img class="td-img" src="' + imgUrl(p.i, 100) + '" alt="" data-pid="' + p.id + '" onerror="imgFallback(this)"></td>' +
-        '<td style="font-weight:600">' + esc(p.n) + '</td>' +
-        '<td><span class="pill">' + esc(catName(p.cs)) + '</span></td>' +
-        '<td>' + fmt(p.p) + '</td>' +
-        '<td><span class="pill" style="background:#e8f8f7;color:#25bab5;font-weight:600">' + moq + '</span></td>' +
-        '<td><span class="stars" style="color:#f5a623;font-size:12px">' + stars(rt.r) + '</span> <span style="font-size:12px;color:var(--ink-soft)">' + rt.r.toFixed(1) + '</span></td>' +
-        '<td><div class="table-actions">' +
-          '<button onclick="openProductForm(\'' + p.id + '\')" title="Edit">' + IC.edit + '</button>' +
-          '<button class="del" onclick="deleteProduct(\'' + p.id + '\')" title="Delete">' + IC.del + '</button>' +
-        '</div></td></tr>';
-    }).join("") +
+    '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table" id="productsTable"><thead><tr><th style="width:40px"><input type="checkbox" id="selectAllHeader" onchange="toggleSelectAllProducts(this)" style="width:16px;height:16px;cursor:pointer"></th><th></th><th>Name</th><th>Category</th><th>Price</th><th>MOQ</th><th>Rating</th><th>Actions</th></tr></thead><tbody id="productsTableBody">' +
+    products.slice().reverse().map(p => renderProductRow(p)).join("") +
     '</tbody></table></div></div>' +
     '<div class="admin-panel"><div class="panel-body"><div style="font-size:13px;color:var(--ink-soft)">Changes are saved to this browser (localStorage) and appear on the storefront immediately. Use checkboxes to select products for bulk editing.</div></div></div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Products";
+}
+
+/* Render a single product row for the admin table */
+function renderProductRow(p){
+  const rt = productRating(p);
+  const moq = p.priceTiers && p.priceTiers.length ? p.priceTiers[0].minQty : 1;
+  return '<tr data-product-id="' + p.id + '"><td><input type="checkbox" class="product-checkbox" value="' + p.id + '" onchange="updateSelectedCount()" style="width:16px;height:16px;cursor:pointer"></td>' +
+    '<td><img class="td-img" src="' + imgUrl(p.i, 100) + '" alt="" data-pid="' + p.id + '" onerror="imgFallback(this)"></td>' +
+    '<td style="font-weight:600">' + esc(p.n) + '</td>' +
+    '<td><span class="pill">' + esc(catName(p.cs)) + '</span></td>' +
+    '<td>' + fmt(p.p) + '</td>' +
+    '<td><span class="pill" style="background:#e8f8f7;color:#25bab5;font-weight:600">' + moq + '</span></td>' +
+    '<td><span class="stars" style="color:#f5a623;font-size:12px">' + stars(rt.r) + '</span> <span style="font-size:12px;color:var(--ink-soft)">' + rt.r.toFixed(1) + '</span></td>' +
+    '<td><div class="table-actions">' +
+      '<button onclick="openProductForm(\'' + p.id + '\')" title="Edit">' + IC.edit + '</button>' +
+      '<button class="del" onclick="deleteProduct(\'' + p.id + '\')" title="Delete">' + IC.del + '</button>' +
+    '</div></td></tr>';
+}
+
+/* Filter products by category */
+function filterProductsByCategory(cat){
+  const products = getProducts();
+  const filtered = cat === 'all' ? products : products.filter(p => p.cs === cat);
+  const tbody = document.getElementById('productsTableBody');
+  if(tbody){
+    tbody.innerHTML = filtered.slice().reverse().map(p => renderProductRow(p)).join("");
+  }
+  updateSelectedCount();
 }
 
 function toggleSelectAllProducts(checkbox){
@@ -2072,5 +2099,29 @@ async function sendTestOrderEmail(){
       "network": "Network error — check your connection and try again"
     };
     showToast(errMap[r.reason] || ("Email failed — " + (r.reason || "unknown error")));
+  }
+}
+
+/* Filter dashboard activity by type */
+function filterDashboardActivity(type){
+  const activities = window._dashboardActivities || [];
+  const filtered = type === 'all' ? activities : activities.filter(a => a.type === type);
+  const listEl = document.getElementById('activityList');
+  if(!listEl) return;
+  
+  if(filtered.length){
+    listEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:0">' +
+      filtered.slice(0, 20).map(a => {
+        const timeAgo = formatTimeAgo(a.time);
+        return '<div style="display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid var(--line);transition:background .15s" onmouseover="this.style.background=\'var(--bg-soft)\'" onmouseout="this.style.background=\'transparent\'">' +
+          '<div style="width:32px;height:32px;border-radius:8px;background:' + a.color + '15;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:' + a.color + ';stroke:' + a.color + ';font-size:14px">' + a.icon.replace('<svg', '<svg width="18" height="18"') + '</div>' +
+          '<div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--ink);line-height:1.35">' + a.text + '</div>' +
+          '<div style="font-size:11px;color:var(--ink-soft);margin-top:1px">' + timeAgo + '</div></div>' +
+          '<span class="pill ' + a.type + '" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;flex-shrink:0;padding:3px 8px">' + a.type + '</span>' +
+        '</div>';
+      }).join("") +
+    '</div>';
+  }else{
+    listEl.innerHTML = '<div style="padding:20px;font-size:13.5px;color:var(--ink-soft)">No activity of this type yet.</div>';
   }
 }
