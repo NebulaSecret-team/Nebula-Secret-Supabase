@@ -2298,10 +2298,10 @@ function seeded(id, salt){
 }
 function productRating(p){
   const r = 3.8 + seeded(p.id, "rating") * 1.1;
-  const reviews = 6 + Math.floor(seeded(p.id, "reviews") * 240);
+  const reviews = 60 + Math.floor(seeded(p.id, "reviews") * 2400);
   return { r: Math.round(r * 10) / 10, reviews };
 }
-function productSold(p){ return 40 + Math.floor(seeded(p.id, "sold") * 960); }
+function productSold(p){ return 400 + Math.floor(seeded(p.id, "sold") * 9600); }
 function stars(r){
   const full = Math.round(r);
   return "★★★★★".slice(0, full) + "☆☆☆☆☆".slice(0, 5 - full);
@@ -2695,15 +2695,17 @@ function cardHTML(p, opts){
   const priceHTML = hasDiscount 
     ? fmtTier(p.p) + '<span class="old">' + fmt(p.p) + '</span>'
     : fmt(p.p);
+  const moq = p.priceTiers && p.priceTiers.length ? p.priceTiers[0].minQty : 1;
   return '<article class="product-card">' +
     '<div class="ph">' +
       '<a href="#/product/' + esc(p.id) + '"><img src="' + esc(imgUrl(p.i, 700)) + '" alt="' + esc(p.n) + '" loading="lazy" data-pid="' + esc(p.id) + '" onerror="imgFallback(this)"></a>' +
-      '<button class="quick-add" onclick="addToCart(\'' + p.id + '\',1)">Add to cart</button>' +
+      '<button class="quick-add" onclick="addToCart(\'' + p.id + '\',' + moq + ')">Add to cart</button>' +
     '</div>' +
     '<div class="info">' +
       '<a class="p-name" href="#/product/' + p.id + '">' + esc(p.n) + '</a>' +
-      '<div class="p-rating"><span class="stars">' + stars(rt.r) + '</span><b>' + rt.r.toFixed(1) + '</b><span>(' + rt.reviews + ')</span></div>' +
+      '<div class="p-rating"><span class="stars">' + stars(rt.r) + '</span><b>' + rt.r.toFixed(1) + '</b><span>(' + rt.reviews + ' reviews)</span></div>' +
       '<div class="p-price">' + priceHTML + (opts.showUnit ? '<span class="unit"> / piece</span>' : '') + '</div>' +
+      '<div class="p-moq" style="font-size:12px;color:#666;margin-top:4px;">MOQ: ' + moq + ' units</div>' +
     '</div></article>';
 }
 
