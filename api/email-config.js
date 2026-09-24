@@ -32,17 +32,14 @@ export default async function handler(req) {
   }
 
   const params = {
-    EMAILJS_SERVICE_ID: !!process.env.EMAILJS_SERVICE_ID,
-    EMAILJS_TEMPLATE_ID: !!process.env.EMAILJS_TEMPLATE_ID,
-    EMAILJS_CONTACT_TEMPLATE_ID: !!process.env.EMAILJS_CONTACT_TEMPLATE_ID,
-    EMAILJS_PUBLIC_KEY: !!process.env.EMAILJS_PUBLIC_KEY,
-    EMAILJS_PRIVATE_KEY: !!process.env.EMAILJS_PRIVATE_KEY,
+    RESEND_API_KEY: !!process.env.RESEND_API_KEY,
+    MAIL_FROM: !!process.env.MAIL_FROM,
     MAIL_RECIPIENTS: !!process.env.MAIL_RECIPIENTS,
     MAIL_ENABLED: process.env.MAIL_ENABLED !== 'false',
     ALLOWED_ORIGINS: !!process.env.ALLOWED_ORIGINS,
   };
 
-  const hasKeys = params.EMAILJS_SERVICE_ID && params.EMAILJS_TEMPLATE_ID && params.EMAILJS_PUBLIC_KEY;
+  const hasKeys = params.RESEND_API_KEY && params.MAIL_FROM;
 
   return new Response(JSON.stringify({ configured: hasKeys, enabled: params.MAIL_ENABLED && hasKeys, params }), {
     status: 200,
