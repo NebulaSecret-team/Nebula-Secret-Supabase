@@ -3836,10 +3836,34 @@ function acctTab(which){
 let _resetState = "email"; // email, sent, newpassword, success
 
 function accountResetView(){
+  if(window._authError) return accountResetError();
   if(_resetState === "sent") return accountResetSent();
   if(_resetState === "newpassword") return accountResetNewPassword();
   if(_resetState === "success") return accountResetSuccess();
   return accountResetForm();
+}
+
+function accountResetError(){
+  const errorDesc = window._authErrorDesc || "The password reset link is invalid or has expired.";
+  const errorCode = window._authErrorCode || "";
+  return '<div class="acct-card" style="text-align:center">' +
+    '<div style="font-size:48px;margin-bottom:16px">⚠️</div>' +
+    '<h2>Reset Link Expired</h2>' +
+    '<p class="sub" style="color:var(--danger)">' + esc(errorDesc) + '</p>' +
+    (errorCode ? '<p style="font-size:12px;color:var(--ink-soft);margin-bottom:16px">Error code: ' + esc(errorCode) + '</p>' : '') +
+    '<div style="background:var(--bg-soft);padding:16px;border-radius:8px;margin:20px 0;text-align:left;font-size:13px;color:var(--ink-soft)">' +
+      '<p style="margin:0 0 8px 0"><strong>📝 What to do:</strong></p>' +
+      '<ol style="margin:0;padding-left:20px">' +
+        '<li style="margin-bottom:4px">Click the button below to request a new reset link</li>' +
+        '<li style="margin-bottom:4px">Check your email inbox (and spam folder)</li>' +
+        '<li style="margin-bottom:4px">Click the new link within 1 hour (links expire quickly)</li>' +
+      '</ol>' +
+    '</div>' +
+    '<button class="btn full" onclick="window._authError=false;window._authErrorDesc=null;window._authErrorCode=null;_resetState=\'email\';viewAccount();">🔄 Request New Reset Link</button>' +
+    '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">' +
+      'Remember your password? <a href="#/account" style="color:var(--brand);font-weight:600">Sign in here</a>' +
+    '</p>' +
+  '</div>';
 }
 
 function accountResetForm(){
@@ -4764,10 +4788,33 @@ function syncSticky(){
   if(h) document.documentElement.style.setProperty("--catnav-top", h.offsetHeight + "px");
 }
 cleanupOldData();
-/* Detect password recovery token in URL on page load */
+/* Detect password recovery token or auth errors in URL on page load */
 (function(){
   const hash = location.hash || "";
   const search = location.search || "";
+  const fullUrl = hash + search;
+  
+  /* Check for auth errors (expired link, invalid token, etc.) */
+  if(fullUrl.includes("error=") || fullUrl.includes("error_code=")){
+    console.log("Auth error detected in URL - showing error message");
+    window._authError = true;
+    /* Extract error description */
+    const errorMatch = fullUrl.match(/error_description=([^&]+)/);
+    const errorCodeMatch = fullUrl.match(/error_code=([^&]+)/);
+    if(errorMatch){
+      window._authErrorDesc = decodeURIComponent(errorMatch[1].replace(/\+/g, ' '));
+    }
+    if(errorCodeMatch){
+      window._authErrorCode = errorCodeMatch[1];
+    }
+    /* Force navigation to account page to show error */
+    if(!hash.startsWith("#/account")){
+      location.hash = "#/account?reset=1&error=1";
+    }
+    return;
+  }
+  
+  /* Detect password recovery token */
   if(hash.includes("type=recovery") || search.includes("type=recovery") || 
      hash.includes("access_token") || search.includes("access_token")){
     console.log("Recovery token detected in URL on page load");
