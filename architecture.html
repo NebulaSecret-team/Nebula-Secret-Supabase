@@ -1084,7 +1084,7 @@
             <div class="card-subtitle">產品管理</div>
           </div>
         </div>
-        <div class="card-desc">新增、編輯、刪除產品，支持圖片上傳、批量編輯 MOQ 和價格。</div>
+        <div class="card-desc">新增、編輯、刪除產品，支持圖片上傳、批量編輯 MOQ 和價格。名稱/價格/圖片路徑存 Supabase 即時生效；圖片檔案在 git images/ 隨分支部署。</div>
         <div class="card-link">管理產品 →</div>
       </a>
 
@@ -1401,6 +1401,10 @@
           <div class="detail-value" style="font-size:10px;text-align:left">products, cats, theme, content, orders, accounts, admins, tiers, quotes</div>
         </div>
         <div class="detail-row">
+          <div class="detail-label">圖片存儲</div>
+          <div class="detail-value" style="font-size:10px;text-align:left">products/cats 只存圖片路徑字串（i 欄位）；圖片檔案在 Git images/（Vercel 靜態託管），非 Supabase Storage</div>
+        </div>
+        <div class="detail-row">
           <div class="detail-label">用戶認證</div>
           <div class="detail-value">Supabase Auth（Email/Password）</div>
         </div>
@@ -1456,6 +1460,10 @@
           <div class="detail-value">GitHub 自動部署（雙環境）</div>
         </div>
         <div class="detail-row">
+          <div class="detail-label">靜態圖片</div>
+          <div class="detail-value" style="font-size:10px;text-align:left">images/（96 個文件，含 images/perfume/）隨分支部署：main = prod，uat = UAT；DB 只存路徑，檔案改動需 push</div>
+        </div>
+        <div class="detail-row">
           <div class="detail-label">部署時間</div>
           <div class="detail-value">1-2 分鐘</div>
         </div>
@@ -1500,7 +1508,11 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">主要文件</div>
-          <div class="detail-value" style="font-size:11px;text-align:left">index.html, admin.js, architecture.html, api/send-email.js</div>
+          <div class="detail-value" style="font-size:11px;text-align:left">index.html, admin.js, architecture.html, api/send-email.js, images/</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">圖片部署</div>
+          <div class="detail-value" style="font-size:10px;text-align:left">產品元數據在 Supabase（即時）；圖片檔案在 images/（隨分支部署，main/uat 各自版本）</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">推送工具</div>

@@ -19,7 +19,7 @@ nebula-secret-supabase/
 
 ├── setup.sql       # 數據庫建表 SQL（在 Supabase SQL Editor 執行）
 
-├── images/         # 產品圖片、logo、banner（82 個文件）
+├── images/         # 產品圖片、logo、banner（96 個文件，香水分類在 images/perfume/）
 
 └── README.md       # 本說明文件
 ```
@@ -122,6 +122,24 @@ const SB\_KEY = "REPLACE\_WITH\_YOUR\_ANON\_KEY";
 | `accounts` | 客戶賬號（JSON 數組）  |                              |
 | `admins`   | 管理員賬號（JSON 數組） |                              |
 
+### 圖片存儲方式（混合模型）
+
+產品**元數據**與圖片**檔案**分開存放：
+
+| 內容             | 存放位置                            | 生效方式                     |
+| -------------- | ------------------------------- | ------------------------ |
+| 產品名稱、價格、分類等   | Supabase `site_settings.products` | Admin Panel 保存 → 立即生效（雙環境共用 DB） |
+| 圖片**路徑**（`i` 欄位） | 同上（只存字串，如 `images/perfume/…jpg`） | Admin Panel 改路徑 → 立即生效        |
+| 圖片**檔案**（位元組）  | Git 倉庫 `images/`（Vercel 靜態託管）  | 替換檔案 → commit → push 該分支       |
+
+* 渲染時 `getProducts()` 從緩存讀出路徑，`imgUrl(p.i, w)` 拼出 `<img src="images/…?width=w">`，瀏覽器向 Vercel CDN 拉取靜態檔案
+
+* `main` 分支 = 正式站，`uat` 分支 = UAT — **同一個 Supabase，各自分支的 `images/` 會分別部署**，所以換照片只 push 對應分支即可
+
+* Admin 上傳新圖時也可存為 base64 data URL（直接存進 DB，不依賴靜態檔案）
+
+* 當前目錄：`images/`（logo、banner、weebly 遷移產品圖）+ `images/perfume/`（14 張香水去背圖）
+
 ### 為什麼用單表而不是多表？
 
 
@@ -172,7 +190,7 @@ const SB\_KEY = "REPLACE\_WITH\_YOUR\_ANON\_KEY";
 | 多設備同步  | 需要手動 Cloud Sync   | 自動實時同步                                    |
 | 客戶下單   | 只發郵件，後台看不到        | 訂單直接寫入數據庫，後台即時顯示                          |
 | 管理員改產品 | 需要 Push to GitHub | 直接保存到 Supabase，即時生效                       |
-| 圖片存儲   | GitHub repo       | 仍用本地 images/ 文件夾（未來可遷移到 Supabase Storage） |
+| 圖片存儲   | GitHub repo       | 路徑存 Supabase（即時），檔案存 `images/`（Vercel 按分支靜態託管）  |
 | 用戶認證   | 自寫密碼驗證            | 自寫密碼驗證（未來可升級到 Supabase Auth）              |
 
 
@@ -192,6 +210,10 @@ A：管理員登錄 Admin Panel → **Orders** 頁面，所有客戶訂單即時
 ### Q：如何修改產品？
 
 A：管理員登錄 Admin Panel → **Products** → 新增 / 編輯 / 刪除產品，保存後自動同步到 Supabase，所有訪客刷新即可看到。
+
+### Q：如何更換產品照片本身（不是路徑）？
+
+A：照片檔案在 `images/`（香水系列在 `images/perfume/`），存在 Git 而非資料庫。替換對應檔案 → commit → push（`main` = 正式站，`uat` = UAT），Vercel 自動部署。僅改名稱 / 價格 / 圖片**路徑**則在 Admin Panel 操作即可，無需 push。
 
 ### Q：數據會丟失嗎？
 
