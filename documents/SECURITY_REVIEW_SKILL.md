@@ -13,7 +13,7 @@ Stack-specific notes are marked **[NS]** — everything else is generic and reus
 | UAT site | `https://nebula-secret-supabase-uat.vercel.app` |
 | Supabase project | `xwhhsoppcpkijxxychjm` (`https://xwhhsoppcpkijxxychjm.supabase.co`) |
 | Supabase publishable key | Public by design (`sb_publishable_…`) — do **not** report as a leak |
-| Secret keys to hunt for | Supabase **service_role** / `sb_secret_`, EmailJS **private** key, Vercel tokens, PATs |
+| Secret keys to hunt for | Supabase **service_role** / `sb_secret_`, Resend **API** key, Vercel tokens, PATs |
 | Repo | `NebulaSecret-team/Nebula-Secret-Supabase` |
 
 Out of scope: Denial-of-service, physical attacks, social engineering of staff.
@@ -126,7 +126,7 @@ Also verify `robots.txt`, `vercel.json` rewrites/headers, and that `.vercel/` + 
 - [ ] **A05 Misconfiguration** — RLS ON on all 9 public tables; zero `user_metadata`-based policies; security headers present; no directory listing
 - [ ] **A06 Vulnerable components** — CDN pins with valid `integrity=`; versions not bumped without rehashing
 - [ ] **A07 Auth failures** — Supabase Auth for admin; session token 24h; rate-limit login attempts if reachable; no default creds
-- [ ] **A08 Data integrity** — EmailJS via serverless only (`api/send-email.js`), private key server-side env var
+- [ ] **A08 Data integrity** — Resend via serverless only (`api/send-email.js`), API key server-side env var
 - [ ] **A09 Logging/monitoring** — `site_settings.activity_log` admin-written only; confirm failed admin logins surface somewhere
 - [ ] **A10 SSRF** — serverless functions must not fetch user-supplied URLs
 

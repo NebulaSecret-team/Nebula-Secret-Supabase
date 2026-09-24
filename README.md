@@ -187,7 +187,7 @@ A：anon key 是公開的，設計上就是放在前端的。它的權限由 Sup
 
 ### Q：客戶下單後，管理員在哪裡看到訂單？
 
-A：管理員登錄 Admin Panel → **Orders** 頁面，所有客戶訂單即時顯示。同時 EmailJS 郵件通知仍然生效。
+A：管理員登錄 Admin Panel → **Orders** 頁面，所有客戶訂單即時顯示。同時 Resend 郵件通知仍然生效。
 
 ### Q：如何修改產品？
 
@@ -213,7 +213,7 @@ A：可以。`setup.sql` 已包含獨立表定義。v2 版本需要改寫數據�
 
 * **後端**：Supabase（PostgreSQL + REST API）
 
-* **郵件**：EmailJS（訂單確認郵件）
+* **郵件**：Resend（訂單確認 + 聯繫表單，經 Vercel Edge Function `/api/send-email` 代理發送）
 
 * **PDF**：jsPDF + html2canvas（訂單 PDF 下載）
 

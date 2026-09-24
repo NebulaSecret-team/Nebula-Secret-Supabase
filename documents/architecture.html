@@ -747,9 +747,9 @@
           <div class="node-role">數據存儲、Auth</div>
         </a>
         <div class="arch-connector"></div>
-        <a href="https://dashboard.emailjs.com" target="_blank" class="arch-node">
+        <a href="https://resend.com" target="_blank" class="arch-node">
           <div class="node-icon">📧</div>
-          <div class="node-name">EmailJS</div>
+          <div class="node-name">Resend</div>
           <div class="node-role">郵件發送</div>
         </a>
         <div class="arch-connector"></div>
@@ -1201,7 +1201,7 @@
             <div class="card-subtitle">郵件設置</div>
           </div>
         </div>
-        <div class="card-desc">配置 EmailJS 服務、訂單模板、聯繫表單模板、收件人郵箱。</div>
+        <div class="card-desc">查看 Resend 發送狀態、Vercel 環境變量、收件人配置。</div>
         <div class="card-link">配置郵件 →</div>
       </a>
     </div>
@@ -1228,7 +1228,7 @@
         <div class="flow-step"><div class="step-num">1</div><div>客戶瀏覽產品（自動應用分級折扣）→ 加入購物車</div></div>
         <div class="flow-step"><div class="step-num">2</div><div>填寫結賬信息 → 提交訂單</div></div>
         <div class="flow-step"><div class="step-num">3</div><div>訂單數據寫入 Supabase 數據庫</div></div>
-        <div class="flow-step"><div class="step-num">4</div><div>Vercel Edge Function → EmailJS 發送確認郵件</div></div>
+        <div class="flow-step"><div class="step-num">4</div><div>Vercel Edge Function → Resend 發送確認郵件</div></div>
         <div class="flow-step"><div class="step-num">5</div><div>管理員在 Admin Panel 查看訂單</div></div>
         <div class="flow-step"><div class="step-num">6</div><div>管理員更新訂單狀態 → 客戶可追蹤</div></div>
       </div>
@@ -1260,7 +1260,7 @@
         <div class="flow-step"><div class="step-num">1</div><div>客戶填寫聯繫表單</div></div>
         <div class="flow-step"><div class="step-num">2</div><div>選擇查詢類型（批發/OEM/ODM 等）</div></div>
         <div class="flow-step"><div class="step-num">3</div><div>提交表單 → Vercel Edge Function</div></div>
-        <div class="flow-step"><div class="step-num">4</div><div>Edge Function 調用 EmailJS API</div></div>
+        <div class="flow-step"><div class="step-num">4</div><div>Edge Function 調用 Resend API</div></div>
         <div class="flow-step"><div class="step-num">5</div><div>郵件發送到 sales@nebulasecret.com</div></div>
         <div class="flow-step"><div class="step-num">6</div><div>同時發送到 bong8686@gmail.com</div></div>
       </div>
@@ -1398,7 +1398,7 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">存儲的 Keys</div>
-          <div class="detail-value" style="font-size:10px;text-align:left">products, cats, theme, content, orders, accounts, admins, tiers, quotes, emailjs</div>
+          <div class="detail-value" style="font-size:10px;text-align:left">products, cats, theme, content, orders, accounts, admins, tiers, quotes</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">用戶認證</div>
@@ -1512,53 +1512,45 @@
         </div>
       </div>
 
-      <!-- EmailJS -->
+      <!-- Resend -->
       <div class="detail-card color-orange">
         <div class="detail-card-header">
           <div class="detail-card-icon">📧</div>
           <div>
-            <div class="detail-card-title">EmailJS 郵件服務</div>
+            <div class="detail-card-title">Resend 郵件服務</div>
             <div class="detail-card-sub">Email Service (via Edge Function)</div>
           </div>
         </div>
         <div class="detail-row">
           <div class="detail-label">服務平台</div>
-          <div class="detail-value">EmailJS</div>
+          <div class="detail-value">Resend</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">計劃 (Plan)</div>
-          <div class="detail-value">Free Tier (200 封/月)</div>
+          <div class="detail-value">Free Tier (3,000 封/月)</div>
         </div>
         <div class="detail-row">
-          <div class="detail-label">Service ID</div>
-          <div class="detail-value"><span class="detail-code">service_klqhx4h</span></div>
+          <div class="detail-label">發件域名</div>
+          <div class="detail-value"><span class="detail-code">nebulasecret.com</span>（DKIM/SPF/return-path 已驗證）</div>
         </div>
         <div class="detail-row">
-          <div class="detail-label">訂單模板 ID</div>
-          <div class="detail-value"><span class="detail-code">template_cdrvj4m</span></div>
+          <div class="detail-label">發件人 (From)</div>
+          <div class="detail-value"><span class="detail-code">Nebula Secret &lt;noreply@nebulasecret.com&gt;</span></div>
         </div>
         <div class="detail-row">
-          <div class="detail-label">聯繫表單模板 ID</div>
-          <div class="detail-value"><span class="detail-code">template_o5u18d6</span></div>
-        </div>
-        <div class="detail-row">
-          <div class="detail-label">收件人 1</div>
-          <div class="detail-value" style="font-size:11px">sales@nebulasecret.com</div>
-        </div>
-        <div class="detail-row">
-          <div class="detail-label">收件人 2</div>
-          <div class="detail-value" style="font-size:11px">bong8686@gmail.com</div>
+          <div class="detail-label">收件人</div>
+          <div class="detail-value" style="font-size:11px">由 <code>MAIL_RECIPIENTS</code> 環境變量配置</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">發送方式</div>
-          <div class="detail-value">Vercel Edge Function 代理</div>
+          <div class="detail-value">Vercel Edge Function 代理（<code>POST https://api.resend.com/emails</code>）</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">後台登錄</div>
-          <div class="detail-value"><a href="https://dashboard.emailjs.com" target="_blank">dashboard.emailjs.com</a></div>
+          <div class="detail-value"><a href="https://resend.com" target="_blank">resend.com</a></div>
         </div>
         <div class="info-box">
-          <strong>🔒 安全：</strong>EmailJS Private Key 存儲在 Vercel 環境變量中，前端永遠看不到密鑰。
+          <strong>🔒 安全：</strong>Resend API Key（<code>RESEND_API_KEY</code>）存儲在 Vercel 環境變量中，前端永遠看不到密鑰。
         </div>
       </div>
 
@@ -1581,22 +1573,22 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">用途</div>
-          <div class="detail-value">保護 EmailJS Private Key</div>
+          <div class="detail-value">保護 Resend API Key</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">環境變量</div>
-          <div class="detail-value" style="font-size:10px;text-align:left">EMAILJS_PUBLIC_KEY, EMAILJS_PRIVATE_KEY, EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_CONTACT_TEMPLATE_ID, ALLOWED_ORIGINS</div>
+          <div class="detail-value" style="font-size:10px;text-align:left">RESEND_API_KEY, MAIL_FROM, MAIL_RECIPIENTS, MAIL_ENABLED, ALLOWED_ORIGINS</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">降級機制</div>
-          <div class="detail-value">Edge 失敗 → 前端 EmailJS SDK</div>
+          <div class="detail-value">Edge 失敗 → 前端顯示錯誤提示（訂單仍保存在數據庫）</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">源代碼</div>
           <div class="detail-value"><span class="detail-code">api/send-email.js</span></div>
         </div>
         <div class="info-box">
-          <strong>💡 工作原理：</strong>前端發送請求到 /api/send-email，Edge Function 使用服務端環境變量中的 Private Key 調用 EmailJS API，避免密鑰暴露在前端。
+          <strong>💡 工作原理：</strong>前端發送請求到 /api/send-email，Edge Function 使用服務端環境變量中的 API Key 調用 Resend API，避免密鑰暴露在前端。
         </div>
       </div>
 
