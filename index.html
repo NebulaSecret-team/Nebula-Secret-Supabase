@@ -1652,14 +1652,18 @@ async function syncAuthSession(){
           /* User clicked password reset link - show new password form */
           console.log("Password recovery detected - showing new password form");
           window._passwordRecovery = true;
-          /* If we're on the account page, refresh to show new password form */
-          if(location.hash.startsWith('#/account')){
-            setTimeout(() => {
-              if(typeof showNewPasswordForm === 'function') showNewPasswordForm();
-            }, 300);
+          /* Force navigation to account page to prevent redirect to home */
+          if(!location.hash.startsWith('#/account')){
+            location.hash = "#/account?reset=1";
           }
+          /* Show new password form after navigation */
+          setTimeout(() => {
+            if(typeof showNewPasswordForm === 'function') showNewPasswordForm();
+          }, 400);
         }
         if(event === 'SIGNED_IN' && session?.user){
+          /* Don't auto-redirect during password recovery */
+          if(window._passwordRecovery) return;
           const name = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User';
           setSession({ name, email: session.user.email, supabaseAuth: true, userId: session.user.id });
           if(typeof updateAcctLabel === 'function') updateAcctLabel();
@@ -4760,6 +4764,20 @@ function syncSticky(){
   if(h) document.documentElement.style.setProperty("--catnav-top", h.offsetHeight + "px");
 }
 cleanupOldData();
+/* Detect password recovery token in URL on page load */
+(function(){
+  const hash = location.hash || "";
+  const search = location.search || "";
+  if(hash.includes("type=recovery") || search.includes("type=recovery") || 
+     hash.includes("access_token") || search.includes("access_token")){
+    console.log("Recovery token detected in URL on page load");
+    window._passwordRecovery = true;
+    /* Force navigation to account page if not already there */
+    if(!hash.startsWith("#/account")){
+      location.hash = "#/account?reset=1";
+    }
+  }
+})();
 /* Load data from Supabase, then render */
 sbLoadAll().then(() => {
   applyTheme();
