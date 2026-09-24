@@ -76,7 +76,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <tbody>
 <tr><td style="font-weight:600">#1 (fresh)</td><td>2026-09-12</td><td>Full audit: index.html (4125 lines), admin.js, api/keep-alive.js, api/send-email.js, vercel.json, .gitignore + Supabase security advisors. Prior reports retired on request.</td><td>33 open (1 Critical, 12 High, 12 Medium, 8 Low) · 17 controls verified · 1 accepted risk. Fix order: CR-1 → H-10 (RLS) → H-12 (mail API) → H-2/H-3/H-4 (login) → stored XSS cluster.</td></tr>
 <tr><td style="font-weight:600">#2 (batch fix)</td><td>2026-09-13</td><td>All 33 findings remediated. Batches: (1) CR-1 + H-2/H-3/H-4 login hardening; (2) H-6–H-10, M-6–M-8 XSS/injection sinks; (3) H-12, M-9–M-12, L-4–L-5 API + edge function hardening + CDN SRI.</td><td><strong>19 fixed</strong>, 14 open (RLS-related findings require manual DB policy work or design decisions — see below).</td></tr>
-<tr><td style="font-weight:600">#3 (final)</td><td>2026-09-13</td><td>All remaining 14 findings. Batches: (4) H-1 deprecated GitHub cloud sync removal; (5) H-5/H-11 RLS policies via Supabase migration; (6) M-1/M-4 legacy password branches removed; (7) M-2 EmailJS secrets stripped from localStorage; (8) M-3 session validation + expiration; (9) M-5 architecture.html redaction; (10) L-2/L-6/L-8 fixes.</td><td><strong>32 fixed</strong>, 1 open (L-7 requires Supabase dashboard). 17 → 22 controls verified.</td></tr>
+<tr><td style="font-weight:600">#3 (final)</td><td>2026-09-13</td><td>All remaining 14 findings. Batches: (4) H-1 deprecated GitHub cloud sync removal; (5) H-5/H-11 RLS policies via Supabase migration; (6) M-1/M-4 legacy password branches removed; (7) M-2 email secrets stripped from localStorage; (8) M-3 session validation + expiration; (9) M-5 architecture.html redaction; (10) L-2/L-6/L-8 fixes.</td><td><strong>32 fixed</strong>, 1 open (L-7 requires Supabase dashboard). 17 → 22 controls verified.</td></tr>
 </tbody>
 </table></div>
 </div>
@@ -239,8 +239,8 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 </div>
 <div class="finding-body">
 <h5>Location</h5><p><code>api/send-email.js:15-101</code> — no limiter, captcha, or auth in the whole file.</p>
-<h5>Impact</h5><p>Anyone can POST directly, burning EmailJS quota or sending spam/phishing from your service identity.</p>
-<h5>Remediation</h5><p>Per-IP rate limit plus Turnstile/captcha or an auth-token check before calling EmailJS.</p>
+<h5>Impact</h5><p>Anyone can POST directly, burning email quota or sending spam/phishing from your service identity.</p>
+<h5>Remediation</h5><p>Per-IP rate limit plus Turnstile/captcha or an auth-token check before calling the email API.</p>
 </div>
 </div>
 </div>
@@ -251,7 +251,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-1 · Plaintext password fallback branches kept alive</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:1511,1543-1547</code> (<code>plain::</code> + raw passthrough).</p><h5>Impact</h5><p>Stolen DB/localStorage yields immediately reusable credentials; legacy plaintext accounts never die.</p><h5>Remediation</h5><p>Drop the <code>plain</code> branches; force a reset for non-PBKDF2 accounts.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-2 · EmailJS secrets + recipients in unencrypted localStorage</div><span class="status fixed">Fixed</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-2 · Email secrets + recipients in unencrypted localStorage</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:1101,1106,1616,1695</code> (<code>ns_mail_v3</code>, <code>ns_cloudsync_v3</code>).</p><h5>Impact</h5><p>Any XSS exfiltrates service IDs, keys, and recipient addresses for quota abuse/spam.</p><h5>Remediation</h5><p>Keep secrets server-side (the <code>api/send-email.js:45-53</code> env pattern); browser holds only an enabled flag.</p></div></div>
 
 <div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-3 · Admin/customer session tokens in localStorage</div><span class="status fixed">Fixed</span></div>
@@ -260,8 +260,8 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-4 · Weak legacy SHA-256 hashes still accepted</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:1509-1510,1535-1540</code> (static-pepper single-round <code>ns-salt::</code>).</p><h5>Impact</h5><p>Fast offline brute force of stolen <code>sha256::</code> hashes.</p><h5>Remediation</h5><p>Remove the <code>sha256::</code> verify branch; re-hash on next login, then delete the legacy value.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-5 · Real EmailJS template ID + mailboxes published in static doc</div><span class="status fixed">Fixed</span></div>
-<div class="finding-body"><h5>Location</h5><p><code>architecture.html:1417,1421,1425</code> (contact template ID, sales + personal mailboxes).</p><h5>Impact</h5><p>Enables targeted phishing and quota-draining against the real template and addresses.</p><h5>Remediation</h5><p>Remove IDs/mailboxes from the repo; load from server config + enable the EmailJS domain whitelist.</p></div></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-5 · Real email template ID + mailboxes published in static doc</div><span class="status fixed">Fixed</span></div>
+<div class="finding-body"><h5>Location</h5><p><code>architecture.html:1417,1421,1425</code> (contact template ID, sales + personal mailboxes).</p><h5>Impact</h5><p>Enables targeted phishing and quota-draining against the real template and addresses.</p><h5>Remediation</h5><p>Remove IDs/mailboxes from the repo; load from server config only.</p></div></div>
 
 <div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-6 · Attribute-breakout in product/image sinks</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>index.html:2217</code> (<code>imgUrl(p.i)</code>, <code>p.id</code>, <code>p.cs</code> raw in <code>src/href/onclick</code>); same pattern at <code>index.html:2502,3429</code>, <code>admin.js:104,646</code>.</p><h5>Impact</h5><p>A quote character in a product record breaks out into event-handler XSS.</p><h5>Remediation</h5><p><code>esc()</code> every attribute interpolation + validate image URL protocol.</p></div></div>
@@ -275,7 +275,7 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-9 · send-email request validation too weak</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>api/send-email.js:34-54</code> — <code>type</code> not allowlisted, <code>params</code> shape/size unchecked.</p><h5>Impact</h5><p>Spoofed names, oversized payloads, HTML/URL injection into outgoing mail; any non-<code>contact</code> type silently uses the order template.</p><h5>Remediation</h5><p>Allowlist <code>['order','contact']</code> + schema-validate/sanitize each field with size caps.</p></div></div>
 
-<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-10 · Upstream EmailJS errors proxied to client</div><span class="status fixed">Fixed</span></div>
+<div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-10 · Upstream email-provider errors proxied to client</div><span class="status fixed">Fixed</span></div>
 <div class="finding-body"><h5>Location</h5><p><code>api/send-email.js:89</code> (<code>detail: errorText</code>).</p><h5>Impact</h5><p>Service/template IDs and quota/reject reasons disclosed for reconnaissance.</p><h5>Remediation</h5><p>Return a generic error; log <code>errorText</code> server-side only.</p></div></div>
 
 <div class="finding open"><div class="finding-header" onclick="this.parentElement.classList.toggle('open')"><div class="finding-title"><span class="badge medium">Medium</span> M-11 · vercel.json has zero security headers</div><span class="status fixed">Fixed</span></div>
@@ -326,14 +326,14 @@ td{padding:11px 13px;border-bottom:1px solid #e2e8f0;color:#4b5563;vertical-alig
 <tr><td>Search/hash reflection escaped; contact messages use <code>textContent</code></td><td><code>index.html:3305,3324,3277</code></td><td><span class="status secured">Secured</span></td></tr>
 <tr><td>Currency API data used numerically only, no DOM URL reflection</td><td><code>index.html:1432</code></td><td><span class="status secured">Secured</span></td></tr>
 <tr><td>CORS exact allowlist, no origin reflection</td><td><code>api/send-email.js:103-122</code></td><td><span class="status secured">Secured</span></td></tr>
-<tr><td>EmailJS secrets env-only, none hardcoded</td><td><code>api/send-email.js:45-47</code></td><td><span class="status secured">Secured</span></td></tr>
+<tr><td>Email service secrets env-only, none hardcoded</td><td><code>api/send-email.js:45-47</code></td><td><span class="status secured">Secured</span></td></tr>
 <tr><td>No SSRF: <code>params</code> only serialized as mail body, never fetched</td><td><code>api/send-email.js:66-78</code></td><td><span class="status secured">Secured</span></td></tr>
 <tr><td>Method enforcement (POST-only / GET-only + 405)</td><td><code>api/send-email.js:17-30</code>, <code>api/keep-alive.js:13-18</code></td><td><span class="status secured">Secured</span></td></tr>
 <tr><td>keep-alive uses anon/publishable key, no <code>service_role</code> in repo</td><td><code>api/keep-alive.js:23-24</code>; repo-wide secret grep clean</td><td><span class="status secured">Secured</span></td></tr>
 <tr><td>All 5 CDN libs pinned with SRI + crossorigin</td><td><code>index.html:934-938</code></td><td><span class="status secured">Secured</span></td></tr>
 <tr><td><code>.env*</code> / <code>.vercel</code> gitignored</td><td><code>.gitignore:15-17,30-31</code></td><td><span class="status secured">Secured</span></td></tr>
 <tr><td>HTTPS enforced by Vercel default</td><td>platform default</td><td><span class="status secured">Secured</span></td></tr>
-<tr><td>Client-side EmailJS rate limits (bypassable, defense-in-depth only)</td><td><code>index.html:1619-1665</code></td><td><span class="status secured">Secured</span></td></tr>
+<tr><td>Client-side email rate limits (bypassable, defense-in-depth only)</td><td><code>index.html:1619-1665</code></td><td><span class="status secured">Secured</span></td></tr>
 <tr><td>Publishable key in client is by-design public (control = RLS)</td><td><code>index.html:942-943</code></td><td><span class="status accepted">Accepted*</span></td></tr>
 </tbody>
 </table></div>

@@ -980,7 +980,6 @@ details.ct-block > .form-grid{padding:14px 16px}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js" integrity="sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous"></script>
@@ -1842,8 +1841,8 @@ async function getEmailConfig(){
   catch(e){ return { configured: false, enabled: false }; }
 }
 
-/* ============ EmailJS Security: Rate Limiting & Domain Validation ============ */
-const EMAILJS_RATE_LIMIT = {
+/* ============ Email Security: Rate Limiting & Domain Validation ============ */
+const EMAIL_RATE_LIMIT = {
   maxPerMinute: 5,      // Max 5 emails per minute
   maxPerHour: 20,       // Max 20 emails per hour
   maxPerDay: 100        // Max 100 emails per day
@@ -1874,13 +1873,13 @@ function checkEmailRateLimit(){
   const lastHour = history.filter(t => t > oneHourAgo).length;
   const lastDay = history.filter(t => t > oneDayAgo).length;
   
-  if(lastMinute >= EMAILJS_RATE_LIMIT.maxPerMinute){
+  if(lastMinute >= EMAIL_RATE_LIMIT.maxPerMinute){
     return { allowed: false, reason: "rate-limit-minute", message: "Too many emails sent. Please wait a moment and try again." };
   }
-  if(lastHour >= EMAILJS_RATE_LIMIT.maxPerHour){
+  if(lastHour >= EMAIL_RATE_LIMIT.maxPerHour){
     return { allowed: false, reason: "rate-limit-hour", message: "Hourly email limit reached. Please try again later." };
   }
-  if(lastDay >= EMAILJS_RATE_LIMIT.maxPerDay){
+  if(lastDay >= EMAIL_RATE_LIMIT.maxPerDay){
     return { allowed: false, reason: "rate-limit-day", message: "Daily email limit reached. Please try again tomorrow." };
   }
   
@@ -1897,9 +1896,9 @@ function recordEmailSend(){
 }
 
 function validateEmailDomain(){
-  // Domain validation is relaxed because server-side rate limiting and
-  // EmailJS domain whitelist provide the primary security. This allows
-  // the site to work from any domain (Vercel preview, custom domains, localhost).
+  // Domain validation is relaxed because server-side rate limiting provides
+  // the primary security. This allows the site to work from any domain
+  // (Vercel preview, custom domains, localhost).
   const currentDomain = window.location.hostname;
   const blockedDomains = []; // Add any explicitly blocked domains here
   if(blockedDomains.includes(currentDomain)){
@@ -1913,7 +1912,7 @@ function validateEmailDomain(){
 async function sendOrderEmail(o){
   const cfg = await getEmailConfig();
   if(!cfg.enabled) return {ok:false, reason:"not-configured"};
-  return sendViaEmailJS(o);
+  return sendViaApi(o);
 }
 function emailTemplateParams(o){
   const cur = o.cur || "EUR"; const r = orate(o);
@@ -1936,11 +1935,11 @@ function emailTemplateParams(o){
     message: orderEmailText(o, storeName)
   };
 }
-async function sendViaEmailJS(o){
+async function sendViaApi(o){
   try{
     /* Security check 1: Validate domain */
     if(!validateEmailDomain()){
-      return {ok:false, reason:"invalid-domain", detail:"Email sending is not allowed from this domain. Please contact site administrator."};
+      return {ok:false, reason:"invalid-domain", detail:"Email sending is not allowed from this domain. Please contact the site administrator."};
     }
     
     /* Security check 2: Rate limiting */
@@ -1956,7 +1955,7 @@ async function sendViaEmailJS(o){
       body: JSON.stringify({ type: "order", params })
     });
     const j = await resp.json();
-    if(!resp.ok || j.error) return {ok:false, reason:"email-error", detail: j.error || ("HTTP " + resp.status)};
+    if(!resp.ok || j.error) return {ok:false, reason:"send-error", detail: j.error || ("HTTP " + resp.status)};
     
     /* Record successful send for rate limiting */
     recordEmailSend();
@@ -2107,7 +2106,7 @@ function orderEmailText(o, storeName){
 async function mailOrder(o){
   const cfg = await getEmailConfig();
   if(!cfg.enabled){
-    showToast("Order email not configured — set MAIL_ENABLED and Resend env vars in Vercel");
+    showToast("Order email not configured — set MAIL_ENABLED and email env vars in Vercel");
     return;
   }
   const st = $("#ocEmailState");
@@ -2642,7 +2641,7 @@ async function placeOrder(){
       });
     }else{
       const st = $("#ocEmailState");
-      if(st) st.textContent = "Order saved. Email not configured — set MAIL_ENABLED and Resend env vars in Vercel.";
+      if(st) st.textContent = "Order saved. Email not configured — set MAIL_ENABLED and email env vars in Vercel.";
     }
   });
   $("#orderModal").classList.add("open");
@@ -3437,7 +3436,7 @@ function subscribeNewsletter(ev){
   }
 }
 
-/* ============ Contact Form (EmailJS) ============ */
+/* ============ Contact Form ============ */
 async function submitContactForm(ev){
   ev.preventDefault();
   const val = id => { const el = document.getElementById(id); return el ? (el.value || "").trim() : ""; };
@@ -3493,7 +3492,7 @@ async function submitContactForm(ev){
       date: new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" })
     };
 
-    // Route through server-side /api/send-email (EmailJS secrets stay server-side)
+    // Route through server-side /api/send-email (email secrets stay server-side)
     const resp = await fetch("/api/send-email", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
