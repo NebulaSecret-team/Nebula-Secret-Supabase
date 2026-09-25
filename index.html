@@ -2545,7 +2545,7 @@ function submitQuoteRequest(){
   showToast("Quote request submitted! Our team will contact you within 24 hours.");
   /* Show confirmation */
   $("#app").innerHTML =
-  '<section class="block"><div class="page">' +
+  '<section class="block animate-on-scroll"><div class="page">' +
     '<div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<span class="cur">Quote Confirmation</span></div>' +
     '<div class="acct-card" style="text-align:center;padding:40px 20px">' +
       '<div style="width:64px;height:64px;background:rgba(37,186,181,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">' +
@@ -2786,23 +2786,23 @@ function viewAbout(){
   const abPromiseT = S("promise","t","Our Promise to You");
   const abPromiseLead = S("promise","lead","Five principles that guide everything we make and do.");
   let html =
-  '<section class="about-hero">' +
+  '<section class="about-hero animate-on-scroll">' +
     '<div><h1>About Nebula Secret</h1>' +
     '<p>Quality products for everyday life — from skincare and body care to home wellness and more. Discover the story behind our wholesale and OEM/ODM brands.</p></div>' +
   '</section>' +
 
-  '<section class="about-section" id="ab-story">' +
+  '<section class="about-section animate-on-scroll delay-1" id="ab-story">' +
     '<h2><span class="bar"></span>' + esc(abStoryT) + '</h2>' +
     '<div class="about-prose">' + sanitizeHTML(abStoryB) + '</div>' +
   '</section>' +
 
-  '<section class="about-section" id="ab-mission">' +
+  '<section class="about-section animate-on-scroll delay-2" id="ab-mission">' +
     '<h2><span class="bar"></span>' + esc(abMissionT) + '</h2>' +
     '<p class="lead">' + esc(abMissionLead) + '</p>' +
     '<div class="about-prose">' + sanitizeHTML(abMissionB) + '</div>' +
   '</section>' +
 
-  '<section class="about-section" id="ab-promise">' +
+  '<section class="about-section animate-on-scroll delay-1" id="ab-promise">' +
     '<h2><span class="bar"></span>' + esc(abPromiseT) + '</h2>' +
     '<p class="lead">' + esc(abPromiseLead) + '</p>' +
     '<div class="value-grid">' +
@@ -2810,7 +2810,7 @@ function viewAbout(){
     '</div>' +
   '</section>' +
 
-  '<section class="about-section" id="ab-world">' +
+  '<section class="about-section animate-on-scroll delay-2" id="ab-world">' +
     '<h2><span class="bar"></span>Our World</h2>' +
     '<p class="lead">Our Nebula Secret storefront focuses on skincare and wellness — but behind the scenes, our product family spans a wide world of everyday essentials, curated with the same care and quality.</p>' +
     '<div class="range-grid">' +
@@ -2818,7 +2818,7 @@ function viewAbout(){
     '</div>' +
   '</section>' +
 
-  '<section class="about-section" id="ab-brands">' +
+  '<section class="about-section animate-on-scroll delay-1" id="ab-brands">' +
     '<h2><span class="bar"></span>Trusted Craftsmanship</h2>' +
     '<p class="lead">Behind every product is a supply chain that has proudly served and collaborated with some of the world\'s most renowned brands. Their trust in our quality is your assurance that every Nebula Secret item meets international standards.</p>' +
     '<div class="brand-strip">' +
@@ -2826,7 +2826,7 @@ function viewAbout(){
     '</div>' +
   '</section>' +
 
-  '<section class="about-section" id="ab-contact" style="padding-bottom:56px">' +
+  '<section class="about-section animate-on-scroll delay-2" id="ab-contact" style="padding-bottom:56px">' +
     '<h2><span class="bar"></span>Get in Touch</h2>' +
     '<p class="lead">We would love to hear from you. Whether you have a question about a product, a suggestion, or just want to say hello — our team is here.</p>' +
     '<div class="contact-grid">' +
@@ -2845,14 +2845,14 @@ function viewAbout(){
 function viewWhyUs(){
   const ic = (p) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px;flex-shrink:0">' + p + '</svg>';
   const html =
-  '<div class="page-hero" style="background:linear-gradient(135deg,var(--brand-dark),var(--brand));color:#fff;padding:60px 24px;text-align:center">' +
+  '<div class="page-hero animate-on-scroll" style="background:linear-gradient(135deg,var(--brand-dark),var(--brand));color:#fff;padding:60px 24px;text-align:center">' +
     '<div style="max-width:800px;margin:0 auto">' +
       '<h1 style="font-size:36px;margin:0 0 12px 0;color:#fff">Why Choose Nebula Secret</h1>' +
       '<p style="font-size:16px;opacity:.9;margin:0">Your trusted partner for wholesale, OEM & ODM beauty and wellness products</p>' +
     '</div>' +
   '</div>' +
   '<div class="container" style="max-width:1200px;margin:0 auto;padding:48px 24px">' +
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-bottom:48px">' +
+    '<div class="animate-on-scroll delay-1" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-bottom:48px">' +
       '<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:28px;transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform=\'translateY(-4px)\';this.style.boxShadow=\'0 8px 24px rgba(0,0,0,.1)\'" onmouseout="this.style.transform=\'\';this.style.box-shadow=\'\'">' +
         '<div style="width:48px;height:48px;background:var(--brand-light);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--brand)">' + ic('<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>') + '</div>' +
         '<h3 style="font-size:18px;margin:0 0 10px 0">OEM / ODM Expertise</h3>' +
@@ -2884,7 +2884,7 @@ function viewWhyUs(){
         '<p style="color:var(--ink-soft);font-size:14px;line-height:1.6;margin:0">Direct factory pricing with no middlemen. Volume discounts available for larger orders. Transparent pricing with no hidden fees.</p>' +
       '</div>' +
     '</div>' +
-    '<div style="background:linear-gradient(135deg,var(--brand-light),var(--card));border:1px solid var(--line);border-radius:16px;padding:40px;text-align:center">' +
+    '<div class="animate-on-scroll delay-2" style="background:linear-gradient(135deg,var(--brand-light),var(--card));border:1px solid var(--line);border-radius:16px;padding:40px;text-align:center">' +
       '<h2 style="font-size:24px;margin:0 0 12px 0">Ready to Start Your Project?</h2>' +
       '<p style="color:var(--ink-soft);font-size:15px;margin:0 0 24px 0;max-width:600px;margin-left:auto;margin-right:auto">Contact us today for a free consultation and custom quote. Our team will help you find the perfect solution for your brand.</p>' +
       '<a href="#/" onclick="setTimeout(function(){var el=document.getElementById(\'contact-section\');if(el)el.scrollIntoView({behavior:\'smooth\'});},200);" style="display:inline-block;background:var(--brand);color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;transition:background .2s" onmouseover="this.style.background=\'var(--brand-dark)\'" onmouseout="this.style.background=\'var(--brand)\'">Get a Free Quote</a>' +
@@ -3029,7 +3029,7 @@ const BLOG_POSTS = [
 function viewBlog(){
   const ic = (p) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;flex-shrink:0">' + p + '</svg>';
   const html =
-  '<div class="page-hero" style="background:linear-gradient(135deg,var(--brand-dark),var(--brand));color:#fff;padding:60px 24px;text-align:center">' +
+  '<div class="page-hero animate-on-scroll" style="background:linear-gradient(135deg,var(--brand-dark),var(--brand));color:#fff;padding:60px 24px;text-align:center">' +
     '<div style="max-width:800px;margin:0 auto">' +
       '<h1 style="font-size:36px;margin:0 0 12px 0;color:#fff">Blog & Resources</h1>' +
       '<p style="font-size:16px;opacity:.9;margin:0">Expert insights on OEM/ODM, private label, and growing your beauty brand</p>' +
@@ -3569,7 +3569,7 @@ function viewShop(){
   const totalInCat = cat === "all" ? products.length : products.filter(p => p.cs === cat).length;
 
   $("#app").innerHTML =
-  '<section class="block"><div class="page">' +
+  '<section class="block animate-on-scroll"><div class="page">' +
     '<div class="crumbs">' +
       '<a href="#/">Home</a>' + IC.chev + '<a href="#/shop">Shop</a>' +
       (cat !== "all" ? IC.chev + '<span class="cur">' + esc(catLabel) + '</span>' : '') +
@@ -3726,7 +3726,7 @@ function viewProduct(id){
   }).join("");
   const priceTiersHtml = renderPriceTiersTable(p);
   $("#app").innerHTML =
-  '<section class="block"><div class="page">' +
+  '<section class="block animate-on-scroll"><div class="page">' +
     '<div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<a href="#/shop">Shop</a>' + IC.chev + '<a href="#/shop?cat=' + p.cs + '">' + esc(catName(p.cs)) + '</a>' + IC.chev + '<span class="cur">' + esc(p.n) + '</span></div>' +
     '<div class="detail-wrap">' +
       '<div class="detail-gallery">' +
@@ -3807,7 +3807,7 @@ function viewAccount(){
   const isResetMode = urlResetMode || window._passwordRecovery === true;
   /* Always show reset view if in reset mode, even if signed in */
   const inner = isResetMode ? accountResetView() : (s ? accountSignedIn(s) : accountSignIn());
-  $("#app").innerHTML = '<section class="block"><div class="page"><div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<span class="cur">My Account</span></div><div class="acct-wrap">' + inner + '</div></div></section>';
+  $("#app").innerHTML = '<section class="block animate-on-scroll"><div class="page"><div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<span class="cur">My Account</span></div><div class="acct-wrap">' + inner + '</div></div></section>';
   /* Refresh latest orders & quotes from Supabase when signed in */
   if(s && supabase && !isResetMode){
     sbRefreshKey("orders").catch(()=>{});
@@ -4416,7 +4416,7 @@ function viewCustomerQuote(id){
   const isExpired = q.validUntil && new Date(q.validUntil) < new Date();
   const canAccept = q.status === "Quoted" && !isExpired;
   $("#app").innerHTML =
-  '<section class="block"><div class="page">' +
+  '<section class="block animate-on-scroll"><div class="page">' +
     '<div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<a href="#/account">My Account</a>' + IC.chev + '<span class="cur">Quote ' + esc(q.id) + '</span></div>' +
     '<div class="acct-card">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px">' +
@@ -4624,7 +4624,7 @@ function viewCustomerOrder(id){
   const notes = o.notes || [];
   const statusHistory = o.statusHistory || [{ status: o.status, date: o.date, note: "Order placed" }];
   $("#app").innerHTML =
-  '<section class="block"><div class="page">' +
+  '<section class="block animate-on-scroll"><div class="page">' +
     '<div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<a href="#/account">My Account</a>' + IC.chev + '<span class="cur">Order ' + esc(o.id) + '</span></div>' +
     '<div class="acct-card">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px">' +
@@ -4848,8 +4848,11 @@ function route(){
 }
 
 /* ============ Scroll Animations ============ */
+let _scrollAnimObserver = null;
+let _scrollAnimTick = false;
+
 function initScrollAnimations(){
-  const elements = document.querySelectorAll('.animate-on-scroll');
+  const elements = document.querySelectorAll('.animate-on-scroll:not(.visible)');
   if(!elements.length) return;
   
   // 如果浏览器不支持 IntersectionObserver，直接显示所有元素
@@ -4858,20 +4861,56 @@ function initScrollAnimations(){
     return;
   }
   
-  const observer = new IntersectionObserver((entries) => {
+  // 先检查已经在视口内的元素，立即显示
+  checkScrollAnimations();
+  
+  // 对还没显示的元素使用 IntersectionObserver
+  const remaining = document.querySelectorAll('.animate-on-scroll:not(.visible)');
+  if(!remaining.length) return;
+  
+  // 断开旧的 observer
+  if(_scrollAnimObserver){
+    _scrollAnimObserver.disconnect();
+  }
+  
+  _scrollAnimObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if(entry.isIntersecting){
         entry.target.classList.add('visible');
-        observer.unobserve(entry.target);
+        _scrollAnimObserver.unobserve(entry.target);
       }
     });
   }, {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
+    threshold: 0.05,
+    rootMargin: '0px 0px -20px 0px'
   });
   
-  elements.forEach(el => observer.observe(el));
+  remaining.forEach(el => _scrollAnimObserver.observe(el));
 }
+
+function checkScrollAnimations(){
+  const elements = document.querySelectorAll('.animate-on-scroll:not(.visible)');
+  if(!elements.length) return;
+  
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  elements.forEach(el => {
+    const rect = el.getBoundingClientRect();
+    // 元素顶部进入视口底部 100px 内时显示
+    if(rect.top < vh - 50 && rect.bottom > 50){
+      el.classList.add('visible');
+    }
+  });
+}
+
+// 滚动时使用 requestAnimationFrame 节流检查
+window.addEventListener('scroll', () => {
+  if(_scrollAnimTick) return;
+  _scrollAnimTick = true;
+  requestAnimationFrame(() => {
+    checkScrollAnimations();
+    _scrollAnimTick = false;
+  });
+}, { passive: true });
 
 /* ============ Events ============ */
 $("#searchBtn").addEventListener("click", () => {
