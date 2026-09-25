@@ -1676,9 +1676,10 @@ async function syncAuthSession(){
           if(!location.hash.startsWith('#/account')){
             location.hash = "#/account?reset=1";
           }
-          /* Show new password form after navigation */
+          /* Show new password form after navigation (once — a re-render
+             would wipe input the user has already started typing) */
           setTimeout(() => {
-            if(typeof showNewPasswordForm === 'function') showNewPasswordForm();
+            if(_resetState !== "newpassword" && typeof showNewPasswordForm === 'function') showNewPasswordForm();
           }, 400);
         }
         if(event === 'SIGNED_IN' && session?.user){
@@ -3775,12 +3776,15 @@ function viewAccount(){
   const hash = location.hash || "";
   const search = location.search || "";
   /* Detect password recovery from: URL params, hash params, or auth listener flag */
-  const isResetMode = hash.includes("reset=1") || 
-                      hash.includes("type=recovery") || 
-                      search.includes("type=recovery") ||
-                      search.includes("access_token") ||
-                      hash.includes("access_token") ||
-                      window._passwordRecovery === true;
+  const urlResetMode = hash.includes("reset=1") || 
+                       hash.includes("type=recovery") || 
+                       search.includes("type=recovery") ||
+                       search.includes("access_token") ||
+                       hash.includes("access_token");
+  /* Leaving the reset flow (plain #/account) must clear the recovery flag,
+     otherwise isResetMode stays true and sign-in can never be reached. */
+  if(!urlResetMode && window._passwordRecovery){ window._passwordRecovery = false; }
+  const isResetMode = urlResetMode || window._passwordRecovery === true;
   /* Always show reset view if in reset mode, even if signed in */
   const inner = isResetMode ? accountResetView() : (s ? accountSignedIn(s) : accountSignIn());
   $("#app").innerHTML = '<section class="block"><div class="page"><div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<span class="cur">My Account</span></div><div class="acct-wrap">' + inner + '</div></div></section>';
@@ -3789,9 +3793,15 @@ function viewAccount(){
     sbRefreshKey("orders").catch(()=>{});
     sbRefreshKey("quotes").catch(()=>{});
   }
-  /* If this is a Supabase Auth recovery callback, show new password form */
-  if(isResetMode && (hash.includes("type=recovery") || search.includes("type=recovery") || hash.includes("access_token") || search.includes("access_token") || window._passwordRecovery)){
-    setTimeout(() => showNewPasswordForm(), 500);
+  /* If this is a Supabase Auth recovery callback, show new password form.
+     Guard on _resetState: re-rendering while the form is already shown
+     (or after success) would wipe anything the user has typed — this
+     previously re-armed every 500ms and made the form impossible to use. */
+  if(isResetMode && _resetState !== "newpassword" && _resetState !== "success" &&
+     (hash.includes("type=recovery") || search.includes("type=recovery") || hash.includes("access_token") || search.includes("access_token") || window._passwordRecovery)){
+    setTimeout(() => {
+      if(_resetState !== "newpassword" && _resetState !== "success") showNewPasswordForm();
+    }, 500);
   }
   /* PKCE ?code= landing fallback: if the PASSWORD_RECOVERY event arrives
      after this render, pick it up shortly after. */
@@ -4000,8 +4010,12 @@ async function sendResetEmail(){
   
   try {
     if(supabase){
-      /* Build redirect URL - use current origin */
-      const redirectUrl = window.location.origin + window.location.pathname + "#/account?reset=1";
+      /* Redirect URL must have NO fragment (#...). GoTrue appends its own
+         "#access_token=..." fragment — a redirect URL that already contains
+         one produces a double-# URL that supabase-js cannot parse, so no
+         session is established and the password form can never submit.
+         Post-login routing to the account page happens via the auth listener. */
+      const redirectUrl = window.location.origin + window.location.pathname;
       console.log("Sending reset email to:", email, "with redirectTo:", redirectUrl);
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl
@@ -4064,6 +4078,9 @@ function backToResetForm(){
 }
 
 function goToSignIn(){
+  /* Clear the recovery flag — otherwise isResetMode stays true and the
+     reset form is shown again instead of the sign-in form. */
+  window._passwordRecovery = false;
   _resetState = "email";
   location.hash = "#/account";
 }
@@ -4110,12 +4127,18 @@ async function updatePassword(){
     if(supabase){
       const { data, error } = await supabase.auth.updateUser({ password: newPass });
       if(error){
-        err.textContent = "Failed to update password: " + error.message;
+        const raw = (error.message || "") + " " + (error.error_description || "");
+        if(/session missing|auth session/i.test(raw)){
+          err.textContent = "Your reset session has expired. Please request a new reset link.";
+        } else {
+          err.textContent = "Failed to update password: " + error.message;
+        }
         if(btn){ btn.disabled = false; btn.textContent = "🔐 Update Password"; }
         return;
       }
       /* Sign out after password reset */
       await supabase.auth.signOut();
+      window._passwordRecovery = false;
       _resetState = "success";
       viewAccount();
       return;
@@ -4901,10 +4924,16 @@ if(typeof syncAuthSession === 'function') syncAuthSession();
      hash.includes("access_token") || search.includes("access_token")){
     console.log("Recovery token detected in URL on page load");
     window._passwordRecovery = true;
-    /* Force navigation to account page if not already there */
-    if(!hash.startsWith("#/account")){
-      location.replace(location.pathname + "#/account?reset=1");
-    }
+    /* Do NOT navigate away yet — supabase-js parses the token from the URL
+       in a later microtask and wiping the hash first would destroy the
+       session. If parsing succeeds, auth-js clears the hash and the
+       PASSWORD_RECOVERY event navigates for us; this timer is only the
+       fallback for unparseable/legacy links. */
+    setTimeout(() => {
+      if(window._passwordRecovery && !location.hash.startsWith("#/account")){
+        location.replace(location.pathname + "#/account?reset=1");
+      }
+    }, 1200);
   }
 })();
 /* Load data from Supabase, then render */
