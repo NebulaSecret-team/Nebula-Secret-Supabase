@@ -3264,8 +3264,8 @@ function viewInfo(page){
   const finalBody = isInteractivePage ? body : sanitizeHTML(body);
 
   $("#app").innerHTML =
-  '<section class="info-hero"><div><h1>' + esc(title) + '</h1>' + (subtitle ? '<p>' + esc(subtitle) + '</p>' : '') + '</div></section>' +
-  '<section class="info-section">' + back + finalBody + '</section>';
+  '<section class="info-hero animate-on-scroll"><div><h1>' + esc(title) + '</h1>' + (subtitle ? '<p>' + esc(subtitle) + '</p>' : '') + '</div></section>' +
+  '<section class="info-section animate-on-scroll delay-1">' + back + finalBody + '</section>';
 }
 
 function toggleFaq(index){
