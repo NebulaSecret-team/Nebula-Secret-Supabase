@@ -616,9 +616,14 @@ table.admin-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .acct-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px;margin-bottom:18px}
 .acct-card h2{font-size:21px;font-weight:700;margin-bottom:4px}
 .acct-card .sub{color:var(--ink-soft);font-size:13.5px;margin-bottom:18px}
-.acct-tabs{display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid var(--line);padding-bottom:14px}
-.acct-tabs button{flex:1;padding:11px;border-radius:9px;border:1px solid var(--line-dark);background:var(--card);font-size:14px;font-weight:600;color:var(--ink);transition:all .18s}
-.acct-tabs button.active{background:var(--brand);border-color:var(--brand);color:#fff}
+.acct-tabs{display:flex;gap:10px;margin-bottom:24px;background:var(--bg-soft);padding:6px;border-radius:12px;border:1px solid var(--line)}
+.acct-tabs button{flex:1;padding:14px 16px;border-radius:9px;border:2px solid transparent;background:transparent;font-size:14px;font-weight:600;color:var(--ink-soft);transition:all .2s;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.acct-tabs button:hover{background:var(--card);color:var(--ink);transform:translateY(-1px)}
+.acct-tabs button.active{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+.acct-tabs button .tab-icon{font-size:18px}
+.acct-tabs button .tab-text{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
+.acct-tabs button .tab-title{font-size:14px;font-weight:700}
+.acct-tabs button .tab-desc{font-size:11px;font-weight:400;opacity:0.8}
 .acct-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
 .acct-row:last-child{border-bottom:none}
 .acct-row .k{font-size:12.5px;color:var(--ink-soft);font-weight:600;letter-spacing:.03em}
@@ -747,6 +752,25 @@ details.ct-block > .form-grid{padding:14px 16px}
   .admin-table .td-img{width:40px;height:40px;display:block}
   .admin-table td:first-child{min-width:56px;text-align:center}
   .panel-body{padding:14px}
+}
+
+/* ================= Scroll Animations ================= */
+.animate-on-scroll{
+  opacity:0;
+  transform:translateY(30px);
+  transition:opacity 0.8s cubic-bezier(0.22,1,0.36,1),transform 0.8s cubic-bezier(0.22,1,0.36,1);
+  will-change:opacity,transform;
+}
+.animate-on-scroll.visible{
+  opacity:1;
+  transform:translateY(0);
+}
+.animate-on-scroll.delay-1{transition-delay:0.15s}
+.animate-on-scroll.delay-2{transition-delay:0.3s}
+.animate-on-scroll.delay-3{transition-delay:0.45s}
+.animate-on-scroll.delay-4{transition-delay:0.6s}
+@media (prefers-reduced-motion:reduce){
+  .animate-on-scroll{opacity:1;transform:none;transition:none}
 }
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
@@ -969,6 +993,26 @@ let supabaseAvailable = false;
 /* Debug logging disabled in production for security */
 const DEBUG = false;
 function dbg(...args){ if(DEBUG) console.log("[Supabase]", ...args); }
+/* Capture auth error/flow params from the URL BEFORE supabase-js processes
+   and possibly cleans it (expired/invalid email-link landings). Uses the same
+   flag shape as the bottom-of-page detection below. */
+try {
+  (function(){
+    const hs = location.hash || "";
+    const qs = location.search || "";
+    const src = (hs.indexOf("error=") > -1 || hs.indexOf("error_code=") > -1) ? hs.slice(1)
+              : ((qs.indexOf("error=") > -1 || qs.indexOf("error_code=") > -1) ? qs.slice(1) : "");
+    if(src){
+      const p = new URLSearchParams(src.replace(/\?/, "&"));
+      if(p.get("error") || p.get("error_code")){
+        window._authError = true;
+        const d = p.get("error_description"); if(d) window._authErrorDesc = d;
+        const c = p.get("error_code"); if(c) window._authErrorCode = c;
+      }
+    }
+    window._pkceLanding = /[?&]code=[^&]+/.test(qs);
+  })();
+} catch(e){}
 try {
   if (window.supabase && window.supabase.createClient) {
     supabase = window.supabase.createClient(SB_URL, SB_KEY, {
@@ -1618,6 +1662,40 @@ async function syncAuthSession(){
   try {
     await getSessionAsync();
     if(typeof updateAcctLabel === 'function') updateAcctLabel();
+    
+    /* Listen for auth state changes (including password recovery) */
+    if(supabase && !window._authListenerSetup){
+      window._authListenerSetup = true;
+      supabase.auth.onAuthStateChange((event, session) => {
+        console.log("Auth state change:", event, session?.user?.email);
+        if(event === 'PASSWORD_RECOVERY'){
+          /* User clicked password reset link - show new password form */
+          console.log("Password recovery detected - showing new password form");
+          window._passwordRecovery = true;
+          /* Force navigation to account page to prevent redirect to home */
+          if(!location.hash.startsWith('#/account')){
+            location.hash = "#/account?reset=1";
+          }
+          /* Show new password form after navigation (once — a re-render
+             would wipe input the user has already started typing) */
+          setTimeout(() => {
+            if(_resetState !== "newpassword" && typeof showNewPasswordForm === 'function') showNewPasswordForm();
+          }, 400);
+        }
+        if(event === 'SIGNED_IN' && session?.user){
+          /* Don't auto-redirect during password recovery */
+          if(window._passwordRecovery) return;
+          const name = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User';
+          setSession({ name, email: session.user.email, supabaseAuth: true, userId: session.user.id });
+          if(typeof updateAcctLabel === 'function') updateAcctLabel();
+        }
+        if(event === 'SIGNED_OUT'){
+          /* Clear local session */
+          try{ localStorage.removeItem(LS.session); }catch(e){}
+          if(typeof updateAcctLabel === 'function') updateAcctLabel();
+        }
+      });
+    }
   } catch(e) {
     console.warn("Auth session sync failed:", e);
   }
@@ -2263,10 +2341,10 @@ function seeded(id, salt){
 }
 function productRating(p){
   const r = 3.8 + seeded(p.id, "rating") * 1.1;
-  const reviews = 6 + Math.floor(seeded(p.id, "reviews") * 240);
+  const reviews = 60 + Math.floor(seeded(p.id, "reviews") * 2400);
   return { r: Math.round(r * 10) / 10, reviews };
 }
-function productSold(p){ return 40 + Math.floor(seeded(p.id, "sold") * 960); }
+function productSold(p){ return 400 + Math.floor(seeded(p.id, "sold") * 9600); }
 function stars(r){
   const full = Math.round(r);
   return "★★★★★".slice(0, full) + "☆☆☆☆☆".slice(0, 5 - full);
@@ -2660,15 +2738,17 @@ function cardHTML(p, opts){
   const priceHTML = hasDiscount 
     ? fmtTier(p.p) + '<span class="old">' + fmt(p.p) + '</span>'
     : fmt(p.p);
+  const moq = p.priceTiers && p.priceTiers.length ? p.priceTiers[0].minQty : 1;
   return '<article class="product-card">' +
     '<div class="ph">' +
       '<a href="#/product/' + esc(p.id) + '"><img src="' + esc(imgUrl(p.i, 700)) + '" alt="' + esc(p.n) + '" loading="lazy" data-pid="' + esc(p.id) + '" onerror="imgFallback(this)"></a>' +
-      '<button class="quick-add" onclick="addToCart(\'' + p.id + '\',1)">Add to cart</button>' +
+      '<button class="quick-add" onclick="addToCart(\'' + p.id + '\',' + moq + ')">Add to cart</button>' +
     '</div>' +
     '<div class="info">' +
       '<a class="p-name" href="#/product/' + p.id + '">' + esc(p.n) + '</a>' +
-      '<div class="p-rating"><span class="stars">' + stars(rt.r) + '</span><b>' + rt.r.toFixed(1) + '</b><span>(' + rt.reviews + ')</span></div>' +
+      '<div class="p-rating"><span class="stars">' + stars(rt.r) + '</span><b>' + rt.r.toFixed(1) + '</b><span>(' + rt.reviews + ' reviews)</span></div>' +
       '<div class="p-price">' + priceHTML + (opts.showUnit ? '<span class="unit"> / piece</span>' : '') + '</div>' +
+      '<div class="p-moq" style="font-size:12px;color:#666;margin-top:4px;">MOQ: ' + moq + ' units</div>' +
     '</div></article>';
 }
 
@@ -3241,7 +3321,7 @@ function viewHome(){
     '</div>' +
   '</section>' +
 
-  '<section class="block"><div class="page">' +
+  '<section class="block animate-on-scroll"><div class="page">' +
     '<div class="sec-head"><div><h2><span class="bar"></span>What We Do</h2><p>Wholesale supply and custom manufacturing under one roof</p></div></div>' +
     '<div class="svc-grid">' +
       '<div class="svc-card"><span class="svc-tag">Core Service</span><div class="svc-icon">' + IC.box + '</div><h4>Wholesale Supply</h4><p>Bulk ordering across our extensive catalog of skincare, body care, home wellness and everyday essentials. Competitive unit pricing with flexible minimum order quantities for retailers and distributors.</p></div>' +
@@ -3251,7 +3331,7 @@ function viewHome(){
     '</div>' +
   '</div></section>' +
 
-  '<section class="block" style="padding-top:0"><div class="page">' +
+  '<section class="block animate-on-scroll delay-1" style="padding-top:0"><div class="page">' +
     '<div class="sec-head"><div><h2><span class="bar"></span>Our Product Range</h2><p>9 categories — ready for wholesale and private label</p></div><a class="sec-link" href="#/shop">View All Products ' + IC.arrow + '</a></div>' +
     '<div class="cat-strip">' + getCats().map(c =>
       '<a class="cat-card" href="#/shop?cat=' + c.cs + '">' +
@@ -3261,7 +3341,7 @@ function viewHome(){
     '</div>' +
   '</div></section>' +
 
-  '<section class="block" style="padding-top:0"><div class="page">' +
+  '<section class="block animate-on-scroll delay-2" style="padding-top:0"><div class="page">' +
     '<div class="sec-head"><div><h2><span class="bar"></span>Why Choose Nebula Secret</h2><p>The advantages of working with a global wholesale product supplier</p></div></div>' +
     '<div class="why-grid">' +
       '<div class="why-card"><div class="why-icon">' + IC.truck + '</div><h4>Global Supply Chain</h4><p>UK HQ with HK/China offices and Asia-Pacific sourcing network</p></div>' +
@@ -3272,7 +3352,7 @@ function viewHome(){
     '</div>' +
   '</div></section>' +
 
-  '<section class="block" style="padding-top:0"><div class="page">' +
+  '<section class="block animate-on-scroll delay-3" style="padding-top:0"><div class="page">' +
     '<div class="sec-head"><div><h2><span class="bar"></span>Our OEM/ODM Process</h2><p>From concept to delivery — a simple 5-step journey</p></div></div>' +
     '<div class="process-wrap"><div class="process-steps">' +
       '<div class="process-step"><div class="ps-num">1</div><h4>Consultation</h4><p>Share your vision, target market and requirements. We advise on formulation and packaging options.</p></div>' +
@@ -3283,12 +3363,12 @@ function viewHome(){
     '</div></div>' +
   '</div></section>' +
 
-  '<section class="block" style="padding-top:0"><div class="page">' +
+  '<section class="block animate-on-scroll" style="padding-top:0"><div class="page">' +
     '<div class="sec-head"><div><h2><span class="bar"></span>Featured Products</h2><p>Popular items for wholesale and private label</p></div><a class="sec-link" href="#/shop">View All ' + IC.arrow + '</a></div>' +
     '<div class="product-grid">' + featured.map(p => cardHTML(p)).join("") + '</div>' +
   '</div></section>' +
 
-  '<section class="block" style="padding-top:0"><div class="page">' +
+  '<section class="block animate-on-scroll delay-1" style="padding-top:0"><div class="page">' +
     '<div class="contact-form-wrap" id="contact-section">' +
       '<h2>Contact Nebula Secret</h2>' +
       '<p class="cf-sub">Thank you for considering Nebula Secret. Whether you are interested in wholesale pricing, OEM/ODM private label solutions, custom formulation, or simply have a question, we would be delighted to hear from you. Please fill out the form below and our dedicated team will respond to your inquiry within 24 hours.</p>' +
@@ -3692,12 +3772,43 @@ function setQtyInput(v){
 /* ============ Customer account (register / login / change password / my orders) ============ */
 function viewAccount(){
   const s = getSession();
-  const inner = s ? accountSignedIn(s) : accountSignIn();
+  /* Check for password reset mode or Supabase Auth recovery callback */
+  const hash = location.hash || "";
+  const search = location.search || "";
+  /* Detect password recovery from: URL params, hash params, or auth listener flag */
+  const urlResetMode = hash.includes("reset=1") || 
+                       hash.includes("type=recovery") || 
+                       search.includes("type=recovery") ||
+                       search.includes("access_token") ||
+                       hash.includes("access_token");
+  /* Leaving the reset flow (plain #/account) must clear the recovery flag,
+     otherwise isResetMode stays true and sign-in can never be reached. */
+  if(!urlResetMode && window._passwordRecovery){ window._passwordRecovery = false; }
+  const isResetMode = urlResetMode || window._passwordRecovery === true;
+  /* Always show reset view if in reset mode, even if signed in */
+  const inner = isResetMode ? accountResetView() : (s ? accountSignedIn(s) : accountSignIn());
   $("#app").innerHTML = '<section class="block"><div class="page"><div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<span class="cur">My Account</span></div><div class="acct-wrap">' + inner + '</div></div></section>';
   /* Refresh latest orders & quotes from Supabase when signed in */
-  if(s && supabase){
+  if(s && supabase && !isResetMode){
     sbRefreshKey("orders").catch(()=>{});
     sbRefreshKey("quotes").catch(()=>{});
+  }
+  /* If this is a Supabase Auth recovery callback, show new password form.
+     Guard on _resetState: re-rendering while the form is already shown
+     (or after success) would wipe anything the user has typed — this
+     previously re-armed every 500ms and made the form impossible to use. */
+  if(isResetMode && _resetState !== "newpassword" && _resetState !== "success" &&
+     (hash.includes("type=recovery") || search.includes("type=recovery") || hash.includes("access_token") || search.includes("access_token") || window._passwordRecovery)){
+    setTimeout(() => {
+      if(_resetState !== "newpassword" && _resetState !== "success") showNewPasswordForm();
+    }, 500);
+  }
+  /* PKCE ?code= landing fallback: if the PASSWORD_RECOVERY event arrives
+     after this render, pick it up shortly after. */
+  if(isResetMode && window._pkceLanding && !window._passwordRecovery){
+    setTimeout(() => {
+      if(window._passwordRecovery && _resetState !== "newpassword") showNewPasswordForm();
+    }, 1500);
   }
 }
 /* Refresh a single key from Supabase and update cache */
@@ -3711,20 +3822,42 @@ function accountSignIn(){
   return '<div class="acct-card">' +
     '<h2>My Account</h2>' +
     '<p class="sub">Sign in to track orders, manage your details and check out faster.</p>' +
-    '<div class="acct-tabs"><button class="active" id="tabLogin" onclick="acctTab(\'login\')">Sign in</button><button id="tabReg" onclick="acctTab(\'register\')">Create account</button></div>' +
+    '<div class="acct-tabs">' +
+      '<button class="active" id="tabLogin" onclick="acctTab(\'login\')">' +
+        '<span class="tab-icon">🔐</span>' +
+        '<span class="tab-text"><span class="tab-title">Sign in</span><span class="tab-desc">Existing customer</span></span>' +
+      '</button>' +
+      '<button id="tabReg" onclick="acctTab(\'register\')">' +
+        '<span class="tab-icon">✨</span>' +
+        '<span class="tab-text"><span class="tab-title">Create account</span><span class="tab-desc">New customer</span></span>' +
+      '</button>' +
+    '</div>' +
     '<div id="acctLogin">' +
       '<div class="field"><label>Email</label><input id="acEmail" type="email" placeholder="you@example.com"></div>' +
       '<div class="field"><label>Password</label><input id="acPass" type="password" placeholder="Your password"></div>' +
       '<p id="acctErr" style="color:var(--danger);font-size:13px;min-height:18px;margin-bottom:6px"></p>' +
-      '<button class="btn full" onclick="acctLogin()">Sign in</button>' +
-      '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:12px">For admin, please use the Admin Center in the top bar.</p>' +
+      '<button class="btn full" onclick="acctLogin()">🔐 Sign in</button>' +
+      '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">' +
+        'Forgot your password? <a href="#/account?reset=1" style="color:var(--brand);font-weight:600">Reset here</a><br>' +
+        '<span style="font-size:11px;opacity:0.8">For admin, please use the Admin Center in the top bar.</span>' +
+      '</p>' +
     '</div>' +
     '<div id="acctReg" style="display:none">' +
       '<div class="field"><label>Full name</label><input id="regName" type="text" placeholder="Jane Doe"></div>' +
       '<div class="field"><label>Email</label><input id="regEmail" type="email" placeholder="you@example.com"></div>' +
-      '<div class="field"><label>Password (min 6 characters)</label><input id="regPass" type="password" placeholder="Create a password"></div>' +
+      '<div class="field"><label>Password (min 6 characters)</label><input id="regPass" type="password" placeholder="Create a secure password"></div>' +
+      '<div style="background:var(--bg-soft);padding:12px;border-radius:8px;margin-bottom:16px;font-size:12px;color:var(--ink-soft)">' +
+        '✅ Create an account to:<br>' +
+        '• Track your orders and shipping status<br>' +
+        '• Save your shipping details for faster checkout<br>' +
+        '• Access exclusive wholesale pricing and quotes<br>' +
+        '• Manage your account preferences' +
+      '</div>' +
       '<p id="acctErr2" style="color:var(--danger);font-size:13px;min-height:18px;margin-bottom:6px"></p>' +
-      '<button class="btn full" onclick="acctRegister()">Create account</button>' +
+      '<button class="btn full" onclick="acctRegister()">✨ Create account</button>' +
+      '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">' +
+        'Already have an account? <a href="#" onclick="acctTab(\'login\');return false;" style="color:var(--brand);font-weight:600">Sign in here</a>' +
+      '</p>' +
     '</div>' +
   '</div>';
 }
@@ -3735,6 +3868,289 @@ function acctTab(which){
   l.classList.toggle("active", isLogin); r.classList.toggle("active", !isLogin);
   li.style.display = isLogin ? "" : "none"; ri.style.display = isLogin ? "none" : "";
 }
+
+/* ============ Password Reset Functions ============ */
+let _resetState = "email"; // email, sent, newpassword, success
+
+function accountResetView(){
+  if(window._authError) return accountResetError();
+  if(_resetState === "sent") return accountResetSent();
+  if(_resetState === "newpassword") return accountResetNewPassword();
+  if(_resetState === "success") return accountResetSuccess();
+  return accountResetForm();
+}
+
+function accountResetError(){
+  const errorDesc = window._authErrorDesc || "The password reset link is invalid or has expired.";
+  const errorCode = window._authErrorCode || "";
+  return '<div class="acct-card" style="text-align:center">' +
+    '<div style="font-size:48px;margin-bottom:16px">⚠️</div>' +
+    '<h2>Reset Link Expired</h2>' +
+    '<p class="sub" style="color:var(--danger)">' + esc(errorDesc) + '</p>' +
+    (errorCode ? '<p style="font-size:12px;color:var(--ink-soft);margin-bottom:16px">Error code: ' + esc(errorCode) + '</p>' : '') +
+    '<div style="background:var(--bg-soft);padding:16px;border-radius:8px;margin:20px 0;text-align:left;font-size:13px;color:var(--ink-soft)">' +
+      '<p style="margin:0 0 8px 0"><strong>📝 What to do:</strong></p>' +
+      '<ol style="margin:0;padding-left:20px">' +
+        '<li style="margin-bottom:4px">Click the button below to request a new reset link</li>' +
+        '<li style="margin-bottom:4px">Check your email inbox (and spam folder)</li>' +
+        '<li style="margin-bottom:4px">Click the new link within 1 hour (links expire quickly)</li>' +
+      '</ol>' +
+    '</div>' +
+    '<button class="btn full" onclick="window._authError=false;window._authErrorDesc=null;window._authErrorCode=null;_resetState=\'email\';viewAccount();">🔄 Request New Reset Link</button>' +
+    '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">' +
+      'Remember your password? <a href="#/account" style="color:var(--brand);font-weight:600">Sign in here</a>' +
+    '</p>' +
+  '</div>';
+}
+
+function accountResetForm(){
+  return '<div class="acct-card">' +
+    '<h2>Reset Password</h2>' +
+    '<p class="sub">Enter your email address and we\'ll send you a link to reset your password.</p>' +
+    '<div id="resetForm">' +
+      '<div class="field"><label>Email</label><input id="resetEmail" type="email" placeholder="you@example.com"></div>' +
+      '<p id="resetErr" style="color:var(--danger);font-size:13px;min-height:18px;margin-bottom:6px"></p>' +
+      '<button class="btn full" onclick="sendResetEmail()">📧 Send Reset Link</button>' +
+      '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">' +
+        'Remember your password? <a href="#/account" style="color:var(--brand);font-weight:600">Sign in here</a>' +
+      '</p>' +
+    '</div>' +
+  '</div>';
+}
+
+function accountResetSent(){
+  const email = window._resetEmail || "";
+  return '<div class="acct-card" style="text-align:center">' +
+    '<div style="font-size:48px;margin-bottom:16px">📬</div>' +
+    '<h2>Check Your Email</h2>' +
+    '<p class="sub">We\'ve sent a password reset link to <strong>' + esc(email) + '</strong></p>' +
+    '<div style="background:var(--bg-soft);padding:16px;border-radius:8px;margin:20px 0;text-align:left;font-size:13px;color:var(--ink-soft)">' +
+      '<p style="margin:0 0 8px 0"><strong>📝 Next steps:</strong></p>' +
+      '<ol style="margin:0;padding-left:20px">' +
+        '<li style="margin-bottom:4px">Check your email inbox (and spam folder)</li>' +
+        '<li style="margin-bottom:4px">Click the "Reset Password" link in the email</li>' +
+        '<li style="margin-bottom:4px">Enter your new password on the page that opens</li>' +
+      '</ol>' +
+    '</div>' +
+    '<p style="font-size:12px;color:var(--ink-soft);margin-bottom:16px">The reset link will expire in 1 hour.</p>' +
+    '<button class="btn full ghost" onclick="backToResetForm()">← Back to Reset Form</button>' +
+    '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">' +
+      'Didn\'t receive the email? <a href="#" onclick="resendResetEmail();return false;" style="color:var(--brand);font-weight:600">Resend link</a>' +
+    '</p>' +
+  '</div>';
+}
+
+function accountResetNewPassword(){
+  return '<div class="acct-card">' +
+    '<h2>Set New Password</h2>' +
+    '<p class="sub">Enter your new password below. Your password must be at least 6 characters.</p>' +
+    '<div id="newPasswordForm">' +
+      '<div class="field"><label>New Password</label><input id="newPass" type="password" placeholder="Enter new password"></div>' +
+      '<div class="field"><label>Confirm Password</label><input id="confirmPass" type="password" placeholder="Confirm new password"></div>' +
+      '<div id="passStrength" style="font-size:12px;margin-bottom:12px"></div>' +
+      '<p id="newPassErr" style="color:var(--danger);font-size:13px;min-height:18px;margin-bottom:6px"></p>' +
+      '<button class="btn full" onclick="updatePassword()">🔐 Update Password</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function accountResetSuccess(){
+  return '<div class="acct-card" style="text-align:center">' +
+    '<div style="font-size:48px;margin-bottom:16px">✅</div>' +
+    '<h2>Password Updated!</h2>' +
+    '<p class="sub">Your password has been successfully updated. You can now sign in with your new password.</p>' +
+    '<div style="margin:24px 0">' +
+      '<button class="btn full" onclick="goToSignIn()">🔐 Sign In Now</button>' +
+    '</div>' +
+    '<p style="font-size:12px;color:var(--ink-soft)">If you have any issues signing in, please contact customer support.</p>' +
+  '</div>';
+}
+
+/* Client-side cooldown to avoid hammering Supabase's email rate limits */
+function _resetCooldown(sec){
+  window._resetCooldownUntil = Date.now() + sec * 1000;
+  if(window._resetCooldownTimer) clearInterval(window._resetCooldownTimer);
+  const tick = () => {
+    const left = Math.ceil(((window._resetCooldownUntil || 0) - Date.now()) / 1000);
+    const b = document.querySelector("#resetForm button");
+    if(left <= 0){
+      if(window._resetCooldownTimer){ clearInterval(window._resetCooldownTimer); window._resetCooldownTimer = null; }
+      if(b){ b.disabled = false; b.textContent = "📧 Send Reset Link"; }
+      return;
+    }
+    if(b){ b.disabled = true; b.textContent = "⏱️ Wait " + left + "s"; }
+  };
+  tick();
+  window._resetCooldownTimer = setInterval(tick, 1000);
+}
+
+function _resetCooldownLeft(){
+  if(!window._resetCooldownUntil) return 0;
+  return Math.ceil((window._resetCooldownUntil - Date.now()) / 1000);
+}
+
+async function sendResetEmail(){
+  const email = $("#resetEmail").value.trim().toLowerCase();
+  const err = $("#resetErr");
+  if(!email || !/.+@.+\..+/.test(email)){ err.textContent = "Please enter a valid email address"; return; }
+  /* Cooldown active → don't even attempt (prevents 429 loops) */
+  const cdLeft = _resetCooldownLeft();
+  if(cdLeft > 0){
+    err.textContent = "⏱️ Please wait " + cdLeft + " second(s) before requesting another email.";
+    _resetCooldown(cdLeft);
+    return;
+  }
+  window._authError = false;
+  window._authErrorDesc = null;
+  window._authErrorCode = null;
+
+  err.textContent = "";
+  const btn = document.querySelector("#resetForm button");
+  if(btn){ btn.disabled = true; btn.textContent = "Sending..."; }
+  
+  try {
+    if(supabase){
+      /* Redirect URL must have NO fragment (#...). GoTrue appends its own
+         "#access_token=..." fragment — a redirect URL that already contains
+         one produces a double-# URL that supabase-js cannot parse, so no
+         session is established and the password form can never submit.
+         Post-login routing to the account page happens via the auth listener. */
+      const redirectUrl = window.location.origin + window.location.pathname;
+      console.log("Sending reset email to:", email, "with redirectTo:", redirectUrl);
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl
+      });
+      if(error){
+        console.error("Reset password error:", error);
+        const raw = (error.message || "") + " " + (error.error_description || "");
+        if(error.status === 429 || /rate limit/i.test(raw)){
+          /* Hourly/global email cap — friendly message + cooldown, no raw error leak */
+          err.textContent = "⏱️ Too many reset emails were requested. Please wait a few minutes before trying again.";
+          _resetCooldown(60);
+          return;
+        }
+        const secMatch = raw.match(/after\s+(\d+)\s+seconds/i);
+        if(secMatch || /For security purposes/i.test(raw)){
+          const s = parseInt(secMatch && secMatch[1], 10) || 60;
+          err.textContent = "⏱️ Please wait " + s + " seconds before requesting another email.";
+          _resetCooldown(s);
+          return;
+        }
+        err.textContent = "Could not send the reset email. Please try again in a moment.";
+        if(btn){ btn.disabled = false; btn.textContent = "📧 Send Reset Link"; }
+        return;
+      }
+      console.log("Reset email sent successfully");
+      window._resetEmail = email;
+      _resetState = "sent";
+      viewAccount();
+      return;
+    }
+  } catch(e) {
+    console.error("Reset password exception:", e);
+  }
+  
+  /* Fallback: legacy account system */
+  const acc = getAccounts().find(a => a.email === email);
+  if(!acc){
+    err.textContent = "No account found with this email address";
+    if(btn){ btn.disabled = false; btn.textContent = "📧 Send Reset Link"; }
+    return;
+  }
+  
+  /* For legacy accounts, show a message that reset is not available */
+  err.textContent = "Password reset for this account requires email verification. Please contact customer support.";
+  if(btn){ btn.disabled = false; btn.textContent = "📧 Send Reset Link"; }
+}
+
+function resendResetEmail(){
+  if(window._resetEmail){
+    $("#resetEmail").value = window._resetEmail;
+    _resetState = "email";
+    viewAccount();
+    setTimeout(() => sendResetEmail(), 300);
+  }
+}
+
+function backToResetForm(){
+  _resetState = "email";
+  viewAccount();
+}
+
+function goToSignIn(){
+  /* Clear the recovery flag — otherwise isResetMode stays true and the
+     reset form is shown again instead of the sign-in form. */
+  window._passwordRecovery = false;
+  _resetState = "email";
+  location.hash = "#/account";
+}
+
+function showNewPasswordForm(){
+  _resetState = "newpassword";
+  viewAccount();
+  /* Add password strength indicator */
+  setTimeout(() => {
+    const newPass = $("#newPass");
+    if(newPass){
+      newPass.addEventListener("input", function(){
+        const pass = this.value;
+        const strengthEl = $("#passStrength");
+        if(!strengthEl) return;
+        if(pass.length === 0){ strengthEl.textContent = ""; return; }
+        let strength = 0;
+        if(pass.length >= 6) strength++;
+        if(pass.length >= 10) strength++;
+        if(/[A-Z]/.test(pass)) strength++;
+        if(/[0-9]/.test(pass)) strength++;
+        if(/[^A-Za-z0-9]/.test(pass)) strength++;
+        const levels = ["Very Weak", "Weak", "Fair", "Good", "Strong", "Very Strong"];
+        const colors = ["#e74c3c", "#e67e22", "#f39c12", "#27ae60", "#2ecc71", "#27ae60"];
+        strengthEl.innerHTML = '<span style="color:' + colors[Math.min(strength, 5)] + '">Password strength: ' + levels[Math.min(strength, 5)] + '</span>';
+      });
+    }
+  }, 100);
+}
+
+async function updatePassword(){
+  const newPass = $("#newPass").value;
+  const confirmPass = $("#confirmPass").value;
+  const err = $("#newPassErr");
+  
+  if(!newPass || newPass.length < 6){ err.textContent = "Password must be at least 6 characters"; return; }
+  if(newPass !== confirmPass){ err.textContent = "Passwords do not match"; return; }
+  
+  err.textContent = "";
+  const btn = document.querySelector("#newPasswordForm button");
+  if(btn){ btn.disabled = true; btn.textContent = "Updating..."; }
+  
+  try {
+    if(supabase){
+      const { data, error } = await supabase.auth.updateUser({ password: newPass });
+      if(error){
+        const raw = (error.message || "") + " " + (error.error_description || "");
+        if(/session missing|auth session/i.test(raw)){
+          err.textContent = "Your reset session has expired. Please request a new reset link.";
+        } else {
+          err.textContent = "Failed to update password: " + error.message;
+        }
+        if(btn){ btn.disabled = false; btn.textContent = "🔐 Update Password"; }
+        return;
+      }
+      /* Sign out after password reset */
+      await supabase.auth.signOut();
+      window._passwordRecovery = false;
+      _resetState = "success";
+      viewAccount();
+      return;
+    }
+  } catch(e) {
+    console.error("Update password error:", e);
+  }
+  
+  err.textContent = "Failed to update password. Please try again.";
+  if(btn){ btn.disabled = false; btn.textContent = "🔐 Update Password"; }
+}
+
 async function acctRegister(){
   const name = $("#regName").value.trim();
   const email = $("#regEmail").value.trim().toLowerCase();
@@ -3825,6 +4241,20 @@ async function acctLogin(){
         const name = data.user.user_metadata?.name || email.split('@')[0];
         setSession({ name, email, supabaseAuth: true, userId: data.user.id });
         updateAcctLabel();
+        /* Record last login time for Supabase Auth users too */
+        try{
+          const all = getAccounts();
+          const i = all.findIndex(a => a.email === email);
+          if(i >= 0){ 
+            all[i].lastLogin = new Date().toISOString(); 
+            all[i].name = all[i].name || name;
+            saveAccounts(all); 
+          } else {
+            /* Add to legacy accounts for tracking if not exists */
+            all.push({ name, email, pass: 'supabase_auth', created: new Date().toISOString(), lastLogin: new Date().toISOString(), tier: 'new' });
+            saveAccounts(all);
+          }
+        }catch(e){ /* Ignore login time recording errors */ }
         showToast("Signed in as " + name.split(" ")[0]);
         route();
         return;
@@ -4327,6 +4757,11 @@ function storeRoute(){
   const h = location.hash || "#/";
   closeCart();
   window.scrollTo(0, 0);
+  /* Auth error landing with intact #error= hash → friendly reset page */
+  if(h.startsWith("#error")){
+    location.replace(location.pathname + "#/account?reset=1");
+    return;
+  }
   if(h.startsWith("#/product/")){
     viewProduct(h.split("/")[2]);
   } else if(h.startsWith("#/quote/")){
@@ -4367,7 +4802,7 @@ function loadAdminScript(callback){
   }
   _adminLoading = true;
   const script = document.createElement("script");
-  script.src = "admin.js?v=20260910";
+  script.src = "admin.js?v=20260915b";
   script.onload = () => { _adminLoaded = true; _adminLoading = false; if(callback) callback(); };
   script.onerror = () => {
     _adminLoading = false;
@@ -4388,7 +4823,34 @@ function route(){
   } else {
     document.body.classList.remove("admin-mode");
     storeRoute();
+    setTimeout(initScrollAnimations, 100);
   }
+}
+
+/* ============ Scroll Animations ============ */
+function initScrollAnimations(){
+  const elements = document.querySelectorAll('.animate-on-scroll');
+  if(!elements.length) return;
+  
+  // 如果浏览器不支持 IntersectionObserver，直接显示所有元素
+  if(!('IntersectionObserver' in window)){
+    elements.forEach(el => el.classList.add('visible'));
+    return;
+  }
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  });
+  
+  elements.forEach(el => observer.observe(el));
 }
 
 /* ============ Events ============ */
@@ -4428,6 +4890,52 @@ function syncSticky(){
   if(h) document.documentElement.style.setProperty("--catnav-top", h.offsetHeight + "px");
 }
 cleanupOldData();
+/* Attach the auth listener immediately (not after data load) so the
+   PASSWORD_RECOVERY event from a PKCE ?code= landing is never missed. */
+if(typeof syncAuthSession === 'function') syncAuthSession();
+/* Detect password recovery token or auth errors in URL on page load */
+(function(){
+  const hash = location.hash || "";
+  const search = location.search || "";
+  const fullUrl = hash + search;
+  
+  /* Check for auth errors (expired link, invalid token, etc.) */
+  if(fullUrl.includes("error=") || fullUrl.includes("error_code=")){
+    console.log("Auth error detected in URL - showing error message");
+    window._authError = true;
+    /* Extract error description */
+    const errorMatch = fullUrl.match(/error_description=([^&]+)/);
+    const errorCodeMatch = fullUrl.match(/error_code=([^&]+)/);
+    if(errorMatch){
+      window._authErrorDesc = decodeURIComponent(errorMatch[1].replace(/\+/g, ' '));
+    }
+    if(errorCodeMatch){
+      window._authErrorCode = errorCodeMatch[1];
+    }
+    /* Force navigation to account page to show error */
+    if(!hash.startsWith("#/account")){
+      location.replace(location.pathname + "#/account?reset=1&error=1");
+    }
+    return;
+  }
+  
+  /* Detect password recovery token */
+  if(hash.includes("type=recovery") || search.includes("type=recovery") || 
+     hash.includes("access_token") || search.includes("access_token")){
+    console.log("Recovery token detected in URL on page load");
+    window._passwordRecovery = true;
+    /* Do NOT navigate away yet — supabase-js parses the token from the URL
+       in a later microtask and wiping the hash first would destroy the
+       session. If parsing succeeds, auth-js clears the hash and the
+       PASSWORD_RECOVERY event navigates for us; this timer is only the
+       fallback for unparseable/legacy links. */
+    setTimeout(() => {
+      if(window._passwordRecovery && !location.hash.startsWith("#/account")){
+        location.replace(location.pathname + "#/account?reset=1");
+      }
+    }, 1200);
+  }
+})();
 /* Load data from Supabase, then render */
 sbLoadAll().then(() => {
   applyTheme();
@@ -4455,6 +4963,11 @@ window.addEventListener("hashchange", () => {
 });
 window.addEventListener("resize", syncSticky);
 window.addEventListener("load", syncSticky);
+/* One-shot: if an auth error was captured but supabase-js cleaned the
+   #error hash, still land the user on the reset page with the message. */
+if(window._authError && !(location.hash || "").startsWith("#/account")){
+  location.replace(location.pathname + "#/account?reset=1");
+}
 if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ syncSticky(); }); }
 /* Header height can change after first measure (webfonts, logo image, account
    label) — keep the sticky category bar offset in sync so it never slides
