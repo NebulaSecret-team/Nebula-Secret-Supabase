@@ -1211,6 +1211,8 @@ function defaultTheme(){
     tagline: "Wholesale & OEM/ODM",
     brandColor: "#ff5983",
     accentColor: "#25bab5",
+    navBgColor: "#232228",
+    navLinkColor: "#e8e6ec",
     announce: "Wholesale & OEM/ODM — Minimum order applies. Contact sales@nebulasecret.com for bulk pricing",
     heroKicker: "Wholesale & OEM/ODM Product Supplier",
     heroTitle: "Your Trusted Partner in Product Wholesale & Custom Manufacturing",
@@ -1265,6 +1267,13 @@ function applyTheme(){
       root.style.setProperty("--brand", th.brandColor);
       /* Calculate darker shade */
       root.style.setProperty("--brand-dark", shadeColor(th.brandColor, -15));
+    }
+    /* Set navigation bar colors */
+    if(th.navBgColor){
+      root.style.setProperty("--nav-bg", th.navBgColor);
+    }
+    if(th.navLinkColor){
+      root.style.setProperty("--nav-link", th.navLinkColor);
       /* Calculate lighter shade */
       root.style.setProperty("--brand-soft", shadeColor(th.brandColor, 88));
     }
@@ -3641,22 +3650,42 @@ function getPriceForQty(product, qty){
 function renderPriceTiersTable(product){
   const tiers = product.priceTiers;
   if(!tiers || tiers.length === 0) return '';
-  let html = '<div class="price-tiers-section" style="margin:16px 0">' +
-    '<h4 style="font-size:14px;font-weight:600;margin-bottom:10px;color:var(--ink)">Bulk Pricing Tiers</h4>' +
-    '<div class="price-tiers-table" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">';
+  const basePrice = tiers[0].price;
+  let html = '<div class="price-tiers-section" style="margin:20px 0">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+      '<h4 style="font-size:15px;font-weight:700;margin:0;color:var(--ink)">Bulk Pricing Tiers</h4>' +
+      '<span style="font-size:11px;color:var(--ink-soft);background:var(--accent-soft);padding:4px 10px;border-radius:20px;font-weight:600">Volume Discount</span>' +
+    '</div>' +
+    '<div class="price-tiers-table" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">';
   for(let i = 0; i < tiers.length; i++){
     const t = tiers[i];
     const nextQty = i < tiers.length - 1 ? tiers[i + 1].minQty - 1 : null;
     const range = nextQty ? (t.minQty + ' – ' + nextQty) : (t.minQty + '+');
     const isActive = qtySel >= t.minQty && (i === tiers.length - 1 || qtySel < tiers[i + 1].minQty);
-    html += '<div class="tier-card' + (isActive ? ' active' : '') + '" style="padding:12px;border-radius:10px;border:1px solid ' + (isActive ? 'var(--brand)' : 'var(--border)') + ';background:' + (isActive ? 'rgba(37,186,181,0.05)' : 'var(--card)') + ';text-align:center;transition:all 0.2s">' +
-      '<div style="font-size:12px;color:var(--ink-soft);font-weight:500">Qty ' + range + '</div>' +
-      '<div style="font-size:18px;font-weight:700;color:var(--ink);margin-top:4px">' + fmt(t.price) + '</div>' +
-      '<div style="font-size:11px;color:var(--ink-soft)">per unit</div>' +
+    const savingsPct = basePrice > 0 ? Math.round((1 - t.price / basePrice) * 100) : 0;
+    const isBestDeal = i === tiers.length - 1 && tiers.length > 1;
+    html += '<div class="tier-card' + (isActive ? ' active' : '') + '" style="position:relative;padding:14px 12px;border-radius:12px;border:2px solid ' + (isActive ? 'var(--accent)' : 'var(--border)') + ';background:' + (isActive ? 'linear-gradient(135deg,rgba(37,186,181,0.08),rgba(37,186,181,0.02))' : 'var(--card)') + ';text-align:center;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);cursor:pointer" onclick="selectTierQty(' + t.minQty + ')">' +
+      (isBestDeal ? '<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;white-space:nowrap">BEST VALUE</div>' : '') +
+      '<div style="font-size:11px;color:var(--ink-soft);font-weight:600;letter-spacing:0.3px;text-transform:uppercase">Qty ' + range + '</div>' +
+      '<div style="font-size:22px;font-weight:800;color:var(--ink);margin-top:6px;line-height:1.2">' + fmt(t.price) + '</div>' +
+      '<div style="font-size:11px;color:var(--ink-soft);margin-top:2px">per unit</div>' +
+      (savingsPct > 0 ? '<div style="font-size:11px;color:var(--success);font-weight:700;margin-top:6px;background:var(--success-soft);padding:3px 8px;border-radius:6px;display:inline-block">Save ' + savingsPct + '%</div>' : '<div style="height:24px;margin-top:6px"></div>') +
     '</div>';
   }
-  html += '</div></div>';
+  html += '</div>' +
+    '<div style="margin-top:10px;font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:6px">' +
+      '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent)"></span>' +
+      'Click a tier to set quantity automatically. Larger orders = better pricing.' +
+    '</div>' +
+  '</div>';
   return html;
+}
+
+function selectTierQty(qty){
+  qtySel = qty;
+  const qtyInput = document.getElementById("qtyInput");
+  if(qtyInput) qtyInput.value = qty;
+  updateProductPriceDisplay();
 }
 
 function updateProductPriceDisplay(){

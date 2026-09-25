@@ -1365,6 +1365,8 @@ function adminTheme(){
         '<div class="field full"><label>Tagline (small text under logo)</label><input id="thTag" value="' + esc(th.tagline) + '"></div>' +
         '<div class="field"><label>Brand color</label><input id="thBrand" type="color" value="' + th.brandColor + '" style="height:46px;padding:4px"></div>' +
         '<div class="field"><label>Accent color</label><input id="thAccent" type="color" value="' + th.accentColor + '" style="height:46px;padding:4px"></div>' +
+        '<div class="field"><label>Navbar background</label><input id="thNavBg" type="color" value="' + (th.navBgColor || "#232228") + '" style="height:46px;padding:4px"></div>' +
+        '<div class="field"><label>Navbar links</label><input id="thNavLink" type="color" value="' + (th.navLinkColor || "#e8e6ec") + '" style="height:46px;padding:4px"></div>' +
         '<div class="field full"><label>Color presets</label><div class="theme-swatches" id="thSwatches">' +
           THEME_PRESETS.map((p,i) => '<button class="swatch" style="background:' + p.brand + '" title="' + p.name + '" onclick="applyPreset(' + i + ')"></button>').join("") +
         '</div></div>' +
@@ -1593,6 +1595,8 @@ function saveThemeForm(){
   th.tagline = $("#thTag").value.trim();
   th.brandColor = $("#thBrand").value;
   th.accentColor = $("#thAccent").value;
+  th.navBgColor = $("#thNavBg").value;
+  th.navLinkColor = $("#thNavLink").value;
   th.heroKicker = $("#thKicker").value.trim();
   th.heroTitle = $("#thTitle").value.trim();
   th.heroSub = $("#thSub").value.trim();
@@ -1623,6 +1627,8 @@ function applyTheme(){
   r.setProperty("--brand-soft", shade(th.brandColor, 92, true));
   r.setProperty("--accent", th.accentColor);
   r.setProperty("--accent-soft", shade(th.accentColor, 90, true));
+  if(th.navBgColor) r.setProperty("--nav-bg", th.navBgColor);
+  if(th.navLinkColor) r.setProperty("--nav-link", th.navLinkColor);
   $("#brandName").innerHTML = esc(th.storeName) + "<small>" + esc(th.tagline) + "</small>";
   document.title = th.storeName + " — Wholesale Supplier & OEM/ODM Manufacturer";
 }
