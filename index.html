@@ -993,6 +993,21 @@ let supabaseAvailable = false;
 /* Debug logging disabled in production for security */
 const DEBUG = false;
 function dbg(...args){ if(DEBUG) console.log("[Supabase]", ...args); }
+/* Capture auth error/flow params from the URL BEFORE supabase-js processes
+   and possibly cleans it (expired/invalid email-link landings). */
+try {
+  (function(){
+    const hs = location.hash || "";
+    const qs = location.search || "";
+    const src = (hs.indexOf("error=") > -1) ? hs.slice(1) : ((qs.indexOf("error=") > -1) ? qs.slice(1) : "");
+    if(src){
+      const p = new URLSearchParams(src.replace(/\?/, "&"));
+      const code = p.get("error_code") || p.get("error") || "";
+      if(code) window._authError = { code: code, desc: p.get("error_description") || "" };
+    }
+    window._pkceLanding = /[?&]code=[^&]+/.test(qs);
+  })();
+} catch(e){}
 try {
   if (window.supabase && window.supabase.createClient) {
     supabase = window.supabase.createClient(SB_URL, SB_KEY, {
@@ -3769,6 +3784,13 @@ function viewAccount(){
   if(isResetMode && (hash.includes("type=recovery") || search.includes("type=recovery") || hash.includes("access_token") || search.includes("access_token") || window._passwordRecovery)){
     setTimeout(() => showNewPasswordForm(), 500);
   }
+  /* PKCE ?code= landing fallback: if the PASSWORD_RECOVERY event arrives
+     after this render, pick it up shortly after. */
+  if(isResetMode && window._pkceLanding && !window._passwordRecovery){
+    setTimeout(() => {
+      if(window._passwordRecovery && _resetState !== "newpassword") showNewPasswordForm();
+    }, 1500);
+  }
 }
 /* Refresh a single key from Supabase and update cache */
 async function sbRefreshKey(key){
@@ -3838,9 +3860,20 @@ function accountResetView(){
   return accountResetForm();
 }
 
+function authErrorBanner(){
+  if(!window._authError) return "";
+  const code = window._authError.code || "";
+  let msg = "This reset link has expired or has already been used. Request a new one below.";
+  if(code !== "otp_expired" && code !== "access_denied"){
+    msg = "This link is no longer valid. Request a new one below.";
+  }
+  return '<div style="background:#fff4f4;border:1px solid #f5c2c7;color:#842029;padding:12px 14px;border-radius:8px;font-size:13px;margin:0 0 16px 0">⛔ ' + msg + '</div>';
+}
+
 function accountResetForm(){
   return '<div class="acct-card">' +
     '<h2>Reset Password</h2>' +
+    authErrorBanner() +
     '<p class="sub">Enter your email address and we\'ll send you a link to reset your password.</p>' +
     '<div id="resetForm">' +
       '<div class="field"><label>Email</label><input id="resetEmail" type="email" placeholder="you@example.com"></div>' +
@@ -3901,11 +3934,42 @@ function accountResetSuccess(){
   '</div>';
 }
 
+/* Client-side cooldown to avoid hammering Supabase's email rate limits */
+function _resetCooldown(sec){
+  window._resetCooldownUntil = Date.now() + sec * 1000;
+  if(window._resetCooldownTimer) clearInterval(window._resetCooldownTimer);
+  const tick = () => {
+    const left = Math.ceil(((window._resetCooldownUntil || 0) - Date.now()) / 1000);
+    const b = document.querySelector("#resetForm button");
+    if(left <= 0){
+      if(window._resetCooldownTimer){ clearInterval(window._resetCooldownTimer); window._resetCooldownTimer = null; }
+      if(b){ b.disabled = false; b.textContent = "📧 Send Reset Link"; }
+      return;
+    }
+    if(b){ b.disabled = true; b.textContent = "⏱️ Wait " + left + "s"; }
+  };
+  tick();
+  window._resetCooldownTimer = setInterval(tick, 1000);
+}
+
+function _resetCooldownLeft(){
+  if(!window._resetCooldownUntil) return 0;
+  return Math.ceil((window._resetCooldownUntil - Date.now()) / 1000);
+}
+
 async function sendResetEmail(){
   const email = $("#resetEmail").value.trim().toLowerCase();
   const err = $("#resetErr");
   if(!email || !/.+@.+\..+/.test(email)){ err.textContent = "Please enter a valid email address"; return; }
-  
+  /* Cooldown active → don't even attempt (prevents 429 loops) */
+  const cdLeft = _resetCooldownLeft();
+  if(cdLeft > 0){
+    err.textContent = "⏱️ Please wait " + cdLeft + " second(s) before requesting another email.";
+    _resetCooldown(cdLeft);
+    return;
+  }
+  window._authError = null;
+
   err.textContent = "";
   const btn = document.querySelector("#resetForm button");
   if(btn){ btn.disabled = true; btn.textContent = "Sending..."; }
@@ -3920,7 +3984,21 @@ async function sendResetEmail(){
       });
       if(error){
         console.error("Reset password error:", error);
-        err.textContent = "Failed to send reset email: " + error.message;
+        const raw = (error.message || "") + " " + (error.error_description || "");
+        if(error.status === 429 || /rate limit/i.test(raw)){
+          /* Hourly/global email cap — friendly message + cooldown, no raw error leak */
+          err.textContent = "⏱️ Too many reset emails were requested. Please wait a few minutes before trying again.";
+          _resetCooldown(60);
+          return;
+        }
+        const secMatch = raw.match(/after\s+(\d+)\s+seconds/i);
+        if(secMatch || /For security purposes/i.test(raw)){
+          const s = parseInt(secMatch && secMatch[1], 10) || 60;
+          err.textContent = "⏱️ Please wait " + s + " seconds before requesting another email.";
+          _resetCooldown(s);
+          return;
+        }
+        err.textContent = "Could not send the reset email. Please try again in a moment.";
         if(btn){ btn.disabled = false; btn.textContent = "📧 Send Reset Link"; }
         return;
       }
@@ -4632,6 +4710,11 @@ function storeRoute(){
   const h = location.hash || "#/";
   closeCart();
   window.scrollTo(0, 0);
+  /* Auth error landing with intact #error= hash → friendly reset page */
+  if(h.startsWith("#error")){
+    location.replace(location.pathname + "#/account?reset=1");
+    return;
+  }
   if(h.startsWith("#/product/")){
     viewProduct(h.split("/")[2]);
   } else if(h.startsWith("#/quote/")){
@@ -4760,6 +4843,9 @@ function syncSticky(){
   if(h) document.documentElement.style.setProperty("--catnav-top", h.offsetHeight + "px");
 }
 cleanupOldData();
+/* Attach the auth listener immediately (not after data load) so the
+   PASSWORD_RECOVERY event from a PKCE ?code= landing is never missed. */
+if(typeof syncAuthSession === 'function') syncAuthSession();
 /* Load data from Supabase, then render */
 sbLoadAll().then(() => {
   applyTheme();
@@ -4787,6 +4873,11 @@ window.addEventListener("hashchange", () => {
 });
 window.addEventListener("resize", syncSticky);
 window.addEventListener("load", syncSticky);
+/* One-shot: if an auth error was captured but supabase-js cleaned the
+   #error hash, still land the user on the reset page with the message. */
+if(window._authError && !(location.hash || "").startsWith("#/account")){
+  location.replace(location.pathname + "#/account?reset=1");
+}
 if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ syncSticky(); }); }
 /* Header height can change after first measure (webfonts, logo image, account
    label) — keep the sticky category bar offset in sync so it never slides
