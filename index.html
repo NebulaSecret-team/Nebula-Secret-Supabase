@@ -1211,8 +1211,6 @@ function defaultTheme(){
     tagline: "Wholesale & OEM/ODM",
     brandColor: "#ff5983",
     accentColor: "#25bab5",
-    navBgColor: "#232228",
-    navLinkColor: "#e8e6ec",
     announce: "Wholesale & OEM/ODM — Minimum order applies. Contact sales@nebulasecret.com for bulk pricing",
     heroKicker: "Wholesale & OEM/ODM Product Supplier",
     heroTitle: "Your Trusted Partner in Product Wholesale & Custom Manufacturing",
@@ -1267,13 +1265,6 @@ function applyTheme(){
       root.style.setProperty("--brand", th.brandColor);
       /* Calculate darker shade */
       root.style.setProperty("--brand-dark", shadeColor(th.brandColor, -15));
-    }
-    /* Set navigation bar colors */
-    if(th.navBgColor){
-      root.style.setProperty("--nav-bg", th.navBgColor);
-    }
-    if(th.navLinkColor){
-      root.style.setProperty("--nav-link", th.navLinkColor);
       /* Calculate lighter shade */
       root.style.setProperty("--brand-soft", shadeColor(th.brandColor, 88));
     }
