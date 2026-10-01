@@ -137,7 +137,7 @@ h1,h2,h3,.display{font-family:var(--font-display)}
 .hact{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 12px;border-radius:8px;font-size:11px;color:var(--ink-soft);transition:background .15s,color .15s;position:relative}
 .hact:hover{background:var(--bg);color:var(--ink)}
 .hact svg{width:22px;height:22px;stroke:var(--ink)}
-.hact .cart-count{position:absolute;top:1px;right:6px;background:var(--brand);color:#fff;font-size:10.5px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;padding:0 4px;transform:scale(0);transition:transform .25s}
+.hact .cart-count{position:absolute;top:1px;right:2px;background:var(--brand);color:#fff;font-size:8.5px;font-weight:700;min-width:24px;height:18px;border-radius:9px;display:grid;place-items:center;padding:0 6px;transform:scale(0);transition:transform .25s;line-height:1;white-space:nowrap}
 .hact .cart-count.show{transform:scale(1)}
 .menu-toggle{display:none;width:42px;height:42px;place-items:center;border-radius:8px}
 .menu-toggle:hover{background:var(--bg)}
@@ -430,7 +430,7 @@ section.block{padding:40px 0}
 .ci-qty{display:flex;align-items:center;gap:8px;margin-top:8px}
 .ci-qty button{width:24px;height:24px;border-radius:6px;background:var(--bg);display:grid;place-items:center;font-size:14px}
 .ci-qty button:hover{background:var(--brand-soft);color:var(--brand-dark)}
-.ci-qty input{width:44px;text-align:center;border:1px solid var(--line-dark);border-radius:6px;font-size:13px;font-weight:600;padding:3px 4px;outline:none;background:#fff}
+.ci-qty input{width:56px;text-align:center;border:1px solid var(--line-dark);border-radius:6px;font-size:12px;font-weight:600;padding:3px 2px;outline:none;background:#fff;min-width:56px}
 .ci-qty input:focus{border-color:var(--brand)}
 .ci-remove{color:var(--ink-soft);font-size:12px;text-decoration:underline}
 .ci-remove:hover{color:var(--brand-dark)}
@@ -2842,7 +2842,17 @@ function viewAbout(){
   $("#app").innerHTML = html;
   const q = (location.hash.split("?")[1] || "");
   const sm = q.match(/scroll=([a-z]+)/);
-  if(sm){ setTimeout(() => { const el = document.getElementById("ab-" + sm[1]); if(el) el.scrollIntoView({behavior:"smooth", block:"start"}); }, 120); }
+  if(sm){
+    /* Wait for scroll animations to initialize first, then scroll.
+       Also force all animate-on-scroll elements visible to prevent blank page. */
+    setTimeout(() => {
+      document.querySelectorAll('.animate-on-scroll:not(.visible)').forEach(el => el.classList.add('visible'));
+      setTimeout(() => {
+        const el = document.getElementById("ab-" + sm[1]);
+        if(el) el.scrollIntoView({behavior:"smooth", block:"start"});
+      }, 100);
+    }, 200);
+  }
 }
 
 /* ============ WHY US PAGE ============ */
@@ -3718,7 +3728,12 @@ let currentProduct = null;
 
 function viewProduct(id){
   const p = findProduct(id);
-  if(!p){ location.hash = "#/shop"; return; }
+  if(!p){
+    /* Data may not be loaded yet on direct navigation (boot route() runs before
+       sbLoadAll finishes) — stay on this hash; the post-load route() will retry. */
+    if(!_cache.loaded) return;
+    location.hash = "#/shop"; return;
+  }
   currentProduct = p;
   const rt = productRating(p); const sold = productSold(p);
   const props = (p.d || []).map(s => {
