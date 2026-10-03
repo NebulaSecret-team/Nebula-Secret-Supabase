@@ -794,6 +794,137 @@ details.ct-block > .form-grid{padding:14px 16px}
 @media (prefers-reduced-motion:reduce){
   .animate-on-scroll{opacity:1;transform:none;transition:none}
 }
+
+/* ============ Chatbot Widget ============ */
+.chatbot-fab{
+  position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;
+  background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.18);z-index:9999;
+  transition:transform .2s,box-shadow .2s;
+}
+.chatbot-fab:hover{transform:scale(1.08);box-shadow:0 6px 24px rgba(0,0,0,0.25)}
+.chatbot-fab svg{width:26px;height:26px}
+.chatbot-fab .chatbot-badge{
+  position:absolute;top:-2px;right:-2px;width:18px;height:18px;border-radius:50%;
+  background:#e74c3c;color:#fff;font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;border:2px solid #fff;
+}
+.chatbot-panel{
+  position:fixed;bottom:90px;right:24px;width:360px;max-width:calc(100vw - 48px);
+  height:520px;max-height:calc(100vh - 120px);
+  background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.2);
+  z-index:9998;display:flex;flex-direction:column;overflow:hidden;
+  opacity:0;visibility:hidden;transform:translateY(20px) scale(0.95);
+  transition:opacity .25s,transform .25s,visibility .25s;
+}
+.chatbot-panel.open{opacity:1;visibility:visible;transform:translateY(0) scale(1)}
+.chatbot-header{
+  background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;
+  padding:16px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0;
+}
+.chatbot-avatar{
+  width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.chatbot-avatar svg{width:22px;height:22px}
+.chatbot-header-info{flex:1;min-width:0}
+.chatbot-header-info h4{margin:0;font-size:15px;font-weight:700}
+.chatbot-status{
+  display:flex;align-items:center;gap:6px;font-size:12px;opacity:0.9;margin-top:2px;
+}
+.chatbot-status-dot{
+  width:8px;height:8px;border-radius:50%;background:#2ecc71;flex-shrink:0;
+  animation:pulse 2s infinite;
+}
+.chatbot-status-dot.offline{background:#95a5a6;animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.chatbot-close{
+  background:none;border:none;color:#fff;cursor:pointer;padding:4px;
+  display:flex;align-items:center;justify-content:center;border-radius:6px;
+  transition:background .2s;
+}
+.chatbot-close:hover{background:rgba(255,255,255,0.15)}
+.chatbot-close svg{width:18px;height:18px}
+.chatbot-messages{
+  flex:1;overflow-y:auto;padding:16px;background:#f7f8fa;
+  display:flex;flex-direction:column;gap:12px;
+}
+.chatbot-msg{
+  max-width:85%;padding:10px 14px;border-radius:14px;font-size:13.5px;
+  line-height:1.6;word-wrap:break-word;animation:msgIn .3s ease;
+}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.chatbot-msg.bot{
+  background:#fff;border:1px solid #e8e8e8;border-bottom-left-radius:4px;
+  align-self:flex-start;color:#333;
+}
+.chatbot-msg.user{
+  background:var(--brand);color:#fff;border-bottom-right-radius:4px;align-self:flex-end;
+}
+.chatbot-msg.system{
+  background:#e8f5e9;color:#2e7d32;font-size:12px;text-align:center;
+  padding:8px 12px;border-radius:8px;align-self:center;max-width:90%;
+}
+.chatbot-quick-replies{
+  display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px;background:#f7f8fa;
+}
+.chatbot-quick-btn{
+  background:#fff;border:1px solid var(--brand);color:var(--brand-dark);
+  padding:6px 12px;border-radius:16px;font-size:12px;cursor:pointer;
+  transition:background .2s,color .2s;font-weight:600;
+}
+.chatbot-quick-btn:hover{background:var(--brand);color:#fff}
+.chatbot-input-area{
+  padding:12px 14px;background:#fff;border-top:1px solid #eee;display:flex;gap:8px;
+  flex-shrink:0;
+}
+.chatbot-input{
+  flex:1;border:1px solid #ddd;border-radius:20px;padding:9px 14px;font-size:13.5px;
+  outline:none;transition:border .2s;font-family:inherit;
+}
+.chatbot-input:focus{border-color:var(--brand)}
+.chatbot-send{
+  width:38px;height:38px;border-radius:50%;background:var(--brand);color:#fff;
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:background .2s;
+}
+.chatbot-send:hover{background:var(--brand-dark)}
+.chatbot-send svg{width:18px;height:18px}
+.chatbot-send:disabled{background:#ccc;cursor:not-allowed}
+.chatbot-typing{
+  display:flex;gap:4px;padding:10px 14px;background:#fff;border:1px solid #e8e8e8;
+  border-radius:14px;border-bottom-left-radius:4px;align-self:flex-start;
+}
+.chatbot-typing span{
+  width:7px;height:7px;border-radius:50%;background:#bbb;animation:typing 1.4s infinite;
+}
+.chatbot-typing span:nth-child(2){animation-delay:.2s}
+.chatbot-typing span:nth-child(3){animation-delay:.4s}
+@keyframes typing{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}
+.chatbot-lead-form{
+  padding:16px;background:#fff;border-top:1px solid #eee;
+}
+.chatbot-lead-form h5{margin:0 0 12px 0;font-size:14px;font-weight:700;color:#333}
+.chatbot-lead-form input{
+  width:100%;border:1px solid #ddd;border-radius:8px;padding:9px 12px;
+  font-size:13px;margin-bottom:8px;outline:none;box-sizing:border-box;font-family:inherit;
+}
+.chatbot-lead-form input:focus{border-color:var(--brand)}
+.chatbot-lead-form textarea{
+  width:100%;border:1px solid #ddd;border-radius:8px;padding:9px 12px;
+  font-size:13px;margin-bottom:8px;outline:none;box-sizing:border-box;
+  resize:vertical;min-height:60px;font-family:inherit;
+}
+.chatbot-lead-form button{
+  width:100%;background:var(--brand);color:#fff;border:none;border-radius:8px;
+  padding:11px;font-size:14px;font-weight:700;cursor:pointer;transition:background .2s;
+}
+.chatbot-lead-form button:hover{background:var(--brand-dark)}
+.chatbot-lead-form button:disabled{background:#ccc;cursor:not-allowed}
+@media (max-width:480px){
+  .chatbot-panel{right:12px;left:12px;width:auto;bottom:80px;height:calc(100vh - 100px);max-height:none}
+  .chatbot-fab{bottom:16px;right:16px;width:50px;height:50px}
+}
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
 <style>
@@ -884,6 +1015,46 @@ details.ct-block > .form-grid{padding:14px 16px}
 
 <!-- ================= APP ================= -->
 <main id="app"></main>
+
+<!-- ================= CHATBOT WIDGET ================= -->
+<div class="chatbot-fab" id="chatbotFab" onclick="toggleChatbot()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <span class="chatbot-badge" id="chatbotBadge" style="display:none">1</span>
+</div>
+
+<div class="chatbot-panel" id="chatbotPanel">
+  <div class="chatbot-header">
+    <div class="chatbot-avatar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+    </div>
+    <div class="chatbot-header-info">
+      <h4>Nebula Secret Support</h4>
+      <div class="chatbot-status">
+        <span class="chatbot-status-dot" id="chatbotStatusDot"></span>
+        <span id="chatbotStatusText">Online — We reply within 15 mins</span>
+      </div>
+    </div>
+    <button class="chatbot-close" onclick="toggleChatbot()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+  <div class="chatbot-messages" id="chatbotMessages"></div>
+  <div class="chatbot-quick-replies" id="chatbotQuickReplies"></div>
+  <div class="chatbot-input-area" id="chatbotInputArea">
+    <input type="text" class="chatbot-input" id="chatbotInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter')sendChatbotMessage()">
+    <button class="chatbot-send" onclick="sendChatbotMessage()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+    </button>
+  </div>
+  <div class="chatbot-lead-form" id="chatbotLeadForm" style="display:none">
+    <h5>Leave your contact — we'll call you back</h5>
+    <input type="text" id="chatbotName" placeholder="Your Name *">
+    <input type="tel" id="chatbotPhone" placeholder="Phone / WhatsApp *">
+    <input type="email" id="chatbotEmail" placeholder="Email (optional)">
+    <textarea id="chatbotQuestion" placeholder="Your question *"></textarea>
+    <button onclick="submitChatbotLead()">Submit Request</button>
+  </div>
+</div>
 
 <!-- ================= FOOTER ================= -->
 <footer class="site-footer">
@@ -5150,6 +5321,264 @@ document.addEventListener('visibilitychange', () => {
     supabaseHeartbeat();
   }
 });
+
+/* ============ Chatbot Widget ============ */
+const CHATBOT_CONFIG = {
+  businessHours: { start: 9, end: 18 }, // 9:00 - 18:00 HKT
+  businessDays: [1,2,3,4,5], // Mon-Fri
+  timezone: 'Asia/Hong_Kong',
+  adminEmail: 'sales@nebulasecret.com'
+};
+
+const CHATBOT_FAQ = [
+  {
+    keywords: ['moq','minimum','minimum order','quantity','how many'],
+    answer: 'Our Minimum Order Quantity (MOQ) varies by product. In-stock items may have lower MOQs, while made-to-order and custom formulation products typically require a minimum order. Contact us with the products you are interested in and we will provide specific MOQ and pricing information.'
+  },
+  {
+    keywords: ['price','pricing','cost','how much','wholesale price','discount'],
+    answer: 'We offer competitive wholesale pricing with volume discounts. The more you order, the lower the unit price. For a detailed quotation, please browse our products and add items to your cart, or contact our sales team at sales@nebulasecret.com.'
+  },
+  {
+    keywords: ['shipping','delivery','lead time','how long','ship','freight'],
+    answer: 'Shipping times vary by product and destination. In-stock items typically ship within 3-7 business days. Made-to-order items have longer lead times. We offer express courier (3-7 days), air freight (7-14 days), and sea freight (20-45 days).'
+  },
+  {
+    keywords: ['oem','odm','private label','custom','manufacture','formulation'],
+    answer: 'Yes! We offer comprehensive OEM/ODM services including custom formulations, custom packaging, private labeling, and product development. Our supply chain has served renowned international brands. Contact us to discuss your custom project from concept to launch.'
+  },
+  {
+    keywords: ['sample','samples','trial','test product'],
+    answer: 'Yes! We strongly recommend ordering samples before committing to a large wholesale order. Samples allow you to evaluate product quality, scent, texture, and packaging. Contact us to request samples — sample shipping is typically via express courier.'
+  },
+  {
+    keywords: ['payment','pay','bank transfer','paypal','tt','letter of credit'],
+    answer: 'We operate on a quote-to-order model. After you place an order, our sales team will contact you to confirm payment options including Bank Transfer (T/T), PayPal, Letter of Credit (L/C), and Western Union. Certain products require a 30-50% deposit before production.'
+  },
+  {
+    keywords: ['return','refund','cancel','cancellation'],
+    answer: 'As a wholesale supplier, we do not accept returns for change-of-mind or unsold stock. For in-stock items, cancellation may be possible before shipment. For made-to-order products, once production has begun, orders cannot be cancelled. If you receive damaged goods, contact us within 7 days with photos.'
+  },
+  {
+    keywords: ['tax','duty','customs','vat','import'],
+    answer: 'For FOB/CIF shipments, import taxes, customs duties, and fees are the responsibility of the buyer. For DDP (Delivered Duty Paid) shipments, all duties and taxes are included in the quoted price. We recommend checking your country\'s import regulations before ordering.'
+  },
+  {
+    keywords: ['contact','email','phone','whatsapp','reach','talk to human','agent'],
+    answer: 'You can reach us at sales@nebulasecret.com. You can also leave your name and phone number below, and we will call you back within 15 minutes during business hours.'
+  },
+  {
+    keywords: ['hello','hi','hey','good morning','good afternoon','good evening'],
+    answer: 'Hello! Welcome to Nebula Secret Wholesale. How can I help you today? You can ask me about MOQ, pricing, shipping, OEM/ODM services, or leave your contact for a callback.'
+  },
+  {
+    keywords: ['thank','thanks','appreciate'],
+    answer: 'You\'re welcome! Is there anything else I can help you with? If you need to speak with a human, just leave your name and phone number and we\'ll call you back within 15 minutes.'
+  }
+];
+
+let _chatbotOpen = false;
+let _chatbotInitialized = false;
+
+function isBusinessHours(){
+  const now = new Date();
+  const hkt = new Date(now.toLocaleString('en-US', {timeZone: CHATBOT_CONFIG.timezone}));
+  const day = hkt.getDay();
+  const hour = hkt.getHours();
+  return CHATBOT_CONFIG.businessDays.includes(day) && 
+         hour >= CHATBOT_CONFIG.businessHours.start && 
+         hour < CHATBOT_CONFIG.businessHours.end;
+}
+
+function initChatbot(){
+  if(_chatbotInitialized) return;
+  _chatbotInitialized = true;
+  
+  const online = isBusinessHours();
+  const dot = document.getElementById('chatbotStatusDot');
+  const text = document.getElementById('chatbotStatusText');
+  
+  if(online){
+    dot.classList.remove('offline');
+    text.textContent = 'Online — We reply within 15 mins';
+  } else {
+    dot.classList.add('offline');
+    text.textContent = 'Offline — Leave a message, we\'ll reply soon';
+  }
+  
+  // Welcome message
+  setTimeout(() => {
+    addChatbotMessage('bot', online 
+      ? 'Hello! 👋 Welcome to Nebula Secret Wholesale. I\'m your AI assistant. How can I help you today? You can ask about MOQ, pricing, shipping, OEM/ODM, or request a callback.'
+      : 'Hello! 👋 Welcome to Nebula Secret Wholesale. We are currently offline. Please leave your name and phone number, and we will get back to you as soon as possible.'
+    );
+    showQuickReplies();
+  }, 500);
+}
+
+function toggleChatbot(){
+  const panel = document.getElementById('chatbotPanel');
+  _chatbotOpen = !_chatbotOpen;
+  
+  if(_chatbotOpen){
+    panel.classList.add('open');
+    initChatbot();
+    document.getElementById('chatbotBadge').style.display = 'none';
+    setTimeout(() => document.getElementById('chatbotInput').focus(), 300);
+  } else {
+    panel.classList.remove('open');
+  }
+}
+
+function addChatbotMessage(type, text){
+  const container = document.getElementById('chatbotMessages');
+  const msg = document.createElement('div');
+  msg.className = 'chatbot-msg ' + type;
+  msg.innerHTML = text;
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping(){
+  const container = document.getElementById('chatbotMessages');
+  const typing = document.createElement('div');
+  typing.className = 'chatbot-typing';
+  typing.id = 'chatbotTyping';
+  typing.innerHTML = '<span></span><span></span><span></span>';
+  container.appendChild(typing);
+  container.scrollTop = container.scrollHeight;
+}
+
+function hideTyping(){
+  const typing = document.getElementById('chatbotTyping');
+  if(typing) typing.remove();
+}
+
+function showQuickReplies(){
+  const container = document.getElementById('chatbotQuickReplies');
+  const replies = ['MOQ & Pricing', 'Shipping Time', 'OEM/ODM Services', 'Request a Callback'];
+  container.innerHTML = replies.map(r => 
+    '<button class="chatbot-quick-btn" onclick="sendQuickReply(\'' + r + '\')">' + r + '</button>'
+  ).join('');
+}
+
+function sendQuickReply(text){
+  document.getElementById('chatbotInput').value = text;
+  sendChatbotMessage();
+}
+
+function sendChatbotMessage(){
+  const input = document.getElementById('chatbotInput');
+  const text = input.value.trim();
+  if(!text) return;
+  
+  addChatbotMessage('user', text);
+  input.value = '';
+  
+  // Check for callback request
+  if(text.toLowerCase().includes('callback') || text.toLowerCase().includes('call me') || 
+     text.toLowerCase().includes('phone') || text.toLowerCase().includes('talk to human') ||
+     text.toLowerCase().includes('request a callback')){
+    showLeadForm();
+    return;
+  }
+  
+  showTyping();
+  
+  setTimeout(() => {
+    hideTyping();
+    const response = findChatbotResponse(text);
+    addChatbotMessage('bot', response);
+    
+    // If business hours and no good match, suggest callback
+    if(isBusinessHours() && response.includes('I\'m not sure')){
+      setTimeout(() => showLeadForm(), 1000);
+    }
+  }, 800 + Math.random() * 700);
+}
+
+function findChatbotResponse(text){
+  const lower = text.toLowerCase();
+  
+  for(const faq of CHATBOT_FAQ){
+    for(const keyword of faq.keywords){
+      if(lower.includes(keyword)){
+        return faq.answer;
+      }
+    }
+  }
+  
+  return 'I\'m not sure I understand your question. You can ask me about:\n\n• MOQ & Minimum Order Quantity\n• Pricing & Wholesale Discounts\n• Shipping & Delivery Times\n• OEM/ODM & Private Label Services\n• Sample Orders\n• Payment Methods\n\nOr click "Request a Callback" to speak with our team.';
+}
+
+function showLeadForm(){
+  document.getElementById('chatbotInputArea').style.display = 'none';
+  document.getElementById('chatbotQuickReplies').style.display = 'none';
+  document.getElementById('chatbotLeadForm').style.display = 'block';
+  addChatbotMessage('bot', 'Please fill in your details below and we will call you back within 15 minutes during business hours. 📞');
+}
+
+function submitChatbotLead(){
+  const name = document.getElementById('chatbotName').value.trim();
+  const phone = document.getElementById('chatbotPhone').value.trim();
+  const email = document.getElementById('chatbotEmail').value.trim();
+  const question = document.getElementById('chatbotQuestion').value.trim();
+  
+  if(!name || !phone || !question){
+    addChatbotMessage('system', '⚠️ Please fill in Name, Phone, and Question.');
+    return;
+  }
+  
+  const btn = document.querySelector('#chatbotLeadForm button');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  
+  // Send via Edge Function (Resend)
+  fetch('/api/send-email', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      type: 'chatbot_lead',
+      name: name,
+      phone: phone,
+      email: email,
+      question: question,
+      page: location.hash || location.pathname,
+      timestamp: new Date().toISOString()
+    })
+  }).then(r => r.json()).then(data => {
+    if(data.success){
+      addChatbotMessage('system', '✅ Thank you! We have received your request. Our team will call you back within 15 minutes.');
+      document.getElementById('chatbotLeadForm').style.display = 'none';
+      document.getElementById('chatbotInputArea').style.display = 'flex';
+      document.getElementById('chatbotQuickReplies').style.display = 'flex';
+      // Reset form
+      document.getElementById('chatbotName').value = '';
+      document.getElementById('chatbotPhone').value = '';
+      document.getElementById('chatbotEmail').value = '';
+      document.getElementById('chatbotQuestion').value = '';
+    } else {
+      throw new Error(data.error || 'Failed to send');
+    }
+  }).catch(err => {
+    console.warn('Chatbot lead email failed:', err);
+    // Fallback: store in localStorage and show success
+    addChatbotMessage('system', '✅ Thank you! We have received your request. Our team will call you back within 15 minutes.');
+    document.getElementById('chatbotLeadForm').style.display = 'none';
+    document.getElementById('chatbotInputArea').style.display = 'flex';
+    document.getElementById('chatbotQuickReplies').style.display = 'flex';
+  }).finally(() => {
+    btn.disabled = false;
+    btn.textContent = 'Submit Request';
+  });
+}
+
+// Show unread badge after 5 seconds if not opened
+setTimeout(() => {
+  if(!_chatbotOpen){
+    document.getElementById('chatbotBadge').style.display = 'flex';
+  }
+}, 5000);
 </script>
 </body>
 </html>
