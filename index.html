@@ -141,6 +141,7 @@ h1,h2,h3,.display{font-family:var(--font-display)}
 .brand img{width:46px;height:46px;object-fit:contain}
 .brand-name{font-family:var(--font-display);font-weight:700;font-size:21px;letter-spacing:.01em;line-height:1.1}
 .brand-name small{display:block;font-family:var(--font-body);font-weight:600;font-size:9.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--ink-soft)}
+.brand-logo-notext{width:auto !important;height:42px !important;max-width:160px;object-fit:contain}
 .header-search{flex:1;max-width:620px;display:flex;border:2px solid var(--brand);border-radius:10px;overflow:hidden;background:#fff;transition:box-shadow .2s}
 .header-search:focus-within{box-shadow:0 0 0 4px var(--brand-soft)}
 .header-search input{flex:1;border:none;outline:none;padding:11px 16px;font-size:14.5px;min-width:0}
@@ -556,6 +557,7 @@ section.block{padding:40px 0}
 .site-footer{background:var(--nav-bg);color:#b9b6bf;margin-top:56px}
 .footer-inner{max-width:1400px;margin:0 auto;padding:52px 24px 30px;display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr;gap:36px}
 .footer-brand img{width:50px;height:50px;object-fit:contain;background:#fff;border-radius:10px;margin-bottom:14px}
+.footer-logo-notext{width:auto !important;height:40px !important;max-width:140px;object-fit:contain;background:transparent !important;border-radius:0 !important}
 .footer-brand p{font-size:13px;line-height:1.7;max-width:270px;color:#9d99a5}
 .footer-col h4{color:#fff;font-family:var(--font-display);font-size:13.5px;letter-spacing:.04em;margin-bottom:14px;font-weight:700}
 .footer-col a{display:block;font-size:13px;color:#9d99a5;padding:4px 0;transition:color .2s}
@@ -981,8 +983,7 @@ details.ct-block > .form-grid{padding:14px 16px}
 <header class="site-header" id="siteHeader">
   <div class="header-inner">
     <a class="brand" href="#/" data-nav="home">
-      <img src="images/Neubla_logo_black_1729172124.png" alt="Nebula Secret">
-      <span class="brand-name" id="brandName">Nebula Secret<small>Wholesale &amp; OEM/ODM</small></span>
+      <img src="images/nebula-logo-noText.png" alt="Nebula Secret" class="brand-logo-notext">
     </a>
     <div class="header-search">
       <input type="text" id="searchInput" placeholder="Search products…" aria-label="Search">
@@ -1060,7 +1061,7 @@ details.ct-block > .form-grid{padding:14px 16px}
 <footer class="site-footer">
   <div class="footer-inner">
     <div class="footer-brand">
-      <img src="images/Neubla_logo_black_1729172124.png" alt="Nebula Secret">
+      <img src="images/nebula-logo-noText.png" alt="Nebula Secret" class="footer-logo-notext">
       <p id="ftDesc">We supply everyday products you find in department stores — skincare, body care, home wellness and much more — tailored to your requirements through wholesale and OEM/ODM.</p>
     </div>
     <div class="footer-col">
