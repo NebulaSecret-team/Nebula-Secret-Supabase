@@ -2608,8 +2608,8 @@ function showToast(msg){
 }
 
 /* ============ Cart drawer ============ */
-function openCart(){ $("#cartDrawer").classList.add("open"); $("#drawerBackdrop").classList.add("open"); renderCart(); }
-function closeCart(){ $("#cartDrawer").classList.remove("open"); $("#drawerBackdrop").classList.remove("open"); }
+function openCart(){ $("#cartDrawer").classList.add("open"); $("#drawerBackdrop").classList.add("open"); $("#chatbotFab").style.display = "none"; renderCart(); }
+function closeCart(){ $("#cartDrawer").classList.remove("open"); $("#drawerBackdrop").classList.remove("open"); $("#chatbotFab").style.display = "flex"; }
 function renderCart(){
   const box = $("#cartItems");
   if(!cart.length){
