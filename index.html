@@ -5331,49 +5331,134 @@ const CHATBOT_CONFIG = {
 };
 
 const CHATBOT_FAQ = [
+  // ========== MOQ & Minimum Order ==========
   {
-    keywords: ['moq','minimum','minimum order','quantity','how many'],
-    answer: 'Our Minimum Order Quantity (MOQ) varies by product. In-stock items may have lower MOQs, while made-to-order and custom formulation products typically require a minimum order. Contact us with the products you are interested in and we will provide specific MOQ and pricing information.'
+    keywords: ['moq','minimum','minimum order','quantity','how many','how much minimum','least amount','small order'],
+    answer: '<strong>Minimum Order Quantity (MOQ)</strong><br><br>Our MOQ varies by product category:<br><br>• <strong>In-stock items</strong>: Lower MOQs available, typically from 50-100 units<br>• <strong>Made-to-order items</strong>: Typically 500-1000 units per SKU<br>• <strong>Custom formulation / OEM</strong>: 1000-5000 units depending on complexity<br>• <strong>Private label</strong>: 500 units per SKU with your branding<br><br>We also offer <strong>mixed container orders</strong> — you can combine multiple products to reach shipping minimums. Contact us with the products you are interested in and we will provide specific MOQ and pricing information.'
   },
   {
-    keywords: ['price','pricing','cost','how much','wholesale price','discount'],
-    answer: 'We offer competitive wholesale pricing with volume discounts. The more you order, the lower the unit price. For a detailed quotation, please browse our products and add items to your cart, or contact our sales team at sales@nebulasecret.com.'
+    keywords: ['can i order less','below moq','small quantity','trial order','test order','first order'],
+    answer: '<strong>Small / Trial Orders</strong><br><br>Yes! We understand you may want to test products before placing a large order:<br><br>• <strong>Sample orders</strong>: Available for most products (1-10 units)<br>• <strong>Trial bulk orders</strong>: We can sometimes accommodate orders below standard MOQ for first-time customers, subject to availability<br>• <strong>Mixed orders</strong>: Combine multiple products to meet minimums<br><br>Please contact our sales team at <strong>sales@nebulasecret.com</strong> with your requirements and we will find the best solution for you.'
+  },
+  
+  // ========== Pricing & Discounts ==========
+  {
+    keywords: ['price','pricing','cost','how much','wholesale price','unit price','per unit','price list','catalog'],
+    answer: '<strong>Wholesale Pricing</strong><br><br>We offer competitive wholesale pricing with <strong>volume discounts</strong>:<br><br>• <strong>100-499 units</strong>: Standard wholesale price<br>• <strong>500-999 units</strong>: 5-10% discount<br>• <strong>1000-4999 units</strong>: 10-20% discount<br>• <strong>5000+ units</strong>: Custom pricing, up to 30%+ discount<br><br>Prices shown on our website are <strong>indicative wholesale prices</strong>. For an exact quotation, please add items to your cart and submit a request, or email us at <strong>sales@nebulasecret.com</strong> with your order list.'
   },
   {
-    keywords: ['shipping','delivery','lead time','how long','ship','freight'],
-    answer: 'Shipping times vary by product and destination. In-stock items typically ship within 3-7 business days. Made-to-order items have longer lead times. We offer express courier (3-7 days), air freight (7-14 days), and sea freight (20-45 days).'
+    keywords: ['discount','bulk discount','volume discount','wholesale discount','negotiate','cheaper','lower price','best price'],
+    answer: '<strong>Volume Discounts</strong><br><br>The more you order, the lower the unit price! Our tiered pricing:<br><br>• <strong>100-499 units</strong>: Base wholesale price<br>• <strong>500-999 units</strong>: Save 5-10%<br>• <strong>1000-4999 units</strong>: Save 10-20%<br>• <strong>5000+ units</strong>: Custom quote, maximum savings<br><br>We also offer <strong>loyalty discounts</strong> for repeat customers and <strong>annual contract pricing</strong> for regular bulk orders. Contact us to discuss your specific needs.'
   },
   {
-    keywords: ['oem','odm','private label','custom','manufacture','formulation'],
-    answer: 'Yes! We offer comprehensive OEM/ODM services including custom formulations, custom packaging, private labeling, and product development. Our supply chain has served renowned international brands. Contact us to discuss your custom project from concept to launch.'
+    keywords: ['currency','usd','eur','gbp','hkd','rmb','exchange rate','which currency','pay in'],
+    answer: '<strong>Accepted Currencies</strong><br><br>We accept payment in multiple currencies:<br><br>• <strong>USD</strong> (US Dollar) — most common for international orders<br>• <strong>EUR</strong> (Euro)<br>• <strong>GBP</strong> (British Pound)<br>• <strong>HKD</strong> (Hong Kong Dollar)<br>• <strong>RMB/CNY</strong> (Chinese Yuan)<br><br>Our website displays prices in multiple currencies (CHF, EUR, GBP, USD, HKD, etc.) for your convenience. Final invoices are typically issued in USD or EUR. Exchange rates are confirmed at the time of quotation.'
+  },
+  
+  // ========== Shipping & Delivery ==========
+  {
+    keywords: ['shipping','delivery','lead time','how long','ship','freight','delivery time','when will i receive'],
+    answer: '<strong>Shipping & Delivery Times</strong><br><br><strong>Production lead time:</strong><br>• In-stock items: 3-7 business days after payment<br>• Made-to-order: 15-30 business days<br>• Custom OEM/ODM: 30-60 business days<br><br><strong>Transit time:</strong><br>• <strong>Express courier</strong> (DHL/FedEx/UPS): 3-7 business days<br>• <strong>Air freight</strong>: 7-14 business days<br>• <strong>Sea freight</strong>: 20-45 days depending on destination<br><br>We will provide a tracking number once your order ships. Exact timelines are confirmed in your order quotation.'
   },
   {
-    keywords: ['sample','samples','trial','test product'],
-    answer: 'Yes! We strongly recommend ordering samples before committing to a large wholesale order. Samples allow you to evaluate product quality, scent, texture, and packaging. Contact us to request samples — sample shipping is typically via express courier.'
+    keywords: ['shipping method','courier','dhl','fedex','ups','air freight','sea freight','express','delivery method','how do you ship'],
+    answer: '<strong>Shipping Methods</strong><br><br>We offer flexible shipping for wholesale orders:<br><br>• <strong>Express courier</strong> (DHL/FedEx/UPS): Best for samples and small orders (under 100kg). Door-to-door delivery.<br>• <strong>Air freight</strong>: For medium orders (100-500kg). Airport-to-airport, you handle customs clearance.<br>• <strong>Sea freight</strong>: For large bulk orders (500kg+). Most economical for large quantities.<br>• <strong>Your freight forwarder</strong>: We can also ship with your nominated forwarder.<br><br>Incoterms available: <strong>EXW, FOB, CIF, DDP</strong>. Let us know your preference!'
   },
   {
-    keywords: ['payment','pay','bank transfer','paypal','tt','letter of credit'],
-    answer: 'We operate on a quote-to-order model. After you place an order, our sales team will contact you to confirm payment options including Bank Transfer (T/T), PayPal, Letter of Credit (L/C), and Western Union. Certain products require a 30-50% deposit before production.'
+    keywords: ['shipping cost','freight cost','delivery cost','how much is shipping','shipping fee','postage'],
+    answer: '<strong>Shipping Costs</strong><br><br>Shipping cost depends on:<br><br>• <strong>Order weight and volume</strong><br>• <strong>Destination country</strong><br>• <strong>Shipping method</strong> (express/air/sea)<br>• <strong>Incoterms</strong> (FOB/CIF/DDP)<br><br>For an accurate shipping quote, please provide:<br>1. Your order list with quantities<br>2. Your delivery address<br>3. Preferred shipping method<br><br>Contact us at <strong>sales@nebulasecret.com</strong> and we will provide a detailed quotation including shipping costs.'
   },
   {
-    keywords: ['return','refund','cancel','cancellation'],
-    answer: 'As a wholesale supplier, we do not accept returns for change-of-mind or unsold stock. For in-stock items, cancellation may be possible before shipment. For made-to-order products, once production has begun, orders cannot be cancelled. If you receive damaged goods, contact us within 7 days with photos.'
+    keywords: ['tracking','track order','track my order','where is my order','tracking number','order status'],
+    answer: '<strong>Order Tracking</strong><br><br>Once your order ships, we will provide a <strong>tracking number</strong> by email. You can track your order:<br><br>• On our website at <strong>#/info/track</strong><br>• Directly on the courier website (DHL/FedEx/UPS)<br>• For sea freight: we provide bill of lading and vessel tracking details<br><br>If you have not received your tracking number within the expected timeframe, please contact us at <strong>sales@nebulasecret.com</strong> with your order number.'
+  },
+  
+  // ========== OEM/ODM Services ==========
+  {
+    keywords: ['oem','odm','private label','custom','manufacture','formulation','custom formulation','white label'],
+    answer: '<strong>OEM/ODM & Private Label Services</strong><br><br>Yes! We offer comprehensive OEM/ODM services:<br><br>• <strong>Custom formulations</strong>: Create your unique scent, texture, or formula<br>• <strong>Custom packaging</strong>: Your brand name, logo, and design on bottles, boxes, labels<br>• <strong>Private labeling</strong>: Use our existing formulas with your branding<br>• <strong>Product development</strong>: From concept to launch<br><br><strong>Typical MOQ</strong>: 500-5000 units depending on complexity<br><strong>Timeline</strong>: 30-60 days from design approval to production<br><br>Our supply chain has served renowned international brands. Contact us to discuss your custom project!'
   },
   {
-    keywords: ['tax','duty','customs','vat','import'],
-    answer: 'For FOB/CIF shipments, import taxes, customs duties, and fees are the responsibility of the buyer. For DDP (Delivered Duty Paid) shipments, all duties and taxes are included in the quoted price. We recommend checking your country\'s import regulations before ordering.'
+    keywords: ['oem process','odm process','how does oem work','custom process','steps','procedure','how to start custom'],
+    answer: '<strong>OEM/ODM Process</strong><br><br>Our custom product development process:<br><br><strong>Step 1: Consultation</strong> — Share your vision, target market, and requirements<br><strong>Step 2: Proposal</strong> — We provide formula options, packaging ideas, and cost estimate<br><strong>Step 3: Sample development</strong> — We create prototypes for your evaluation (1-2 weeks)<br><strong>Step 4: Approval</strong> — You approve formula, packaging, and final design<br><strong>Step 5: Mass production</strong> — 15-30 days production time<br><strong>Step 6: Quality inspection</strong> — We conduct QC before shipment<br><strong>Step 7: Shipping</strong> — We arrange delivery to your destination<br><br>Contact us to start your custom project today!'
   },
   {
-    keywords: ['contact','email','phone','whatsapp','reach','talk to human','agent'],
-    answer: 'You can reach us at sales@nebulasecret.com. You can also leave your name and phone number below, and we will call you back within 15 minutes during business hours.'
+    keywords: ['packaging','bottle','label','box','custom packaging','branding','logo','design'],
+    answer: '<strong>Custom Packaging & Branding</strong><br><br>We offer full customization:<br><br>• <strong>Bottles & containers</strong>: Various shapes, sizes, colors (glass, plastic, aluminum)<br>• <strong>Labels</strong>: Full-color printing with your brand design<br>• <strong>Boxes</strong>: Custom printed retail boxes, gift boxes, display boxes<br>• <strong>Ribbons & accessories</strong>: Premium finishing touches<br>• <strong>Printing methods</strong>: Silk screen, hot stamping, labeling, shrink wrap<br><br>We can work with your existing design files or help you create packaging from scratch. <strong>MOQ for custom packaging</strong>: Typically 500 units per SKU.'
   },
   {
-    keywords: ['hello','hi','hey','good morning','good afternoon','good evening'],
-    answer: 'Hello! Welcome to Nebula Secret Wholesale. How can I help you today? You can ask me about MOQ, pricing, shipping, OEM/ODM services, or leave your contact for a callback.'
+    keywords: ['certification','certified','gmp','iso','halal','vegan','cruelty free','organic','natural','quality certificate'],
+    answer: '<strong>Certifications & Quality</strong><br><br>Our products meet international quality standards:<br><br>• <strong>GMP</strong> (Good Manufacturing Practice) certified factory<br>• <strong>ISO 9001</strong> quality management<br>• <strong>MSDS</strong> (Material Safety Data Sheet) available for all products<br>• <strong>COA</strong> (Certificate of Analysis) provided per batch<br>• <strong>Vegan & Cruelty-free</strong> options available<br>• <strong>Halal</strong> certification available for certain products<br>• <strong>Natural & Organic</strong> ingredient options<br><br>We conduct rigorous QC at every stage. Contact us for specific certification documents.'
+  },
+  
+  // ========== Samples ==========
+  {
+    keywords: ['sample','samples','trial','test product','can i try','sample order','free sample'],
+    answer: '<strong>Sample Orders</strong><br><br>Yes! We strongly recommend ordering samples before committing to a large wholesale order:<br><br>• <strong>Sample availability</strong>: Most products available as samples (1-10 units)<br>• <strong>Sample pricing</strong>: At or slightly above wholesale cost (we do not profit on samples)<br>• <strong>Shipping</strong>: Typically via express courier (DHL/FedEx/UPS), 3-7 days<br>• <strong>Custom samples</strong>: For OEM/ODM projects, we can develop custom prototypes<br><br>Samples allow you to evaluate product quality, scent, texture, and packaging before placing your bulk order. Contact us to request samples!'
   },
   {
-    keywords: ['thank','thanks','appreciate'],
-    answer: 'You\'re welcome! Is there anything else I can help you with? If you need to speak with a human, just leave your name and phone number and we\'ll call you back within 15 minutes.'
+    keywords: ['free sample','free trial','complimentary','no cost sample'],
+    answer: '<strong>Free Samples</strong><br><br>We offer sample programs for serious wholesale buyers:<br><br>• <strong>Standard samples</strong>: Priced at cost (we do not profit on samples)<br>• <strong>Sample cost refund</strong>: Sample cost is often <strong>deducted from your first bulk order</strong> over 500 units<br>• <strong>Custom formulation samples</strong>: May require a development fee, refundable on bulk order<br><br>We believe in our product quality and want you to be confident before ordering. Contact us to discuss sample options for your specific needs.'
+  },
+  
+  // ========== Payment ==========
+  {
+    keywords: ['payment','pay','bank transfer','paypal','tt','letter of credit','western union','how to pay','payment method'],
+    answer: '<strong>Payment Methods</strong><br><br>We accept multiple payment methods for wholesale orders:<br><br>• <strong>Bank Transfer (T/T)</strong>: Most common for bulk orders. 30-50% deposit, balance before shipment.<br>• <strong>PayPal</strong>: For sample orders and smaller payments<br>• <strong>Letter of Credit (L/C)</strong>: For large orders (available at sight)<br>• <strong>Western Union</strong>: For urgent sample payments<br>• <strong>Alibaba Trade Assurance</strong>: For added security<br><br>We operate on a <strong>quote-to-order model</strong>. After you place an order, our sales team will contact you to confirm payment details and issue a proforma invoice.'
+  },
+  {
+    keywords: ['deposit','down payment','advance payment','partial payment','payment terms','30% deposit','50% deposit'],
+    answer: '<strong>Payment Terms & Deposits</strong><br><br>Standard payment terms:<br><br>• <strong>In-stock items</strong>: Full payment before shipment<br>• <strong>Made-to-order items</strong>: <strong>30% deposit</strong> to start production, <strong>70% balance</strong> before shipment<br>• <strong>Custom OEM/ODM</strong>: <strong>50% deposit</strong> for custom tooling/packaging, <strong>50% balance</strong> before shipment<br>• <strong>Large orders</strong>: Negotiable terms, including L/C at sight<br><br>Deposits are <strong>non-refundable once production begins</strong> as materials have been ordered and production capacity allocated. Balance is due after QC inspection and before shipment.'
+  },
+  {
+    keywords: ['invoice','proforma','pi','commercial invoice','tax invoice','receipt'],
+    answer: '<strong>Invoices & Documentation</strong><br><br>We provide complete documentation for your order:<br><br>• <strong>Proforma Invoice (PI)</strong>: Issued before production for deposit payment<br>• <strong>Commercial Invoice</strong>: Final invoice for balance payment and customs<br>• <strong>Packing List</strong>: Detailed breakdown of cartons, weights, dimensions<br>• <strong>Bill of Lading (B/L)</strong>: For sea freight shipments<br>• <strong>Air Waybill</strong>: For air freight shipments<br>• <strong>Certificate of Origin</strong>: Available on request<br>• <strong>MSDS & COA</strong>: Product safety and quality certificates<br><br>All documents are provided in English. Other languages available on request.'
+  },
+  
+  // ========== Returns & Quality ==========
+  {
+    keywords: ['return','refund','cancel','cancellation','damaged','defective','quality issue','problem'],
+    answer: '<strong>Returns & Quality Issues</strong><br><br>As a wholesale supplier, we do not accept returns for change-of-mind or unsold stock. However:<br><br>• <strong>Cancellation</strong>: In-stock items may be cancelled before shipment. Made-to-order items cannot be cancelled once production begins.<br>• <strong>Damaged/defective goods</strong>: Contact us within <strong>7 days</strong> of delivery with photos. We will arrange replacement or credit for verified quality issues.<br>• <strong>Quality guarantee</strong>: All products pass QC inspection before shipment. We stand behind our quality.<br><br>We recommend ordering samples before placing large bulk orders to ensure products meet your expectations.'
+  },
+  
+  // ========== Customs & Taxes ==========
+  {
+    keywords: ['tax','duty','customs','vat','import','duties','tariff','customs clearance','broker'],
+    answer: '<strong>Customs, Duties & Taxes</strong><br><br><strong>FOB/CIF shipments</strong>: Import taxes, customs duties, and fees are the <strong>responsibility of the buyer</strong>. You will need to handle customs clearance in your country.<br><br><strong>DDP shipments</strong> (Delivered Duty Paid): All duties and taxes are <strong>included in the quoted price</strong>. We handle everything, door-to-door.<br><br><strong>Tips:</strong><br>• Check your country\'s import regulations before ordering<br>• Some countries have thresholds for duty-free imports<br>• We can provide HS codes and product documentation for customs<br>• We recommend using a customs broker for first-time importers<br><br>Contact us to discuss DDP pricing for your destination.'
+  },
+  
+  // ========== Company Info ==========
+  {
+    keywords: ['about','company','who are you','where are you based','factory','manufacturer','supplier','distributor'],
+    answer: '<strong>About Nebula Secret</strong><br><br>Nebula Secret is a <strong>wholesale and OEM/ODM supplier</strong> based in Hong Kong with manufacturing facilities in China.<br><br>• We supply everyday products found in department stores — skincare, body care, home wellness, and more<br>• Our supply chain has served renowned international brands<br>• We offer both in-stock wholesale items and custom formulation/packaging services<br>• Our team has years of experience in international trade and product development<br><br>We are not a retail company — we specialize in <strong>B2B wholesale</strong> for retailers, distributors, salons, spas, and brands looking for private label or custom formulation services.'
+  },
+  {
+    keywords: ['product range','what do you sell','products','categories','skincare','body care','perfume','mask','what products'],
+    answer: '<strong>Our Product Range</strong><br><br>We offer a wide range of wholesale products:<br><br>• <strong>Body Care</strong>: Body scrubs, body butter, body lotion, bath salts, hand cream<br>• <strong>Skincare</strong>: Facial masks, serums, moisturizers, cleansers, essential oils<br>• <strong>Fragrance</strong>: Perfumes (14+ scents), incense sticks, room sprays<br>• <strong>Hair Care</strong>: Shampoo, conditioner, hair treatments<br>• <strong>Home Wellness</strong>: Aromatherapy, candles, wellness products<br>• <strong>Gift Sets</strong>: Curated gift collections for retail<br><br>All products can be customized with your branding through our OEM/ODM services. Browse our catalog at <strong>#/shop</strong> to see the full range!'
+  },
+  
+  // ========== Contact ==========
+  {
+    keywords: ['contact','email','phone','whatsapp','reach','talk to human','agent','speak to someone','call me','callback'],
+    answer: '<strong>Contact Us</strong><br><br>You can reach our team:<br><br>• <strong>Email</strong>: sales@nebulasecret.com<br>• <strong>WhatsApp</strong>: Available for registered customers<br>• <strong>Callback request</strong>: Click "Request a Callback" below and we will call you within 15 minutes during business hours<br><br><strong>Business hours</strong>: Monday to Friday, 9:00 AM - 6:00 PM HKT<br><br>We typically respond to emails within 24 hours. For urgent inquiries, use the callback feature below!'
+  },
+  
+  // ========== Greetings ==========
+  {
+    keywords: ['hello','hi','hey','good morning','good afternoon','good evening','greetings','yo'],
+    answer: 'Hello! 👋 Welcome to <strong>Nebula Secret Wholesale</strong>.<br><br>I\'m your AI assistant and I can help you with:<br><br>• 📦 <strong>MOQ & Minimum Order</strong> — Ask "what is your MOQ?"<br>• 💰 <strong>Pricing & Discounts</strong> — Ask "do you offer bulk discounts?"<br>• 🚚 <strong>Shipping & Delivery</strong> — Ask "how long does shipping take?"<br>• 🏭 <strong>OEM/ODM Services</strong> — Ask "do you do private label?"<br>• 🧪 <strong>Samples</strong> — Ask "can I order samples?"<br>• 💳 <strong>Payment</strong> — Ask "what payment methods do you accept?"<br><br>Or click <strong>"Request a Callback"</strong> to speak with our team directly!'
+  },
+  {
+    keywords: ['thank','thanks','appreciate','great','perfect','awesome','good job'],
+    answer: 'You\'re welcome! 😊 Is there anything else I can help you with?<br><br>If you need to speak with a human, just click <strong>"Request a Callback"</strong> and we\'ll call you back within 15 minutes during business hours.<br><br>You can also email us at <strong>sales@nebulasecret.com</strong> for detailed quotations.'
+  },
+  {
+    keywords: ['bye','goodbye','see you','later','exit','quit','end'],
+    answer: 'Thank you for chatting with Nebula Secret! 👋<br><br>If you have any more questions, feel free to come back anytime. You can also reach us at <strong>sales@nebulasecret.com</strong>.<br><br>Have a great day!'
+  },
+  {
+    keywords: ['help','what can you do','options','menu','features','how does this work'],
+    answer: '<strong>How Can I Help You?</strong><br><br>I can answer questions about:<br><br>1. <strong>MOQ & Minimum Order</strong> — "What is your minimum order?"<br>2. <strong>Pricing & Discounts</strong> — "How much for bulk orders?"<br>3. <strong>Shipping & Delivery</strong> — "How long does delivery take?"<br>4. <strong>OEM/ODM & Private Label</strong> — "Do you offer custom packaging?"<br>5. <strong>Samples</strong> — "Can I order samples first?"<br>6. <strong>Payment Methods</strong> — "What payment do you accept?"<br>7. <strong>Customs & Duties</strong> — "Do I pay import taxes?"<br>8. <strong>Returns & Quality</strong> — "What if products are damaged?"<br><br>Just type your question or click a quick reply button below!'
   }
 ];
 
