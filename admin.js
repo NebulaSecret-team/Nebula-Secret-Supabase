@@ -120,6 +120,7 @@ function renderAdminShell(content){
         '<a href="#/admin/content" data-av="content">' + IC.edit + ' Site Content</a>' +
         '<div class="sep"></div>' +
         '<a href="#/admin/users" data-av="users">' + IC.shield + ' Admin Users</a>' +
+        '<a href="#/admin/analytics" data-av="analytics">' + IC.chart + ' Analytics</a>' +
         '<a href="architecture.html" target="_blank">' + IC.chart + ' System Architecture</a>' +
         '<a href="#/" >' + IC.store + ' View Store</a>' +
         '<a href="javascript:logout()">' + IC.logout + ' Logout</a>' +
@@ -324,6 +325,343 @@ function formatTimeAgo(timestamp){
     return new Date(timestamp).toLocaleDateString();
   } catch(e) {
     return 'Recently';
+  }
+}
+
+/* ---- Analytics admin ---- */
+async function adminAnalytics(){
+  $("#adminTitle").textContent = "Site Analytics";
+  
+  /* Show loading state */
+  renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">📊</div><h3>Loading analytics...</h3><p style="color:var(--ink-soft)">Fetching visitor data from database</p></div></div>');
+  
+  try {
+    /* Get analytics data from Supabase */
+    let allRecords = [];
+    if(supabase){
+      /* Get all records (limit to last 10000 for performance) */
+      const { data, error } = await supabase
+        .from('site_analytics')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10000);
+      
+      if(error){
+        console.warn("Analytics fetch error:", error);
+      } else {
+        allRecords = data || [];
+      }
+    }
+    
+    /* Calculate statistics */
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - 7);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    /* Filter records by time period */
+    const todayRecords = allRecords.filter(r => new Date(r.created_at) >= todayStart);
+    const weekRecords = allRecords.filter(r => new Date(r.created_at) >= weekStart);
+    const monthRecords = allRecords.filter(r => new Date(r.created_at) >= monthStart);
+    
+    /* Calculate unique visitors (by session_id) */
+    const uniqueSessions = new Set(allRecords.map(r => r.session_id));
+    const todaySessions = new Set(todayRecords.map(r => r.session_id));
+    const weekSessions = new Set(weekRecords.map(r => r.session_id));
+    const monthSessions = new Set(monthRecords.map(r => r.session_id));
+    
+    /* Calculate page views */
+    const totalPageViews = allRecords.length;
+    const todayPageViews = todayRecords.length;
+    const weekPageViews = weekRecords.length;
+    const monthPageViews = monthRecords.length;
+    
+    /* Calculate top pages */
+    const pageCounts = {};
+    allRecords.forEach(r => {
+      const page = r.page || 'unknown';
+      pageCounts[page] = (pageCounts[page] || 0) + 1;
+    });
+    const topPages = Object.entries(pageCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+    
+    /* Calculate device breakdown */
+    const deviceCounts = { desktop: 0, mobile: 0, tablet: 0, unknown: 0 };
+    allRecords.forEach(r => {
+      const device = r.device_type || 'unknown';
+      if(deviceCounts[device] !== undefined) deviceCounts[device]++;
+      else deviceCounts.unknown++;
+    });
+    
+    /* Calculate last 7 days trend */
+    const dailyData = [];
+    for(let i = 6; i >= 0; i--){
+      const dayStart = new Date(todayStart);
+      dayStart.setDate(dayStart.getDate() - i);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+      const dayRecords = allRecords.filter(r => {
+        const d = new Date(r.created_at);
+        return d >= dayStart && d < dayEnd;
+      });
+      const daySessions = new Set(dayRecords.map(r => r.session_id));
+      dailyData.push({
+        date: dayStart.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+        pageViews: dayRecords.length,
+        visitors: daySessions.size
+      });
+    }
+    
+    /* Calculate referrer sources */
+    const referrerCounts = {};
+    allRecords.forEach(r => {
+      let source = 'Direct';
+      if(r.referrer){
+        try {
+          const url = new URL(r.referrer);
+          source = url.hostname.replace('www.', '');
+        } catch(e) {
+          source = 'Other';
+        }
+      }
+      referrerCounts[source] = (referrerCounts[source] || 0) + 1;
+    });
+    const topReferrers = Object.entries(referrerCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
+    
+    /* Build page name mapping for display */
+    const pageDisplayNames = {
+      'home': '🏠 Home Page',
+      'shop': '🛍️ Shop',
+      'account': '👤 My Account',
+      'about': 'ℹ️ About Us',
+      'why-us': '⭐ Why Us',
+      'blog': '📝 Blog',
+      'cart': '🛒 Shopping Cart',
+      'checkout': '💳 Checkout',
+      'info': '❓ Info / FAQ'
+    };
+    
+    const getPageDisplayName = (page) => {
+      if(pageDisplayNames[page]) return pageDisplayNames[page];
+      if(page.startsWith('shop-')) return '🛍️ Category: ' + page.replace('shop-', '');
+      if(page.startsWith('product-')) return '📦 Product #' + page.replace('product-', '');
+      if(page.startsWith('quote-')) return '📄 Quote ' + page.replace('quote-', '');
+      if(page.startsWith('order-')) return '📋 Order ' + page.replace('order-', '');
+      return page.charAt(0).toUpperCase() + page.slice(1);
+    };
+    
+    /* Build the analytics dashboard HTML */
+    const maxDailyViews = Math.max(...dailyData.map(d => d.pageViews), 1);
+    const maxPageViews = topPages.length > 0 ? topPages[0][1] : 1;
+    const hasData = allRecords.length > 0;
+    
+    /* SVG Icons */
+    const icons = {
+      users: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+      eye: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+      calendar: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+      trending: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+      barChart: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>',
+      award: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>',
+      smartphone: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+      monitor: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+      tablet: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+      globe: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+      info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+      refresh: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>'
+    };
+    
+    const content = 
+    '<div class="admin-panel">' +
+      '<div class="panel-head">' +
+        '<div><h3>Site Analytics</h3><div class="ph-sub">Track visitor traffic and page views in real-time</div></div>' +
+        '<div style="display:flex;gap:8px">' +
+          '<button class="btn sm ghost" onclick="adminAnalytics()" style="display:flex;align-items:center;gap:6px">' + icons.refresh + ' Refresh</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="panel-body">' +
+        
+        /* Stat Cards - Premium dark/neutral colors */
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">' +
+          '<div class="stat-card" style="background:linear-gradient(135deg,#2d3748,#1a202c);position:relative;overflow:hidden;border:none">' +
+            '<div style="position:absolute;top:-10px;right:-10px;opacity:0.08;color:white;transform:scale(2.5)">' + icons.users + '</div>' +
+            '<span class="s-icon" style="color:#a0aec0;position:relative;z-index:1">' + icons.users + '</span>' +
+            '<div class="s-label" style="color:rgba(255,255,255,0.6);position:relative;z-index:1">Total Visitors</div>' +
+            '<div class="s-value" style="color:white;position:relative;z-index:1">' + uniqueSessions.size + '</div>' +
+            '<div class="s-sub" style="color:rgba(255,255,255,0.45);position:relative;z-index:1">Unique sessions</div>' +
+          '</div>' +
+          '<div class="stat-card" style="background:linear-gradient(135deg,#2c5282,#1a365d);position:relative;overflow:hidden;border:none">' +
+            '<div style="position:absolute;top:-10px;right:-10px;opacity:0.08;color:white;transform:scale(2.5)">' + icons.eye + '</div>' +
+            '<span class="s-icon" style="color:#90cdf4;position:relative;z-index:1">' + icons.eye + '</span>' +
+            '<div class="s-label" style="color:rgba(255,255,255,0.6);position:relative;z-index:1">Total Page Views</div>' +
+            '<div class="s-value" style="color:white;position:relative;z-index:1">' + totalPageViews + '</div>' +
+            '<div class="s-sub" style="color:rgba(255,255,255,0.45);position:relative;z-index:1">All time</div>' +
+          '</div>' +
+          '<div class="stat-card" style="background:linear-gradient(135deg,#285e61,#1a4749);position:relative;overflow:hidden;border:none">' +
+            '<div style="position:absolute;top:-10px;right:-10px;opacity:0.08;color:white;transform:scale(2.5)">' + icons.calendar + '</div>' +
+            '<span class="s-icon" style="color:#81e6d9;position:relative;z-index:1">' + icons.calendar + '</span>' +
+            '<div class="s-label" style="color:rgba(255,255,255,0.6);position:relative;z-index:1">Today</div>' +
+            '<div class="s-value" style="color:white;position:relative;z-index:1">' + todaySessions.size + '</div>' +
+            '<div class="s-sub" style="color:rgba(255,255,255,0.45);position:relative;z-index:1">Visitors · ' + todayPageViews + ' views</div>' +
+          '</div>' +
+          '<div class="stat-card" style="background:linear-gradient(135deg,#553c9a,#322659);position:relative;overflow:hidden;border:none">' +
+            '<div style="position:absolute;top:-10px;right:-10px;opacity:0.08;color:white;transform:scale(2.5)">' + icons.trending + '</div>' +
+            '<span class="s-icon" style="color:#b794f4;position:relative;z-index:1">' + icons.trending + '</span>' +
+            '<div class="s-label" style="color:rgba(255,255,255,0.6);position:relative;z-index:1">This Week</div>' +
+            '<div class="s-value" style="color:white;position:relative;z-index:1">' + weekSessions.size + '</div>' +
+            '<div class="s-sub" style="color:rgba(255,255,255,0.45);position:relative;z-index:1">Visitors · ' + weekPageViews + ' views</div>' +
+          '</div>' +
+        '</div>' +
+        
+        /* Last 7 Days Trend */
+        '<div style="background:var(--card);border:1px solid var(--border);border-left:4px solid #553c9a;border-radius:12px;padding:20px;margin-bottom:24px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">' +
+          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+            '<div style="width:44px;height:44px;background:linear-gradient(135deg,#553c9a,#322659);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#b794f4">' + icons.barChart + '</div>' +
+            '<div>' +
+              '<h4 style="margin:0;font-size:16px;color:var(--ink)">Last 7 Days Traffic</h4>' +
+              '<div style="font-size:12px;color:var(--ink-soft);margin-top:2px">Daily visitor and page view trend</div>' +
+            '</div>' +
+          '</div>' +
+          (hasData ? 
+            '<div style="display:flex;align-items:flex-end;gap:8px;height:180px;padding:10px 0">' +
+              dailyData.map(d => {
+                const heightPercent = (d.pageViews / maxDailyViews) * 100;
+                return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">' +
+                  '<div style="font-size:11px;font-weight:600;color:var(--ink)">' + d.pageViews + '</div>' +
+                  '<div style="width:100%;background:linear-gradient(180deg,#553c9a,rgba(85,60,154,0.2));border-radius:6px 6px 0 0;height:' + Math.max(heightPercent, 2) + '%;min-height:4px;transition:height 0.3s ease"></div>' +
+                  '<div style="font-size:10px;color:var(--ink-soft);text-align:center;white-space:nowrap">' + d.date.split(',')[0] + '</div>' +
+                '</div>';
+              }).join('') +
+            '</div>'
+          : '<div style="text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:14px">📊 No traffic data yet. Visit some pages to see the trend here.</div>') +
+        '</div>' +
+        
+        /* Two Column Layout */
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:24px">' +
+          /* Top Pages */
+          '<div style="background:var(--card);border:1px solid var(--border);border-left:4px solid #9b2c2c;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">' +
+            '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+              '<div style="width:44px;height:44px;background:linear-gradient(135deg,#9b2c2c,#742a2a);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#feb2b2">' + icons.award + '</div>' +
+              '<div>' +
+                '<h4 style="margin:0;font-size:16px;color:var(--ink)">Top Pages</h4>' +
+                '<div style="font-size:12px;color:var(--ink-soft);margin-top:2px">Most visited pages on your site</div>' +
+              '</div>' +
+            '</div>' +
+            (topPages.length ? '<div style="display:flex;flex-direction:column;gap:10px">' +
+              topPages.map(([page, count], idx) => {
+                const percent = (count / maxPageViews) * 100;
+                const barColors = ['#f5576c', '#f093fb', '#f6a26b', '#f7b733', '#4facfe', '#43e97b', '#667eea', '#764ba2', '#00f2fe', '#38f9d7'];
+                return '<div>' +
+                  '<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px">' +
+                    '<span style="color:var(--ink);font-weight:' + (idx < 3 ? '600' : '400') + '">' + (idx < 3 ? ['🥇','🥈','🥉'][idx] + ' ' : '') + getPageDisplayName(page) + '</span>' +
+                    '<span style="color:var(--ink-soft);font-weight:600">' + count + ' views</span>' +
+                  '</div>' +
+                  '<div style="height:6px;background:var(--bg-soft);border-radius:3px;overflow:hidden">' +
+                    '<div style="height:100%;background:linear-gradient(90deg,' + barColors[idx % barColors.length] + ',' + barColors[idx % barColors.length] + '88);border-radius:3px;width:' + percent + '%;transition:width 0.3s ease"></div>' +
+                  '</div>' +
+                '</div>';
+              }).join('') +
+            '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px">🏆 No page data yet. Visit some pages to see rankings here.</div>') +
+          '</div>' +
+          
+          /* Device Breakdown */
+          '<div style="background:var(--card);border:1px solid var(--border);border-left:4px solid #2c5282;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">' +
+            '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+              '<div style="width:44px;height:44px;background:linear-gradient(135deg,#2c5282,#1a365d);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#90cdf4">' + icons.smartphone + '</div>' +
+              '<div>' +
+                '<h4 style="margin:0;font-size:16px;color:var(--ink)">Device Breakdown</h4>' +
+                '<div style="font-size:12px;color:var(--ink-soft);margin-top:2px">Visitor device distribution</div>' +
+              '</div>' +
+            '</div>' +
+            (Object.values(deviceCounts).some(v => v > 0) ? '<div style="display:flex;flex-direction:column;gap:12px">' +
+              Object.entries(deviceCounts).filter(([k,v]) => v > 0).map(([device, count]) => {
+                const total = Object.values(deviceCounts).reduce((a,b) => a + b, 0);
+                const percent = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+                const deviceIcons = { desktop: icons.monitor, mobile: icons.smartphone, tablet: icons.tablet, unknown: icons.info };
+                const gradients = { 
+                  desktop: 'linear-gradient(90deg,#667eea,#764ba2)', 
+                  mobile: 'linear-gradient(90deg,#f093fb,#f5576c)', 
+                  tablet: 'linear-gradient(90deg,#4facfe,#00f2fe)', 
+                  unknown: 'linear-gradient(90deg,#999,#bbb)' 
+                };
+                return '<div>' +
+                  '<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px">' +
+                    '<span style="color:var(--ink);font-weight:500;display:flex;align-items:center;gap:6px">' + 
+                      '<span style="display:inline-flex;width:16px;height:16px;color:var(--ink-soft)">' + (deviceIcons[device] || icons.info) + '</span>' +
+                      device.charAt(0).toUpperCase() + device.slice(1) + 
+                    '</span>' +
+                    '<span style="color:var(--ink-soft);font-weight:600">' + count + ' (' + percent + '%)</span>' +
+                  '</div>' +
+                  '<div style="height:8px;background:var(--bg-soft);border-radius:4px;overflow:hidden">' +
+                    '<div style="height:100%;background:' + (gradients[device] || '#999') + ';border-radius:4px;width:' + percent + '%;transition:width 0.3s ease"></div>' +
+                  '</div>' +
+                '</div>';
+              }).join('') +
+            '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px">📱 No device data yet. Visit some pages to see device distribution here.</div>') +
+          '</div>' +
+        '</div>' +
+        
+        /* Traffic Sources */
+        '<div style="background:var(--card);border:1px solid var(--border);border-left:4px solid #285e61;border-radius:12px;padding:20px;margin-bottom:24px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">' +
+          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+            '<div style="width:44px;height:44px;background:linear-gradient(135deg,#285e61,#1a4749);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#81e6d9">' + icons.globe + '</div>' +
+            '<div>' +
+              '<h4 style="margin:0;font-size:16px;color:var(--ink)">Traffic Sources</h4>' +
+              '<div style="font-size:12px;color:var(--ink-soft);margin-top:2px">Where your visitors come from</div>' +
+            '</div>' +
+          '</div>' +
+          (topReferrers.length ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">' +
+            topReferrers.map(([source, count], idx) => {
+              const total = allRecords.length;
+              const percent = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+              const cardColors = [
+                'linear-gradient(135deg,rgba(67,233,123,0.1),rgba(56,249,215,0.1))',
+                'linear-gradient(135deg,rgba(79,172,254,0.1),rgba(0,242,254,0.1))',
+                'linear-gradient(135deg,rgba(102,126,234,0.1),rgba(118,75,162,0.1))',
+                'linear-gradient(135deg,rgba(240,147,251,0.1),rgba(245,87,108,0.1))',
+                'linear-gradient(135deg,rgba(247,183,51,0.1),rgba(252,107,107,0.1))',
+                'linear-gradient(135deg,rgba(246,162,107,0.1),rgba(255,205,130,0.1))',
+                'linear-gradient(135deg,rgba(118,75,162,0.1),rgba(102,126,234,0.1))',
+                'linear-gradient(135deg,rgba(56,249,215,0.1),rgba(67,233,123,0.1))'
+              ];
+              const textColors = ['#43e97b', '#4facfe', '#667eea', '#f5576c', '#f7b733', '#f6a26b', '#764ba2', '#38f9d7'];
+              return '<div style="background:' + cardColors[idx % cardColors.length] + ';border:1px solid ' + textColors[idx % textColors.length] + '33;padding:12px;border-radius:10px;text-align:center;transition:transform 0.2s ease">' +
+                '<div style="font-size:24px;font-weight:700;color:' + textColors[idx % textColors.length] + '">' + count + '</div>' +
+                '<div style="font-size:12px;color:var(--ink-soft);margin-top:4px;word-break:break-all;font-weight:500">' + source + '</div>' +
+                '<div style="font-size:11px;color:var(--ink-soft);opacity:0.7;margin-top:2px">' + percent + '%</div>' +
+              '</div>';
+            }).join('') +
+          '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px">🌐 No referrer data yet. Most traffic will show as "Direct" initially.</div>') +
+        '</div>' +
+        
+        /* Info Box */
+        '<div style="background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.2);border-radius:10px;padding:16px;margin-top:20px">' +
+          '<div style="display:flex;align-items:flex-start;gap:12px">' +
+            '<div style="font-size:24px">💡</div>' +
+            '<div>' +
+              '<h5 style="margin:0 0 6px;font-size:14px;color:var(--ink)">About Analytics</h5>' +
+              '<p style="margin:0;font-size:13px;color:var(--ink-soft);line-height:1.6">' +
+                '• Visitor tracking is anonymous and privacy-friendly (no personal data collected)<br>' +
+                '• Sessions are tracked per browser tab (expires when tab is closed)<br>' +
+                '• Data is stored in your Supabase database and only visible to admins<br>' +
+                '• Page views are throttled (same page within 2 seconds counts as one view)<br>' +
+                '• Admin pages are not tracked' +
+              '</p>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+    
+    renderAdminShell(content);
+    
+  } catch(e) {
+    console.error("Analytics error:", e);
+    renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">⚠️</div><h3>Error Loading Analytics</h3><p style="color:var(--ink-soft)">' + esc(e.message) + '</p><button class="btn" onclick="adminAnalytics()" style="margin-top:16px">Try Again</button></div></div>');
   }
 }
 
@@ -1909,6 +2247,7 @@ function adminRoute(){
   const renderAdminPage = () => {
     const page = h.split("/")[2] || "dashboard";
     if(page === "dashboard") adminDashboard();
+    else if(page === "analytics") adminAnalytics();
     else if(page === "products") adminProducts();
     else if(page === "orders") adminOrders();
     else if(page === "quotes") adminQuotes();

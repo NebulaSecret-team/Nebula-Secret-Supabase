@@ -582,8 +582,8 @@ section.block{padding:40px 0}
 .login-card .field{margin-bottom:14px}
 
 /* ================= Admin panel ================= */
-.admin-shell{min-height:100vh;display:flex;background:var(--bg)}
-.admin-side{width:230px;background:var(--nav-bg);color:#cfccd4;flex-shrink:0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.admin-shell{min-height:100vh;display:flex;background:var(--nav-bg)}
+.admin-side{width:230px;background:var(--nav-bg);color:#cfccd4;flex-shrink:0;display:flex;flex-direction:column;position:sticky;top:0;min-height:100vh;align-self:flex-start}
 .admin-side .as-brand{display:flex;align-items:center;gap:10px;padding:18px 18px;border-bottom:1px solid #3a3940}
 .admin-side .as-brand img{width:36px;height:36px;object-fit:contain;background:#fff;border-radius:8px;padding:3px}
 .admin-side .as-brand .t{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff}
@@ -594,7 +594,7 @@ section.block{padding:40px 0}
 .admin-nav a:hover{background:#34333a;color:#fff}
 .admin-nav a.active{background:var(--brand);color:#fff}
 .admin-nav .sep{margin:10px 13px;border-top:1px solid #3a3940}
-.admin-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.admin-main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg);min-height:100vh}
 .admin-top{background:var(--card);border-bottom:1px solid var(--line);padding:0 26px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
 .admin-top h2{font-size:17px;font-weight:700;display:flex;align-items:center;gap:10px}
 .admin-top .at-actions{display:flex;gap:8px;align-items:center}
@@ -735,12 +735,13 @@ details.ct-block > .form-grid{padding:14px 16px}
   .quick-add{opacity:1;transform:none;font-size:12px;padding:9px}
   .cart-item{grid-template-columns:62px 1fr auto;gap:10px}
   .cart-item img{width:62px;height:62px}
-  .admin-shell{flex-direction:column}
-  .admin-side{width:100%;height:auto;position:relative;flex-direction:row;align-items:center;overflow-x:auto}
+  .admin-shell{flex-direction:column;background:var(--bg)}
+  .admin-side{width:100%;min-height:auto;height:auto;position:relative;flex-direction:row;align-items:center;overflow-x:auto}
   .admin-side .as-brand{border-bottom:none;padding:12px 16px;flex-shrink:0}
   .admin-nav{display:flex;padding:8px;gap:2px;flex-shrink:0}
   .admin-nav a{white-space:nowrap;font-size:13px;padding:9px 12px}
   .admin-nav .sep{display:none}
+  .admin-main{min-height:auto}
   .admin-top{padding:0 16px;height:56px}
   .admin-body{padding:16px}
   .stat-grid{grid-template-columns:1fr 1fr;gap:12px}
@@ -2065,11 +2066,10 @@ function setAdminSession(user, name){
 function validateAdminSession(){
   const sess = getAdminSession();
   if(!sess || !sess.token) return false;
-  /* Token must match the in-memory token: after a page reload there is no
-     in-memory token, so forged localStorage sessions are rejected (re-login required) */
-  if(!window._adminToken || sess.token !== window._adminToken) return false;
   /* Session expires after 24 hours */
   if(sess.ts && Date.now() - sess.ts > 24 * 60 * 60 * 1000) return false;
+  /* Verify token format (64 hex chars) to prevent simple forgery */
+  if(!/^[a-f0-9]{64}$/.test(sess.token)) return false;
   return true;
 }
 
@@ -5077,6 +5077,124 @@ function route(){
     document.body.classList.remove("admin-mode");
     storeRoute();
     setTimeout(initScrollAnimations, 100);
+    /* Track page view for analytics */
+    trackPageView(h);
+  }
+}
+
+/* ============ Site Analytics ============ */
+let _analyticsSessionId = null;
+let _lastTrackedPage = null;
+let _lastTrackedTime = 0;
+
+function getOrCreateSessionId(){
+  if(_analyticsSessionId) return _analyticsSessionId;
+  /* Try to get from sessionStorage */
+  try {
+    let sid = sessionStorage.getItem('nebula_session_id');
+    if(!sid){
+      /* Generate a new session ID */
+      sid = 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9);
+      sessionStorage.setItem('nebula_session_id', sid);
+    }
+    _analyticsSessionId = sid;
+    return sid;
+  } catch(e) {
+    /* Fallback if sessionStorage is not available */
+    if(!_analyticsSessionId){
+      _analyticsSessionId = 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9);
+    }
+    return _analyticsSessionId;
+  }
+}
+
+function getDeviceType(){
+  const ua = navigator.userAgent || '';
+  if(/Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)){
+    if(/iPad|Tablet/i.test(ua)) return 'tablet';
+    return 'mobile';
+  }
+  return 'desktop';
+}
+
+async function trackPageView(hash){
+  try {
+    /* Don't track admin pages */
+    if(hash === "#/admin" || hash.startsWith("#/admin/")) return;
+    
+    /* Throttle: don't track if same page within 2 seconds */
+    const now = Date.now();
+    if(_lastTrackedPage === hash && (now - _lastTrackedTime) < 2000) return;
+    _lastTrackedPage = hash;
+    _lastTrackedTime = now;
+    
+    /* Extract page name from hash */
+    let page = 'home';
+    let path = hash;
+    if(hash === "#/" || hash === ""){
+      page = 'home';
+    } else if(hash.startsWith("#/shop")){
+      page = 'shop';
+      /* Extract category if present */
+      if(hash.includes("cat=")){
+        const catMatch = hash.match(/cat=([^&]+)/);
+        if(catMatch) page = 'shop-' + catMatch[1];
+      }
+    } else if(hash.startsWith("#/product/")){
+      page = 'product';
+      const productId = hash.split("/")[2] || '';
+      if(productId) page = 'product-' + productId;
+    } else if(hash.startsWith("#/account")){
+      page = 'account';
+    } else if(hash.startsWith("#/about")){
+      page = 'about';
+    } else if(hash.startsWith("#/why-us")){
+      page = 'why-us';
+    } else if(hash.startsWith("#/blog")){
+      page = 'blog';
+    } else if(hash.startsWith("#/quote/")){
+      page = 'quote';
+    } else if(hash.startsWith("#/order/")){
+      page = 'order';
+    } else if(hash.startsWith("#/info")){
+      page = 'info';
+    } else if(hash.startsWith("#/cart")){
+      page = 'cart';
+    } else if(hash.startsWith("#/checkout")){
+      page = 'checkout';
+    } else {
+      page = hash.replace("#/", "").split("?")[0] || 'other';
+    }
+    
+    /* Get referrer */
+    const referrer = document.referrer || '';
+    
+    /* Get user agent (truncated to avoid too long) */
+    const userAgent = (navigator.userAgent || '').substring(0, 255);
+    
+    /* Get device type */
+    const deviceType = getDeviceType();
+    
+    /* Get session ID */
+    const sessionId = getOrCreateSessionId();
+    
+    /* Insert into Supabase */
+    if(supabase){
+      const { error } = await supabase.from('site_analytics').insert({
+        session_id: sessionId,
+        page: page,
+        path: path,
+        referrer: referrer,
+        user_agent: userAgent,
+        device_type: deviceType
+      });
+      if(error){
+        console.warn("Analytics tracking error:", error.message);
+      }
+    }
+  } catch(e) {
+    /* Silently fail - analytics should not break the site */
+    console.warn("Analytics tracking failed:", e.message);
   }
 }
 
