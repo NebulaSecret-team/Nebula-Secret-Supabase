@@ -575,11 +575,11 @@
   <div>
     <span class="admin-badge" id="adminBadge">ADMIN</span>
     <span class="sep">|</span>
-    <a href="https://nebula-secret-supabase.vercel.app" target="_blank">Production</a>
+    <a href="https://nebulasecret.com" target="_blank">Production（正式站）</a>
     <span class="sep">|</span>
     <a href="https://uat.nebulasecret.com" target="_blank">UAT</a>
     <span class="sep">|</span>
-    <a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank">Admin Panel</a>
+    <a href="https://uat.nebulasecret.com/#/admin" target="_blank">Admin Panel</a>
   </div>
 </div>
 
@@ -590,7 +590,8 @@
     <div class="badge"><strong>5</strong> 大系統層級</div>
     <div class="badge"><strong>4</strong> 種用戶角色</div>
     <div class="badge"><strong>35+</strong> 功能頁面</div>
-    <div class="badge"><strong>7</strong> 外部服務</div>
+    <div class="badge"><strong>8</strong> 外部服務</div>
+    <div class="badge"><strong>🤖</strong> Gemini AI 整合</div>
     <div class="badge"><strong>18</strong> 支援貨幣</div>
     <div class="badge"><strong>3</strong> 客戶級別</div>
     <div class="badge"><strong>2</strong> 部署環境</div>
@@ -666,6 +667,7 @@
           <li>客戶分級定價管理</li>
           <li>網站內容編輯（Footer/About）</li>
           <li>主題顏色和 Banner 設置</li>
+          <li>AI 營運摘要 / 回覆草稿 / 產品文案（Gemini）</li>
         </ul>
       </div>
 
@@ -699,19 +701,19 @@
     <div class="arch-layers">
       <div class="arch-label">👤 第 1 層：用戶層 (User Layer)</div>
       <div class="arch-layer">
-        <a href="https://nebula-secret-supabase.vercel.app" target="_blank" class="arch-node primary">
+        <a href="https://uat.nebulasecret.com" target="_blank" class="arch-node primary">
           <div class="node-icon">🛍️</div>
           <div class="node-name">訪客 / 新客戶</div>
           <div class="node-role">0% 折扣</div>
         </a>
         <div class="arch-connector"></div>
-        <a href="https://nebula-secret-supabase.vercel.app/#/account" target="_blank" class="arch-node">
+        <a href="https://uat.nebulasecret.com/#/account" target="_blank" class="arch-node">
           <div class="node-icon">👤</div>
           <div class="node-name">註冊客戶</div>
           <div class="node-role">5% / 10% 折扣</div>
         </a>
         <div class="arch-connector"></div>
-        <a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank" class="arch-node accent">
+        <a href="https://uat.nebulasecret.com/#/admin" target="_blank" class="arch-node accent">
           <div class="node-icon">🔧</div>
           <div class="node-name">管理員</div>
           <div class="node-role">後台管理</div>
@@ -720,13 +722,13 @@
       <div class="arch-vertical"></div>
       <div class="arch-label">🌐 第 2 層：應用層 (Application Layer)</div>
       <div class="arch-layer">
-        <a href="https://nebula-secret-supabase.vercel.app" target="_blank" class="arch-node primary">
+        <a href="https://uat.nebulasecret.com" target="_blank" class="arch-node primary">
           <div class="node-icon">🌐</div>
           <div class="node-name">前台網站</div>
           <div class="node-role">產品展示、購物車</div>
         </a>
         <div class="arch-connector"></div>
-        <a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank" class="arch-node accent">
+        <a href="https://uat.nebulasecret.com/#/admin" target="_blank" class="arch-node accent">
           <div class="node-icon">⚙️</div>
           <div class="node-name">Admin Panel</div>
           <div class="node-role">數據管理、配置</div>
@@ -763,6 +765,12 @@
           <div class="node-icon">💱</div>
           <div class="node-name">匯率 API</div>
           <div class="node-role">實時匯率換算</div>
+        </a>
+        <div class="arch-connector"></div>
+        <a href="#" class="arch-node" style="border-color: var(--pink); background: rgba(255,89,131,0.1);">
+          <div class="node-icon">🧠</div>
+          <div class="node-name">Google Gemini</div>
+          <div class="node-role">AI 對話 · 文案生成</div>
         </a>
       </div>
       <div class="arch-flow-label">↑ 數據讀取 / ↓ 數據寫入</div>
@@ -889,7 +897,7 @@
       <div class="count">12 個頁面</div>
     </div>
     <div class="cards-grid">
-      <a href="https://nebula-secret-supabase.vercel.app/#/" target="_blank" class="card color-brand">
+      <a href="https://uat.nebulasecret.com/#/" target="_blank" class="card color-brand">
         <div class="card-tag">主頁</div>
         <div class="card-header">
           <div class="card-icon">🏠</div>
@@ -902,7 +910,7 @@
         <div class="card-link">訪問首頁 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/shop" target="_blank" class="card color-purple">
+      <a href="https://uat.nebulasecret.com/#/shop" target="_blank" class="card color-purple">
         <div class="card-tag">產品</div>
         <div class="card-header">
           <div class="card-icon">🛍️</div>
@@ -919,7 +927,7 @@
         <div class="card-link">瀏覽產品 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/cart" target="_blank" class="card color-blue">
+      <a href="https://uat.nebulasecret.com/#/cart" target="_blank" class="card color-blue">
         <div class="card-tag">購物</div>
         <div class="card-header">
           <div class="card-icon">🛒</div>
@@ -932,7 +940,7 @@
         <div class="card-link">查看購物車 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/checkout" target="_blank" class="card color-accent">
+      <a href="https://uat.nebulasecret.com/#/checkout" target="_blank" class="card color-accent">
         <div class="card-tag">結賬</div>
         <div class="card-header">
           <div class="card-icon">💳</div>
@@ -945,7 +953,7 @@
         <div class="card-link">前往結賬 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/about" target="_blank" class="card color-green">
+      <a href="https://uat.nebulasecret.com/#/about" target="_blank" class="card color-green">
         <div class="card-tag">品牌</div>
         <div class="card-header">
           <div class="card-icon">📖</div>
@@ -958,7 +966,7 @@
         <div class="card-link">了解品牌 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/why-us" target="_blank" class="card color-orange">
+      <a href="https://uat.nebulasecret.com/#/why-us" target="_blank" class="card color-orange">
         <div class="card-tag">優勢</div>
         <div class="card-header">
           <div class="card-icon">⭐</div>
@@ -971,7 +979,7 @@
         <div class="card-link">查看優勢 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/blog" target="_blank" class="card color-purple">
+      <a href="https://uat.nebulasecret.com/#/blog" target="_blank" class="card color-purple">
         <div class="card-tag">內容</div>
         <div class="card-header">
           <div class="card-icon">📝</div>
@@ -984,7 +992,7 @@
         <div class="card-link">閱讀博客 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/info/track" target="_blank" class="card color-red">
+      <a href="https://uat.nebulasecret.com/#/info/track" target="_blank" class="card color-red">
         <div class="card-tag">查詢</div>
         <div class="card-header">
           <div class="card-icon">📦</div>
@@ -997,7 +1005,7 @@
         <div class="card-link">追蹤訂單 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/info/faq" target="_blank" class="card color-dark">
+      <a href="https://uat.nebulasecret.com/#/info/faq" target="_blank" class="card color-dark">
         <div class="card-tag">幫助</div>
         <div class="card-header">
           <div class="card-icon">❓</div>
@@ -1010,7 +1018,7 @@
         <div class="card-link">查看 FAQ →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/account" target="_blank" class="card color-brand">
+      <a href="https://uat.nebulasecret.com/#/account" target="_blank" class="card color-brand">
         <div class="card-tag">賬戶</div>
         <div class="card-header">
           <div class="card-icon">👤</div>
@@ -1023,7 +1031,7 @@
         <div class="card-link">登錄賬戶 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/quote" target="_blank" class="card color-gold">
+      <a href="https://uat.nebulasecret.com/#/quote" target="_blank" class="card color-gold">
         <div class="card-tag">報價</div>
         <div class="card-header">
           <div class="card-icon">📋</div>
@@ -1036,7 +1044,7 @@
         <div class="card-link">請求報價 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/contact" target="_blank" class="card color-pink">
+      <a href="https://uat.nebulasecret.com/#/contact" target="_blank" class="card color-pink">
         <div class="card-tag">聯繫</div>
         <div class="card-header">
           <div class="card-icon">✉️</div>
@@ -1056,13 +1064,13 @@
     <div class="section-title">
       <div class="icon">⚙️</div>
       管理後台 (Admin Panel)
-      <div class="count">11 個功能模組</div>
+      <div class="count">12 個功能模組</div>
     </div>
     <div class="section-desc">
       管理後台僅限管理員和超級管理員訪問，用於管理網站的所有數據和配置。
     </div>
     <div class="cards-grid">
-      <a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank" class="card color-accent">
+      <a href="https://uat.nebulasecret.com/#/admin" target="_blank" class="card color-accent">
         <div class="card-tag">總覽</div>
         <div class="card-header">
           <div class="card-icon">📊</div>
@@ -1071,11 +1079,11 @@
             <div class="card-subtitle">數據總覽</div>
           </div>
         </div>
-        <div class="card-desc">訂單統計、產品數量、客戶數、營業額等關鍵指標一覽。</div>
+        <div class="card-desc">訂單統計、產品數量、客戶數、營業額等關鍵指標一覽，內建 🤖 AI 每日營運摘要。</div>
         <div class="card-link">進入 Dashboard →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/admin/products" target="_blank" class="card color-blue">
+      <a href="https://uat.nebulasecret.com/#/admin/products" target="_blank" class="card color-blue">
         <div class="card-tag">產品</div>
         <div class="card-header">
           <div class="card-icon">📦</div>
@@ -1084,11 +1092,11 @@
             <div class="card-subtitle">產品管理</div>
           </div>
         </div>
-        <div class="card-desc">新增、編輯、刪除產品，支持圖片上傳、批量編輯 MOQ 和價格。</div>
+        <div class="card-desc">新增、編輯、刪除產品，支持圖片上傳、批量編輯 MOQ 和價格，內建 ✨AI 名稱/描述/SEO meta 文案。</div>
         <div class="card-link">管理產品 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/admin/categories" target="_blank" class="card color-purple">
+      <a href="https://uat.nebulasecret.com/#/admin/categories" target="_blank" class="card color-purple">
         <div class="card-tag">分類</div>
         <div class="card-header">
           <div class="card-icon">🏷️</div>
@@ -1097,11 +1105,11 @@
             <div class="card-subtitle">分類管理</div>
           </div>
         </div>
-        <div class="card-desc">新增、編輯、刪除產品分類，支持上傳圖片、上下移動排序。</div>
+        <div class="card-desc">新增、編輯、刪除產品分類，支持上傳圖片、上下移動排序，內建 ✨AI 描述生成。</div>
         <div class="card-link">管理分類 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/admin/orders" target="_blank" class="card color-green">
+      <a href="https://uat.nebulasecret.com/#/admin/orders" target="_blank" class="card color-green">
         <div class="card-tag">訂單</div>
         <div class="card-header">
           <div class="card-icon">📋</div>
@@ -1110,11 +1118,11 @@
             <div class="card-subtitle">訂單管理</div>
           </div>
         </div>
-        <div class="card-desc">查看所有訂單、訂單詳情、導出 Excel/CSV、更新訂單狀態。</div>
+        <div class="card-desc">查看所有訂單、訂單詳情、導出 Excel/CSV、更新訂單狀態，內建 🤖 AI 回覆草稿。</div>
         <div class="card-link">查看訂單 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/admin/quotes" target="_blank" class="card color-gold">
+      <a href="https://uat.nebulasecret.com/#/admin/quotes" target="_blank" class="card color-gold">
         <div class="card-tag">報價</div>
         <div class="card-header">
           <div class="card-icon">💰</div>
@@ -1123,11 +1131,11 @@
             <div class="card-subtitle">報價管理</div>
           </div>
         </div>
-        <div class="card-desc">查看客戶報價請求、接受/拒絕報價、修改價格、設置有效期。</div>
+        <div class="card-desc">查看客戶報價請求、接受/拒絕報價、修改價格、設置有效期，內建 🤖 AI 回覆草稿（含議價情境）。</div>
         <div class="card-link">管理報價 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/admin/customers" target="_blank" class="card color-orange">
+      <a href="https://uat.nebulasecret.com/#/admin/customers" target="_blank" class="card color-orange">
         <div class="card-tag">客戶</div>
         <div class="card-header">
           <div class="card-icon">👥</div>
@@ -1140,7 +1148,7 @@
         <div class="card-link">管理客戶 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/admin/tiers" target="_blank" class="card color-brand">
+      <a href="https://uat.nebulasecret.com/#/admin/tiers" target="_blank" class="card color-brand">
         <div class="card-tag">定價</div>
         <div class="card-header">
           <div class="card-icon">⭐</div>
@@ -1153,7 +1161,7 @@
         <div class="card-link">管理級別 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/admin/users" target="_blank" class="card color-red">
+      <a href="https://uat.nebulasecret.com/#/admin/users" target="_blank" class="card color-red">
         <div class="card-tag">權限</div>
         <div class="card-header">
           <div class="card-icon">🔐</div>
@@ -1166,7 +1174,7 @@
         <div class="card-link">管理管理員 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/admin/theme" target="_blank" class="card color-pink">
+      <a href="https://uat.nebulasecret.com/#/admin/theme" target="_blank" class="card color-pink">
         <div class="card-tag">外觀</div>
         <div class="card-header">
           <div class="card-icon">🎨</div>
@@ -1179,7 +1187,7 @@
         <div class="card-link">設置主題 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/admin/content" target="_blank" class="card color-dark">
+      <a href="https://uat.nebulasecret.com/#/admin/content" target="_blank" class="card color-dark">
         <div class="card-tag">內容</div>
         <div class="card-header">
           <div class="card-icon">📝</div>
@@ -1192,7 +1200,7 @@
         <div class="card-link">編輯內容 →</div>
       </a>
 
-      <a href="https://nebula-secret-supabase.vercel.app/#/admin/emails" target="_blank" class="card color-accent">
+      <a href="https://uat.nebulasecret.com/#/admin/emails" target="_blank" class="card color-accent">
         <div class="card-tag">郵件</div>
         <div class="card-header">
           <div class="card-icon">📧</div>
@@ -1204,6 +1212,87 @@
         <div class="card-desc">查看 Resend 發送狀態、Vercel 環境變量、收件人配置。</div>
         <div class="card-link">配置郵件 →</div>
       </a>
+
+      <a href="https://uat.nebulasecret.com/#/admin/analytics" target="_blank" class="card color-green">
+        <div class="card-tag">統計</div>
+        <div class="card-header">
+          <div class="card-icon">📊</div>
+          <div>
+            <div class="card-title">Site Analytics</div>
+            <div class="card-subtitle">訪客統計</div>
+          </div>
+        </div>
+        <div class="card-desc">訪客流量、頁面瀏覽趨勢、裝置分佈、流量來源（site_analytics 表，2026-10-07 啟用）。</div>
+        <div class="card-link">查看統計 →</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Section: AI Integration (Gemini) -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon">🧠</div>
+      AI 功能整合（Google Gemini）
+      <div class="count">4 個入口</div>
+    </div>
+    <div class="section-desc">
+      透過 Vercel Edge Function <span class="detail-code">/api/ai-chat</span> 呼叫 Google Gemini 生成式 AI（模型鏈 gemini-3.8-flash → 3.7-flash → 3.5-flash-lite，每模型 10 秒逾時自動降級）。所有 AI 輸出均為「草稿」，須由管理員審閱後才儲存，不會直接改動線上資料。
+    </div>
+    <div class="cards-grid">
+      <a href="https://uat.nebulasecret.com/#/" target="_blank" class="card color-purple">
+        <div class="card-tag">前台</div>
+        <div class="card-header">
+          <div class="card-icon">💬</div>
+          <div>
+            <div class="card-title">AI 客服聊天</div>
+            <div class="card-subtitle">Storefront Chat</div>
+          </div>
+        </div>
+        <div class="card-desc">網站右下角 AI 聊天助手：帶入產品/分類/訂單上下文回答客戶問題。</div>
+        <div class="card-link">查看前台 →</div>
+      </a>
+
+      <a href="https://uat.nebulasecret.com/#/admin/dashboard" target="_blank" class="card color-brand">
+        <div class="card-tag">後台</div>
+        <div class="card-header">
+          <div class="card-icon">📊</div>
+          <div>
+            <div class="card-title">AI 每日營運摘要</div>
+            <div class="card-subtitle">Dashboard</div>
+          </div>
+        </div>
+        <div class="card-desc">一鍵生成繁體中文營運分析：今日訂單/營收/熱銷排行/狀態分佈/待處理報價/新客戶。</div>
+        <div class="card-link">前往 Dashboard →</div>
+      </a>
+
+      <a href="https://uat.nebulasecret.com/#/admin/orders" target="_blank" class="card color-green">
+        <div class="card-tag">後台</div>
+        <div class="card-header">
+          <div class="card-icon">✉️</div>
+          <div>
+            <div class="card-title">訂單 / 報價回覆草稿</div>
+            <div class="card-subtitle">Reply Drafts</div>
+          </div>
+        </div>
+        <div class="card-desc">帶入客戶/商品/金額/狀態（報價含議價情境分叉），生成含主旨的英文郵件草稿。</div>
+        <div class="card-link">前往訂單 →</div>
+      </a>
+
+      <a href="https://uat.nebulasecret.com/#/admin/products" target="_blank" class="card color-gold">
+        <div class="card-tag">後台</div>
+        <div class="card-header">
+          <div class="card-icon">✨</div>
+          <div>
+            <div class="card-title">產品 / 分類 AI 文案</div>
+            <div class="card-subtitle">AI Copywriting</div>
+          </div>
+        </div>
+        <div class="card-desc">產品名稱、屬性描述、SEO meta、分類描述一鍵生成，並自動套用於前台 SEO 標題/描述。</div>
+        <div class="card-link">前往產品 →</div>
+      </a>
+    </div>
+    <div class="info-box" style="margin-top:20px">
+      <strong>💡 運作流程：</strong>前端組裝上下文 → <span class="detail-code">POST /api/ai-chat</span>（body: <span class="detail-code">{message, history}</span>）→ Vercel Edge 依序嘗試 Gemini 模型 → 回傳 <span class="detail-code">{reply, usage}</span> → 顯示草稿供管理員審閱。
     </div>
   </div>
 
@@ -1273,7 +1362,7 @@
             <div class="card-subtitle">Admin Flow</div>
           </div>
         </div>
-        <div class="flow-step"><div class="step-num">1</div><div>管理員登錄 Admin Panel（Supabase Auth）</div></div>
+        <div class="flow-step"><div class="step-num">1</div><div>管理員登錄 Admin Panel（本地管理員清單 + Supabase 驗證回退）</div></div>
         <div class="flow-step"><div class="step-num">2</div><div>新增/編輯產品、分類、內容</div></div>
         <div class="flow-step"><div class="step-num">3</div><div>設置客戶級別和折扣</div></div>
         <div class="flow-step"><div class="step-num">4</div><div>數據實時同步到 Supabase 雲端</div></div>
@@ -1312,6 +1401,22 @@
         <div class="flow-step"><div class="step-num">5</div><div>產品列表/詳情頁顯示折扣價</div></div>
         <div class="flow-step"><div class="step-num">6</div><div>購物車自動應用折扣計算總價</div></div>
       </div>
+
+      <div class="card color-pink flow-card">
+        <div class="card-header">
+          <div class="card-icon">🧠</div>
+          <div>
+            <div class="card-title">AI 生成流程</div>
+            <div class="card-subtitle">AI Flow</div>
+          </div>
+        </div>
+        <div class="flow-step"><div class="step-num">1</div><div>管理員點擊 🤖 AI 按鈕（摘要 / 草稿 / 文案）</div></div>
+        <div class="flow-step"><div class="step-num">2</div><div>前端組裝上下文（訂單/產品/報價數據 + 指令）</div></div>
+        <div class="flow-step"><div class="step-num">3</div><div>POST /api/ai-chat → Vercel Edge Function</div></div>
+        <div class="flow-step"><div class="step-num">4</div><div>依序嘗試 Gemini 模型（10s 逾時自動降級）</div></div>
+        <div class="flow-step"><div class="step-num">5</div><div>AI 回傳草稿 → 顯示於面板</div></div>
+        <div class="flow-step"><div class="step-num">6</div><div>管理員審閱、複製/儲存 → 完成</div></div>
+      </div>
     </div>
   </div>
 
@@ -1320,7 +1425,7 @@
     <div class="section-title">
       <div class="icon">🔧</div>
       詳細配置信息
-      <div class="count">10 個模組</div>
+      <div class="count">11 個模組</div>
     </div>
     <div class="detail-grid">
 
@@ -1335,7 +1440,7 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">Production 環境</div>
-          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app" target="_blank">nebula-secret-supabase.vercel.app</a></div>
+          <div class="detail-value"><a href="https://nebulasecret.com" target="_blank">nebulasecret.com</a>（正式站 · 待授權上線）</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">UAT 測試環境</div>
@@ -1343,11 +1448,11 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">Admin Panel</div>
-          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank">/#/admin</a></div>
+          <div class="detail-value"><a href="https://uat.nebulasecret.com/#/admin" target="_blank">/#/admin</a></div>
         </div>
         <div class="detail-row">
           <div class="detail-label">系統架構頁</div>
-          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app/architecture.html" target="_blank">/architecture.html</a></div>
+          <div class="detail-value"><a href="https://uat.nebulasecret.com/architecture.html" target="_blank">/architecture.html</a></div>
         </div>
         <div class="detail-row">
           <div class="detail-label">本地開發地址</div>
@@ -1394,11 +1499,15 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">主要數據表</div>
-          <div class="detail-value"><span class="detail-code">site_settings</span></div>
+          <div class="detail-value"><span class="detail-code">site_settings</span> + <span class="detail-code">site_analytics</span></div>
         </div>
         <div class="detail-row">
           <div class="detail-label">存儲的 Keys</div>
           <div class="detail-value" style="font-size:10px;text-align:left">products, cats, theme, content, orders, accounts, admins, tiers, quotes</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Analytics 表</div>
+          <div class="detail-value" style="font-size:11px;text-align:left">site_analytics（2026-10-07 建立；4 索引 + RLS：訪客可寫、後台可讀）</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">用戶認證</div>
@@ -1441,7 +1550,7 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">Production 域名</div>
-          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app" target="_blank">nebula-secret-supabase.vercel.app</a></div>
+          <div class="detail-value"><a href="https://nebulasecret.com" target="_blank">nebulasecret.com</a>（正式站 · 待授權上線）</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">UAT 域名</div>
@@ -1500,7 +1609,7 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">主要文件</div>
-          <div class="detail-value" style="font-size:11px;text-align:left">index.html, admin.js, architecture.html, api/send-email.js</div>
+          <div class="detail-value" style="font-size:11px;text-align:left">index.html, admin.js, architecture.html, api/send-email.js, api/ai-chat.js</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">推送工具</div>
@@ -1554,18 +1663,22 @@
         </div>
       </div>
 
-      <!-- Vercel Edge Function -->
+      <!-- Vercel Edge Functions -->
       <div class="detail-card color-gold">
         <div class="detail-card-header">
           <div class="detail-card-icon">⚡</div>
           <div>
-            <div class="detail-card-title">Vercel Edge Function</div>
-            <div class="detail-card-sub">Serverless Email Proxy</div>
+            <div class="detail-card-title">Vercel Edge Functions</div>
+            <div class="detail-card-sub">Serverless Proxies</div>
           </div>
         </div>
         <div class="detail-row">
-          <div class="detail-label">Function 路徑</div>
-          <div class="detail-value"><span class="detail-code">/api/send-email</span></div>
+          <div class="detail-label">郵件代理</div>
+          <div class="detail-value"><span class="detail-code">/api/send-email</span> → Resend</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">AI 代理</div>
+          <div class="detail-value"><span class="detail-code">/api/ai-chat</span> → Google Gemini</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">運行時</div>
@@ -1573,22 +1686,56 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">用途</div>
-          <div class="detail-value">保護 Resend API Key</div>
+          <div class="detail-value">保護 Resend API Key 與 Gemini API Key（前端不可見）</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">環境變量</div>
-          <div class="detail-value" style="font-size:10px;text-align:left">RESEND_API_KEY, MAIL_FROM, MAIL_RECIPIENTS, MAIL_ENABLED, ALLOWED_ORIGINS</div>
+          <div class="detail-value" style="font-size:10px;text-align:left">RESEND_API_KEY, MAIL_FROM, MAIL_RECIPIENTS, MAIL_ENABLED, ALLOWED_ORIGINS, GEMINI_API_KEY</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">降級機制</div>
-          <div class="detail-value">Edge 失敗 → 前端顯示錯誤提示（訂單仍保存在數據庫）</div>
+          <div class="detail-value">郵件失敗 → 訂單仍保存於數據庫；AI 模型逾時 → 自動降級到下一個模型</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">源代碼</div>
-          <div class="detail-value"><span class="detail-code">api/send-email.js</span></div>
+          <div class="detail-value"><span class="detail-code">api/send-email.js, api/ai-chat.js</span></div>
         </div>
         <div class="info-box">
-          <strong>💡 工作原理：</strong>前端發送請求到 /api/send-email，Edge Function 使用服務端環境變量中的 API Key 調用 Resend API，避免密鑰暴露在前端。
+          <strong>💡 工作原理：</strong>前端把請求送到 Edge Function，函式使用服務端環境變量中的 API Key 呼叫 Resend / Gemini API，避免密鑰暴露在前端。
+        </div>
+      </div>
+
+      <!-- Google Gemini AI -->
+      <div class="detail-card color-pink">
+        <div class="detail-card-header">
+          <div class="detail-card-icon">🧠</div>
+          <div>
+            <div class="detail-card-title">Google Gemini AI</div>
+            <div class="detail-card-sub">Generative AI via Edge Function</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">API 端點</div>
+          <div class="detail-value" style="font-size:11px"><span class="detail-code">POST https://uat.nebulasecret.com/api/ai-chat</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">請求格式</div>
+          <div class="detail-value" style="font-size:11px"><span class="detail-code">{message, history}</span> → <span class="detail-code">{reply, usage}</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">模型鏈</div>
+          <div class="detail-value" style="font-size:11px;text-align:left">gemini-3.8-flash → 3.7-flash → 3.5-flash-lite（依序嘗試，10s 逾時自動降級）</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">密鑰儲存</div>
+          <div class="detail-value">Vercel 環境變量 <span class="detail-code">GEMINI_API_KEY</span>（前端不可見）</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">使用入口</div>
+          <div class="detail-value" style="font-size:11px;text-align:left">前台 AI 聊天、後台 Dashboard 摘要、訂單/報價回覆草稿、產品/分類 AI 文案</div>
+        </div>
+        <div class="info-box">
+          <strong>🤖 設計原則：</strong>AI 一律「只產草稿、不直接寫入」——所有生成內容須由管理員審閱後才儲存，避免 AI 意外改動線上數據。
         </div>
       </div>
 
@@ -1646,11 +1793,11 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">Admin Panel URL</div>
-          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank">/#/admin</a></div>
+          <div class="detail-value"><a href="https://uat.nebulasecret.com/#/admin" target="_blank">/#/admin</a></div>
         </div>
         <div class="detail-row">
           <div class="detail-label">管理員郵箱</div>
-          <div class="detail-value"><span class="detail-code">admin@nebulasecret.com</span></div>
+          <div class="detail-value"><span class="detail-code">admin@nebulaecret.com</span></div>
         </div>
         <div class="detail-row">
           <div class="detail-label">管理員密碼</div>
@@ -1662,7 +1809,11 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">認證方式</div>
-          <div class="detail-value">Supabase Auth</div>
+          <div class="detail-value">本地管理員清單（PBKDF2 雜湊）+ Supabase 驗證回退</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">管理員清單儲存</div>
+          <div class="detail-value" style="font-size:11px">Supabase site_settings.admins + localStorage 備援（RLS 擋寫時不中斷登入）</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">修改密碼位置</div>
@@ -1757,11 +1908,11 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">級別管理頁面</div>
-          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app/#/admin/tiers" target="_blank">Admin → Customer Tiers</a></div>
+          <div class="detail-value"><a href="https://uat.nebulasecret.com/#/admin/tiers" target="_blank">Admin → Customer Tiers</a></div>
         </div>
         <div class="detail-row">
           <div class="detail-label">客戶級別設置</div>
-          <div class="detail-value"><a href="https://nebula-secret-supabase.vercel.app/#/admin/customers" target="_blank">Admin → Customer Accounts</a></div>
+          <div class="detail-value"><a href="https://uat.nebulasecret.com/#/admin/customers" target="_blank">Admin → Customer Accounts</a></div>
         </div>
         <div class="detail-row">
           <div class="detail-label">折扣應用範圍</div>
@@ -1783,14 +1934,14 @@
 
 <!-- Footer -->
 <div class="footer">
-  <p>🌌 Nebula Secret 系統架構總覽 · 最後更新：2026-09-15 · 僅限管理員訪問</p>
+  <p>🌌 Nebula Secret 系統架構總覽 · 最後更新：2026-10-07 · 僅限管理員訪問</p>
   <div class="links">
-    <a href="https://nebula-secret-supabase.vercel.app" target="_blank">Production</a>
+    <a href="https://nebulasecret.com" target="_blank">Production（正式站）</a>
     <a href="https://uat.nebulasecret.com" target="_blank">UAT</a>
     <a href="https://github.com/NebulaSecret-team/Nebula-Secret-Supabase" target="_blank">GitHub</a>
     <a href="https://supabase.com/dashboard/project/xwhhsoppcpkijxxychjm" target="_blank">Supabase</a>
     <a href="https://vercel.com" target="_blank">Vercel</a>
-    <a href="https://nebula-secret-supabase.vercel.app/#/admin" target="_blank">Admin Panel</a>
+    <a href="https://uat.nebulasecret.com/#/admin" target="_blank">Admin Panel</a>
   </div>
 </div>
 
