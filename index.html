@@ -5241,6 +5241,9 @@ function route(){
       if(!window._nsDefaultMeta) window._nsDefaultMeta = dm.content;
       dm.content = window._nsDefaultMeta;
     }
+    /* Reset page title to the site default on non-product navigation */
+    if(!window._nsDefaultTitle) window._nsDefaultTitle = document.title;
+    document.title = window._nsDefaultTitle;
     storeRoute();
     setTimeout(initScrollAnimations, 100);
     /* Track page view for analytics */
