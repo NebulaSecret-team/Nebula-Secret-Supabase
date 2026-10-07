@@ -2282,6 +2282,9 @@ function adminRoute(){
 
   /* Helper function to render admin page */
   const renderAdminPage = () => {
+    /* Ensure admin shell (with #adminTitle) exists before page functions run,
+       so direct loads of admin subpages (e.g. #/admin/analytics) don't crash */
+    if(!document.querySelector(".admin-shell")) renderAdminShell("");
     const page = h.split("/")[2] || "dashboard";
     if(page === "dashboard") adminDashboard();
     else if(page === "analytics") adminAnalytics();
