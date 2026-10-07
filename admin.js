@@ -954,8 +954,7 @@ function submitQuoteResponse(id){
   q.status = "Quoted";
   q.history = q.history || [];
   q.history.push({ status: "Quoted", date: new Date().toISOString(), note: "Quote sent by admin: " + fmt(price) + " EUR, valid until " + valid });
-  saveQuotes(quotes);
-  showToast("Quote " + id + " sent!");
+  saveQuotes(quotes).then(r => { if(r && r.ok) showToast("Quote " + id + " sent!"); });
   $("#adminModal").classList.remove("open");
   adminQuotes();
 }
@@ -966,8 +965,7 @@ function setQuoteStatus(id, status){
   q.status = status;
   q.history = q.history || [];
   q.history.push({ status: status, date: new Date().toISOString(), note: "Status updated by admin" });
-  saveQuotes(quotes);
-  showToast("Quote status updated to " + status);
+  saveQuotes(quotes).then(r => { if(r && r.ok) showToast("Quote status updated to " + status); });
   adminQuotes();
 }
 function acceptCustomerTargetPrice(id){
@@ -981,8 +979,7 @@ function acceptCustomerTargetPrice(id){
   q.status = "Quoted";
   q.history = q.history || [];
   q.history.push({ status: "Quoted", date: new Date().toISOString(), note: "Admin accepted customer target price: " + fmt(q.customerTargetPrice) + " EUR" });
-  saveQuotes(quotes);
-  showToast("Customer target price accepted! Quote sent.");
+  saveQuotes(quotes).then(r => { if(r && r.ok) showToast("Customer target price accepted! Quote sent."); });
   $("#adminModal").classList.remove("open");
   adminQuotes();
 }
@@ -993,15 +990,13 @@ function rejectCustomerTargetPrice(id){
   q.status = "Rejected";
   q.history = q.history || [];
   q.history.push({ status: "Rejected", date: new Date().toISOString(), note: "Admin rejected customer target price of " + (q.customerTargetPrice ? fmt(q.customerTargetPrice) : "N/A") + " EUR" });
-  saveQuotes(quotes);
-  showToast("Customer target price rejected.");
+  saveQuotes(quotes).then(r => { if(r && r.ok) showToast("Customer target price rejected."); });
   $("#adminModal").classList.remove("open");
   adminQuotes();
 }
 function deleteQuote(id){
   if(!confirm("Delete quote " + id + "?")) return;
-  saveQuotes(getQuotes().filter(q => q.id !== id));
-  showToast("Quote deleted");
+  saveQuotes(getQuotes().filter(q => q.id !== id)).then(r => { if(r && r.ok) showToast("Quote deleted"); });
   adminQuotes();
 }
 function mailQuote(id){
@@ -1142,9 +1137,8 @@ function setAllMoqTo100(){
     }
     updated++;
   });
-  saveProducts(products);
+  saveProducts(products).then(r => { if(r && r.ok) showToast('Set MOQ to 100 for ' + updated + ' products'); });
   adminProducts();
-  showToast('Set MOQ to 100 for ' + updated + ' products');
 }
 
 function openBulkEditModal(){
@@ -1246,10 +1240,9 @@ function applyBulkEdit(){
     }
   });
   
-  saveProducts(products);
+  saveProducts(products).then(r => { if(r && r.ok) showToast('Updated ' + updated + ' products'); });
   closeAdminModal();
   adminProducts();
-  showToast('Updated ' + updated + ' products');
 }
 
 function openProductForm(id){
@@ -1359,17 +1352,15 @@ function saveProductForm(id){
   };
   if(existing){ Object.assign(existing, rec); }
   else { products.push(rec); }
-  saveProducts(products);
+  saveProducts(products).then(r => { if(r && r.ok) showToast(existing ? "Product updated" : "Product added"); });
   closeAdminModal();
   adminProducts();
-  showToast(existing ? "Product updated" : "Product added");
 }
 
 function deleteProduct(id){
   if(!confirm("Delete this product? This cannot be undone.")) return;
   const products = getProducts().filter(p => String(p.id) !== String(id));
-  saveProducts(products);
-  showToast("Product deleted");
+  saveProducts(products).then(r => { if(r && r.ok) showToast("Product deleted"); });
   adminProducts();
 }
 
@@ -1404,12 +1395,11 @@ function moveCategory(cs, dir){
   if(newIdx < 0 || newIdx >= cats.length) return;
   const [item] = cats.splice(idx, 1);
   cats.splice(newIdx, 0, item);
-  saveCats(cats);
+  saveCats(cats).then(r => { if(r && r.ok) showToast("Category reordered"); });
   /* Force re-render navigation bar with updated category order */
   setTimeout(() => {
     try{ renderCatNav(); }catch(e){ console.warn("renderCatNav error:", e); }
   }, 50);
-  showToast("Category reordered");
   adminCategories();
 }
 
@@ -1447,6 +1437,7 @@ function saveCatForm(cs){
   const cats = getCats();
   const existing = cs ? cats.find(x => x.cs === cs) : null;
   const newCs = cs || slugify(name);
+  const toSave = [];
   if(existing){
     existing.c = name;
     if(desc) existing.desc = desc;
@@ -1454,22 +1445,21 @@ function saveCatForm(cs){
     // update products that reference this category name/slug
     const products = getProducts();
     products.forEach(p => { if(p.cs === existing.cs) p.c = name; });
-    saveProducts(products);
+    toSave.push(saveProducts(products));
   } else {
     if(cats.some(x => x.cs === newCs)){ showToast("Category already exists"); return; }
     cats.push({ c: name, cs: newCs, desc: desc || "", i: img || PLACEHOLDER });
   }
-  saveCats(cats);
+  toSave.push(saveCats(cats));
   closeAdminModal();
-  showToast(existing ? "Category updated" : "Category added");
+  Promise.all(toSave).then(rs => { if(rs.length && rs.every(r => r && r.ok)) showToast(existing ? "Category updated" : "Category added"); });
   adminCategories();
 }
 
 function deleteCategory(cs){
   if(!confirm("Delete this category? Its products stay in the catalog.")) return;
   const cats = getCats().filter(c => c.cs !== cs);
-  saveCats(cats);
-  showToast("Category deleted");
+  saveCats(cats).then(r => { if(r && r.ok) showToast("Category deleted"); });
   adminCategories();
 }
 
@@ -1697,8 +1687,7 @@ async function adminAddAdmin(){
   /* Hash password before storing */
   const hashedPass = await hashPass(p);
   admins.push({ user: u, pass: hashedPass, name: n || u, created: new Date().toISOString() });
-  saveAdmins(admins);
-  showToast("Admin " + u + " added");
+  saveAdmins(admins).then(r => { if(r && r.ok) showToast("Admin " + u + " added"); });
   adminAdminUsers();
 }
 async function adminChangeAdminPass(user){
@@ -1710,15 +1699,13 @@ async function adminChangeAdminPass(user){
   if(np.trim().length < 6){ showToast("Password must be at least 6 characters"); return; }
   /* Hash password before storing */
   a.pass = await hashPass(np.trim());
-  saveAdmins(admins);
-  showToast("Password updated for " + user);
+  saveAdmins(admins).then(r => { if(r && r.ok) showToast("Password updated for " + user); });
 }
 function adminDeleteAdmin(user){
   const admins = getAdmins();
   if(admins.length <= 1){ showToast("Cannot remove the last admin account"); return; }
   if(!confirm("Remove admin \"" + user + "\"? They will no longer be able to sign in.")) return;
-  saveAdmins(admins.filter(a => a.user !== user));
-  showToast("Admin " + user + " removed");
+  saveAdmins(admins.filter(a => a.user !== user)).then(r => { if(r && r.ok) showToast("Admin " + user + " removed"); });
   adminAdminUsers();
 }
 
@@ -1862,9 +1849,8 @@ function saveContentForm(){
     }
   };
   cleanContentObj(c);
-  saveContent(c);
+  saveContent(c).then(r => { if(r && r.ok) showToast("Site content saved"); });
   applyFooterContent();
-  showToast("Site content saved");
 }
 function cleanContentObj(obj){
   Object.keys(obj).forEach(k => {
@@ -1970,9 +1956,8 @@ function saveThemeForm(){
   th.popupImage = $("#thPopupImg").value.trim();
   th.popupBtnText = $("#thPopupBtnText").value.trim();
   th.popupBtnLink = $("#thPopupBtnLink").value.trim();
-  saveTheme(th);
+  saveTheme(th).then(r => { if(r && r.ok) showToast("Theme saved"); });
   applyTheme();
-  showToast("Theme saved");
 }
 function resetTheme(){
   if(!confirm("Reset theme to defaults?")) return;
@@ -2103,7 +2088,7 @@ async function doInitAdmin(){
       created: new Date().toISOString()
     };
     
-    saveAdmins([newAdmin]);
+    saveAdmins([newAdmin]).then(r => { if(r && r.ok) showToast("Admin account created successfully"); });
     
     /* Also try to create Supabase Auth user */
     try{
@@ -2118,7 +2103,6 @@ async function doInitAdmin(){
       console.log("Supabase Auth signup failed, using legacy admin only:", e.message);
     }
     
-    showToast("Admin account created successfully");
     viewAdminLogin("Account created. Please sign in.");
   }catch(e){
     err.textContent = "Failed to create admin account: " + e.message;

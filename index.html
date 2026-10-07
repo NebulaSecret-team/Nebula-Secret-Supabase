@@ -1465,10 +1465,11 @@ async function sbSave(key, data){
   if(!supabase) return {ok:false, error:"no client"};
   try{
     const { error } = await supabase.from('site_settings').upsert({ id: key, data: data, updated_at: new Date().toISOString() });
-    if(error){ console.warn("Supabase save error (" + key + "):", error); return {ok:false, error}; }
+    if(error){ console.warn("Supabase save error (" + key + "):", error); showToast("Failed to save " + key + " — " + (error.message || "server error")); return {ok:false, error}; }
     return {ok:true};
   }catch(e){
     console.warn("Supabase save exception (" + key + "):", e);
+    showToast("Failed to save " + key + " — " + String(e));
     return {ok:false, error: String(e)};
   }
 }
@@ -1603,7 +1604,7 @@ function getTheme(){
   if(t) return Object.assign(defaultTheme(), t);
   return defaultTheme();
 }
-function saveTheme(t){ _cache.theme = t; sbSave("theme", t); }
+function saveTheme(t){ _cache.theme = t; return sbSave("theme", t); }
 
 /* Apply theme colors and content to the page */
 function applyTheme(){
@@ -1690,7 +1691,7 @@ function getContent(){
   if(c && typeof c === "object") return c;
   return {};
 }
-function saveContent(c){ _cache.content = c; sbSave("content", c); }
+function saveContent(c){ _cache.content = c; return sbSave("content", c); }
 function resetContent(){ _cache.content = {}; sbSave("content", {}); }
 function contentSection(section){
   const c = getContent();
@@ -1712,7 +1713,7 @@ function getProducts(){
   if(_cache.products && Array.isArray(_cache.products) && _cache.products.length) return _cache.products.slice();
   return [];
 }
-function saveProducts(p){ _cache.products = p; sbSave("products", p); }
+function saveProducts(p){ _cache.products = p; return sbSave("products", p); }
 function resetProducts(){ localStorage.removeItem(LS.products); }
 
 function getCats(){
@@ -1757,7 +1758,7 @@ async function loadCloudCatalog(){
     }
   }catch(e){}
 }
-function saveCats(c){ _cache.cats = c; sbSave("cats", c); }
+function saveCats(c){ _cache.cats = c; return sbSave("cats", c); }
 
 /* isAdmin now returns a Promise - checks Supabase Auth session */
 async function isAdmin(){
@@ -2054,7 +2055,7 @@ async function syncAuthSession(){
 
 /* ============ Quotes / Inquiries ============ */
 function getQuotes(){ return _cache.quotes || []; }
-function saveQuotes(q){ _cache.quotes = q; sbSave("quotes", q); }
+function saveQuotes(q){ _cache.quotes = q; return sbSave("quotes", q); }
 function findQuoteById(id){ return getQuotes().find(q => q.id === id); }
 function findOrderById(id){ return getOrders().find(o => o.id === id); }
 
@@ -2154,7 +2155,7 @@ function saveAdmins(list){
   /* Persist locally as well — the server-side 'admins' row can only be created
      once an admin already exists (RLS), so the first admin lives on this browser. */
   try{ localStorage.setItem(LS.admins, JSON.stringify(list)); }catch(e){}
-  sbSave("admins", list);
+  return sbSave("admins", list);
 }
 /* Login brute-force throttle (client-side defense in depth: 5 fails = 5-min lockout.
    A cleared localStorage resets it — server-side limits remain Supabase Auth's.) */
@@ -5214,7 +5215,7 @@ function loadAdminScript(callback){
   }
   _adminLoading = true;
   const script = document.createElement("script");
-  script.src = "admin.js?v=20261007a";
+  script.src = "admin.js?v=20261007b";
   script.onload = () => { _adminLoaded = true; _adminLoading = false; if(callback) callback(); };
   script.onerror = () => {
     _adminLoading = false;
