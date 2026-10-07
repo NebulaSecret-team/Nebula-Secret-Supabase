@@ -1490,7 +1490,7 @@ function injectProductJsonLd(){
           "name": p.n,
           "image": img,
           "category": p.cs || "",
-          "description": (Array.isArray(p.d) ? p.d.join(". ") : (p.d || "")).slice(0, 300)
+          "description": (p.meta || (Array.isArray(p.d) ? p.d.join(". ") : (p.d || ""))).slice(0, 300)
         }
       };
     });
@@ -4100,6 +4100,14 @@ function viewProduct(id){
     location.hash = "#/shop"; return;
   }
   currentProduct = p;
+  /* Per-product SEO: dynamic title + meta description (from admin AI meta or attributes) */
+  if(p.n) document.title = p.n + " — Nebula Secret Wholesale";
+  const metaDesc = p.meta || (Array.isArray(p.d) ? p.d.join(". ") : (p.d || ""));
+  if(metaDesc){
+    let m = document.querySelector('meta[name="description"]');
+    if(!m){ m = document.createElement("meta"); m.name = "description"; document.head.appendChild(m); }
+    m.content = metaDesc.slice(0, 300);
+  }
   const rt = productRating(p); const sold = productSold(p);
   const props = (p.d || []).map(s => {
     const parts = String(s).split(":");
@@ -5227,6 +5235,12 @@ function route(){
     loadAdminScript(() => { if(typeof adminRoute === "function") adminRoute(); });
   } else {
     document.body.classList.remove("admin-mode");
+    /* Reset per-page SEO meta on non-product navigation (product pages override temporarily) */
+    const dm = document.querySelector('meta[name="description"]');
+    if(dm){
+      if(!window._nsDefaultMeta) window._nsDefaultMeta = dm.content;
+      dm.content = window._nsDefaultMeta;
+    }
     storeRoute();
     setTimeout(initScrollAnimations, 100);
     /* Track page view for analytics */

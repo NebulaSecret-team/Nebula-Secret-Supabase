@@ -271,6 +271,13 @@ function adminDashboard(){
       '<div class="stat-card"><span class="s-icon">' + IC.user + '</span><div class="s-label">Customers</div><div class="s-value">' + (accounts.length || 0) + '</div><div class="s-sub"><a href="#/admin/customers" style="color:var(--accent)">Manage customers</a></div></div>' +
       '<div class="stat-card"><span class="s-icon">' + IC.doc + '</span><div class="s-label">Quotes</div><div class="s-value">' + (quotes.length || 0) + '</div><div class="s-sub"><a href="#/admin/quotes" style="color:var(--accent)">View quotes &amp; enquiries</a></div></div>' +
     '</div>' +
+    // AI Operational Summary
+    '<div class="admin-panel"><div class="panel-head"><div><h3>🤖 AI 營運摘要</h3><div class="ph-sub">Gemini 分析今日訂單、營收、待辦事項並給出建議（僅供參考，不直接改動任何資料）</div></div>' +
+      '<div style="display:flex;gap:8px;align-items:center">' +
+        '<button class="btn sm" onclick="aiDashboardSummary(this)">🤖 生成摘要</button>' +
+        '<button class="btn sm ghost" onclick="copyAiSummary()" style="display:none" id="aiCopyBtn">Copy</button>' +
+      '</div></div>' +
+    '<div class="panel-body" id="aiSummaryBox" style="display:none;font-size:13.5px;line-height:1.7;color:var(--ink);white-space:pre-wrap"></div></div>' +
     // Recent Activity
     '<div class="admin-panel"><div class="panel-head"><div><h3>Recent Activity</h3><div class="ph-sub">Latest additions and changes across your store</div></div>' +
     '<select id="activityFilter" onchange="filterDashboardActivity(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--ink);cursor:pointer">' +
@@ -804,8 +811,16 @@ function viewOrder(id){
     '</div>' +
     '<div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">' +
       '<button class="btn sm" onclick="mailOrder(lastOrder)">' + IC.mail + ' Email Order</button>' +
+      '<button class="btn sm ghost" onclick="aiOrderReplyDraft(\'' + escJs(o.id) + '\')" title="AI 生成給客戶的英文回覆草稿">🤖 AI 回覆草稿</button>' +
       '<button class="btn sm ghost" onclick="copyOrderSummary(lastOrder)">Copy Summary</button>' +
       '<button class="btn sm ghost" onclick="downloadOrderPDF(\'' + escJs(o.id) + '\')">' + IC.down + ' Download PDF</button>' +
+    '</div>' +
+    '<div id="aiDraftBox" style="display:none;margin-top:14px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:10px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+        '<span style="font-weight:600;font-size:13px">🤖 AI 回覆草稿（審閱後再寄出）</span>' +
+        '<button class="btn sm ghost" onclick="copyAiDraft()">Copy</button>' +
+      '</div>' +
+      '<textarea id="aiDraftText" rows="8" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);background:var(--bg-soft);resize:vertical"></textarea>' +
     '</div>';
   $("#adminModal").classList.add("open");
 }
@@ -891,7 +906,15 @@ function viewAdminQuote(id){
     '</div>' +
     '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">' +
       '<button class="btn sm ghost" onclick="downloadQuotePDF(\'' + escJs(q.id) + '\')">' + IC.down + ' Download Quote PDF</button>' +
+      '<button class="btn sm ghost" onclick="aiQuoteReplyDraft(\'' + escJs(q.id) + '\')" title="AI 生成給客戶的英文回覆草稿">🤖 AI 回覆草稿</button>' +
       '<button class="btn sm ghost" onclick="mailQuote(\'' + escJs(q.id) + '\')">' + IC.mail + ' Email Customer</button>' +
+    '</div>' +
+    '<div id="aiDraftBox" style="display:none;margin-top:14px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:10px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+        '<span style="font-weight:600;font-size:13px">🤖 AI 回覆草稿（審閱後再寄出）</span>' +
+        '<button class="btn sm ghost" onclick="copyAiDraft()">Copy</button>' +
+      '</div>' +
+      '<textarea id="aiDraftText" rows="8" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);background:var(--bg-soft);resize:vertical"></textarea>' +
     '</div>';
   $("#adminModal").classList.add("open");
   /* Initialize flatpickr date picker */
@@ -1237,13 +1260,14 @@ function openProductForm(id){
   $("#amSub").textContent = p ? "Editing: " + p.n : "Fill in the details to add a new product";
   $("#amBody").innerHTML =
     '<div class="form-grid">' +
-      '<div class="field full"><label>Product name *</label><input id="pfName" value="' + (p ? esc(p.n) : "") + '" placeholder="e.g. Rose Body Scrub"></div>' +
+      '<div class="field full"><label>Product name *</label><div style="display:flex;gap:8px"><input id="pfName" value="' + (p ? esc(p.n) : "") + '" placeholder="e.g. Rose Body Scrub" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenProductName(this)" title="Generate with AI">✨ AI</button></div></div>' +
       '<div class="field"><label>Category *</label><select id="pfCat">' + cats.map(c => '<option value="' + c.cs + '"' + (p && p.cs === c.cs ? " selected" : "") + '>' + esc(c.c) + '</option>').join("") + '</select></div>' +
       '<div class="field"><label>Base Price (EUR) *</label><input id="pfPrice" type="number" step="0.01" min="0" value="' + (p ? p.p : "1.00") + '"><div class="form-hint">Default price for 1 unit</div></div>' +
       '<div class="field full"><label>Image URL</label><input id="pfImg" value="' + (p ? esc(p.i) : "") + '" placeholder="https://… (leave empty for placeholder)" oninput="pfPreview(this.value)"></div>' +
       '<div class="field full"><label>Image preview</label><div class="pf-prev"><img id="pfImgPrev" src="' + (p ? imgUrl(p.i, 200) : PLACEHOLDER) + '" alt="" onerror="this.onerror=null;this.src=PLACEHOLDER"></div>' +
       '<div class="field full"><label>Or upload from your computer</label><label class="upload-btn" for="pfUpload">' + IC.up + ' Choose image file</label><input type="file" id="pfUpload" accept="image/*" style="display:none" onchange="uploadImageTo(\'pfUpload\',\'pfImg\',800)"><div class="form-hint">The image is compressed and stored with this product — no hosting needed. Tip: you can also paste any image URL directly.</div></div>' +
-      '<div class="field full"><label>Description (one attribute per line)</label><textarea id="pfDesc" rows="5" placeholder="Country of Origin: China&#10;Scent: Rose&#10;Volume: 100ml">' + (p ? esc((p.d || []).join("\n")) : "") + '</textarea></div>' +
+      '<div class="field full"><label>Description (one attribute per line)</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="pfDesc" rows="5" placeholder="Country of Origin: China&#10;Scent: Rose&#10;Volume: 100ml" style="flex:1">' + (p ? esc((p.d || []).join("\n")) : "") + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenProductDesc(this)" title="Generate with AI">✨ AI</button></div></div>' +
+      '<div class="field full"><label>SEO meta description</label><div style="display:flex;gap:8px"><input id="pfMeta" value="' + (p ? esc(p.meta || "") : "") + '" placeholder="e.g. Wholesale rose body scrub supplier — OEM/ODM private label available" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenProductMeta(this)" title="Generate with AI">✨ AI</button></div><div class="form-hint">Used for Google search results &amp; structured data. 40–150 characters recommended.</div></div>' +
       '<div class="field full">' +
         '<label>Bulk Pricing Tiers (MOQ & Volume Discounts)</label>' +
         '<div class="form-hint">Set different prices for different order quantities. The first tier should start at 1 (MOQ).</div>' +
@@ -1311,6 +1335,7 @@ function saveProductForm(id){
   const price = parseFloat($("#pfPrice").value);
   const img = $("#pfImg").value.trim();
   const desc = $("#pfDesc").value.split("\n").map(s => s.trim()).filter(Boolean);
+  const meta = $("#pfMeta") ? $("#pfMeta").value.trim() : "";
   const priceTiers = collectPriceTiers();
   if(!name){ showToast("Please enter a product name"); return; }
   if(isNaN(price) || price < 0){ showToast("Please enter a valid price"); return; }
@@ -1327,6 +1352,7 @@ function saveProductForm(id){
     priceTiers: priceTiers,
     i: img || PLACEHOLDER,
     d: desc,
+    meta: meta,
     l: ORIGIN,
     createdAt: existing ? (existing.createdAt || new Date().toISOString()) : new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -1394,7 +1420,8 @@ function openCatForm(cs){
   $("#amSub").textContent = c ? "Editing: " + c.c : "Create a new product category";
   $("#amBody").innerHTML =
     '<div class="form-grid">' +
-      '<div class="field full"><label>Category name *</label><input id="cfName" value="' + (c ? esc(c.c) : "") + '" placeholder="e.g. Body Lotion"></div>' +
+      '<div class="field full"><label>Category name *</label><div style="display:flex;gap:8px"><input id="cfName" value="' + (c ? esc(c.c) : "") + '" placeholder="e.g. Body Lotion" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenCatDesc(this)" title="Generate description with AI">✨ AI</button></div></div>' +
+      '<div class="field full"><label>Description</label><textarea id="cfDesc" rows="2" placeholder="e.g. Wholesale body lotions for brands, retailers & distributors — OEM/ODM available">' + (c ? esc(c.desc || "") : "") + '</textarea></div>' +
       '<div class="field full"><label>Cover image URL</label><input id="cfImg" value="' + (c ? esc(c.i) : "") + '" placeholder="https://… (leave empty for placeholder)" oninput="cfPreview(this.value)"></div>' +
       '<div class="field full"><label>Image preview</label><div class="pf-prev"><img id="cfImgPrev" src="' + (c ? imgUrl(c.i, 200) : PLACEHOLDER) + '" alt="" onerror="this.onerror=null;this.src=PLACEHOLDER"></div></div>' +
       '<div class="field full"><label>Or upload from your computer</label><label class="upload-btn" for="cfUpload">' + IC.up + ' Choose image file</label><input type="file" id="cfUpload" accept="image/*" style="display:none" onchange="uploadImageTo(\'cfUpload\',\'cfImg\',800)"><div class="form-hint">The image is compressed and stored with this category — no hosting needed. Tip: you can also paste any image URL directly.</div></div>' +
@@ -1414,6 +1441,7 @@ function cfPreview(v){
 
 function saveCatForm(cs){
   const name = $("#cfName").value.trim();
+  const desc = $("#cfDesc") ? $("#cfDesc").value.trim() : "";
   const img = $("#cfImg").value.trim();
   if(!name){ showToast("Please enter a category name"); return; }
   const cats = getCats();
@@ -1421,6 +1449,7 @@ function saveCatForm(cs){
   const newCs = cs || slugify(name);
   if(existing){
     existing.c = name;
+    if(desc) existing.desc = desc;
     if(img) existing.i = img;
     // update products that reference this category name/slug
     const products = getProducts();
@@ -1428,7 +1457,7 @@ function saveCatForm(cs){
     saveProducts(products);
   } else {
     if(cats.some(x => x.cs === newCs)){ showToast("Category already exists"); return; }
-    cats.push({ c: name, cs: newCs, i: img || PLACEHOLDER });
+    cats.push({ c: name, cs: newCs, desc: desc || "", i: img || PLACEHOLDER });
   }
   saveCats(cats);
   closeAdminModal();
@@ -2421,4 +2450,227 @@ async function aiGenerateCopy(target, btn){
   }finally{
     btn.disabled = false; btn.textContent = oldLabel;
   }
+}
+
+/* ============ AI 進階助手：營運摘要 / 回覆草稿 / 產品與分類文案 ============ */
+
+/* 統一呼叫 AI 端點，回傳純文字回覆（無回覆時回傳 null） */
+async function aiGenerate(prompt){
+  const res = await fetch("/api/ai-chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: prompt, history: [] })
+  });
+  const data = await res.json();
+  if(data.reply) return String(data.reply).replace(/^["'\s]+|["'\s]+$/g, "").trim();
+  return null;
+}
+/* 包裝按鈕狀態：執行期間禁用並顯示 … */
+async function _aiBtnRun(btn, fn){
+  const old = btn ? btn.textContent : "";
+  if(btn){ btn.disabled = true; btn.textContent = "…"; }
+  try{ await fn(); }
+  catch(e){ console.error("AI error:", e); showToast("AI service error"); }
+  finally{ if(btn){ btn.disabled = false; btn.textContent = old; } }
+}
+/* 複製文字（剪貼簿，失敗時回退選取提示） */
+function copyText(txt){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(() => showToast("已複製")).catch(() => showToast("請手動複製"));
+  } else {
+    showToast("請手動複製");
+  }
+}
+
+/* ---- 1. Dashboard：AI 每日營運摘要（繁體中文） ---- */
+async function aiDashboardSummary(btn){
+  _aiBtnRun(btn, async () => {
+    const orders = getOrders();
+    const quotes = getQuotes ? getQuotes() : [];
+    const accounts = getAccounts ? getAccounts() : [];
+    const products = getProducts();
+    const now = new Date();
+    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const todayOrders = orders.filter(o => { const t = new Date(o.date).getTime(); return !isNaN(t) && t >= startToday; });
+    const todayRevenue = todayOrders.filter(o => o.status !== "Cancelled").reduce((s,o) => s + Number(o.total || 0), 0);
+    const totalRevenue = orders.filter(o => o.status !== "Cancelled").reduce((s,o) => s + Number(o.total || 0), 0);
+    const qtyMap = {};
+    orders.forEach(o => (o.items || []).forEach(it => { qtyMap[it.name] = (qtyMap[it.name] || 0) + (Number(it.qty) || 0); }));
+    const topProducts = Object.entries(qtyMap).sort((a,b) => b[1] - a[1]).slice(0, 5).map(([n,q]) => n + "（" + q + " 件）");
+    const statusCount = {};
+    orders.forEach(o => { statusCount[o.status] = (statusCount[o.status] || 0) + 1; });
+    const pendingQuotes = quotes.filter(q => (q.status || "Pending") === "Pending").length;
+    const newCustToday = accounts.filter(a => {
+      const t = new Date(a.createdAt || a.ts || a.created || a.created_at || a.registeredAt).getTime();
+      return !isNaN(t) && t >= startToday;
+    }).length;
+    const context = {
+      date: now.toISOString().slice(0,10),
+      totalProducts: products.length,
+      totalOrders: orders.length,
+      todayOrders: todayOrders.length,
+      todayRevenue: todayRevenue.toFixed(2),
+      totalRevenue: totalRevenue.toFixed(2),
+      topProducts: topProducts,
+      orderStatusCounts: statusCount,
+      pendingQuotes: pendingQuotes,
+      newCustomersToday: newCustToday,
+      totalCustomers: accounts.length
+    };
+    const prompt = "你是電商營運分析師。請根據以下今日營運數據，用繁體中文輸出精簡的營運摘要（4-6 段）：先總結今日訂單與營收表現，再列出熱銷商品、待處理報價、新客戶，最後給 2-3 條具體可執行的建議。不要編造數據，不要逐項複述原始資料。數據：" + JSON.stringify(context);
+    const txt = await aiGenerate(prompt);
+    const box = document.getElementById("aiSummaryBox");
+    if(!box) return;
+    if(txt){
+      box.textContent = txt;
+      box.style.display = "block";
+      const copyBtn = document.getElementById("aiCopyBtn");
+      if(copyBtn) copyBtn.style.display = "";
+      showToast("AI 摘要已生成");
+    } else {
+      box.textContent = "AI 服務忙碌，請稍後再試。";
+      box.style.display = "block";
+    }
+  });
+}
+function copyAiSummary(){
+  const el = document.getElementById("aiSummaryBox");
+  if(!el || !el.textContent) return;
+  copyText(el.textContent);
+}
+
+/* ---- 2a. 訂單：AI 回覆客戶草稿（英文） ---- */
+async function aiOrderReplyDraft(id){
+  const o = findOrderById(id); if(!o) return;
+  const btn = event && event.target;
+  _aiBtnRun(btn, async () => {
+    const cur = o.cur || "EUR";
+    const itemsTxt = (o.items || []).map(it => it.name + " ×" + it.qty + "（" + Number(it.price).toFixed(2) + " " + cur + "/件）").join("；");
+    const context = {
+      orderId: o.id,
+      date: o.date,
+      status: o.status,
+      customer: {
+        name: custName(o),
+        email: custEmail(o),
+        phone: custPhone(o) || "",
+        address: custAddr(o) || "",
+        preferredContact: custContact(o) || ""
+      },
+      items: itemsTxt,
+      total: Number(o.total || 0).toFixed(2) + " " + cur,
+      notes: (o.notes || []).map(n => n.text).join(" | ")
+    };
+    const prompt = "你是 Nebula Secret（B2B 護膚品批發與 OEM/ODM 製造商）的專業客戶服務代表。請根據以下訂單資料，用禮貌、專業的英文寫一封回覆客戶的郵件草稿：確認訂單內容、說明目前處理狀態，並回覆客戶可能的詢問。不要編造折扣、運費、交期或資料中沒有的資訊；若無交期資訊，請寫明會盡快與客戶確認。開頭以客戶名字稱呼（若有），結尾署名 Nebula Secret Customer Service Team。訂單資料：" + JSON.stringify(context);
+    const txt = await aiGenerate(prompt);
+    const box = document.getElementById("aiDraftBox");
+    const ta = document.getElementById("aiDraftText");
+    if(txt && box && ta){
+      ta.value = txt;
+      box.style.display = "block";
+      showToast("AI 回覆草稿已生成 — 審閱後再寄出");
+    } else if(box){
+      box.style.display = "block";
+      ta.value = "AI 服務忙碌，請稍後再試。";
+    }
+  });
+}
+function copyAiDraft(){
+  const el = document.getElementById("aiDraftText");
+  if(!el || !el.value) return;
+  copyText(el.value);
+}
+
+/* ---- 2b. 報價：AI 回覆詢盤草稿（英文） ---- */
+async function aiQuoteReplyDraft(id){
+  const q = findQuoteById(id); if(!q) return;
+  const btn = event && event.target;
+  _aiBtnRun(btn, async () => {
+    const itemsTxt = (q.items || []).map(it => it.name + " ×" + it.qty + "（" + Number(it.price).toFixed(2) + " EUR/件）").join("；");
+    const context = {
+      quoteId: q.id,
+      date: q.date,
+      status: q.status,
+      customer: {
+        name: qCustName(q),
+        email: qCustEmail(q),
+        phone: qCustPhone(q) || "",
+        company: qCustCompany(q) || "",
+        address: qCustAddr(q) || ""
+      },
+      items: itemsTxt,
+      subtotal: Number(q.subtotal || 0).toFixed(2),
+      customerTargetPrice: q.customerTargetPrice ? Number(q.customerTargetPrice).toFixed(2) : null,
+      quotedPrice: q.quotedPrice ? Number(q.quotedPrice).toFixed(2) : null,
+      notes: q.notes || ""
+    };
+    const pricePart = q.customerTargetPrice
+      ? "（客戶提出了目標價格，請禮貌回應議價：可接受、提出還價並簡短說明理由，或婉拒並建議替代方案）"
+      : "（提供報價並說明條款，引導客戶確認下一步）";
+    const prompt = "你是 Nebula Secret（B2B 護膚品批發與 OEM/ODM 製造商）的銷售代表。請根據以下詢盤資料，用禮貌、專業的英文寫一封回覆客戶的郵件草稿" + pricePart + "。數量與價格以資料為準，不要編造折扣、運費或交期；結尾署名 Nebula Secret Sales Team。報價資料：" + JSON.stringify(context);
+    const txt = await aiGenerate(prompt);
+    const box = document.getElementById("aiDraftBox");
+    const ta = document.getElementById("aiDraftText");
+    if(txt && box && ta){
+      ta.value = txt;
+      box.style.display = "block";
+      showToast("AI 回覆草稿已生成 — 審閱後再寄出");
+    } else if(box){
+      box.style.display = "block";
+      ta.value = "AI 服務忙碌，請稍後再試。";
+    }
+  });
+}
+
+/* ---- 3a. 產品：AI 名稱 ---- */
+async function aiGenProductName(btn){
+  _aiBtnRun(btn, async () => {
+    const catEl = document.getElementById("pfCat");
+    const catStr = catEl && catEl.value ? catName(catEl.value) : "";
+    const descEl = document.getElementById("pfDesc");
+    const desc = descEl ? descEl.value.trim() : "";
+    const prompt = "你是 B2B 護膚品批發選品專家。請為分類「" + catStr + "」" + (desc ? "、屬性「" + desc.replace(/\n/g, ", ") + "」" : "") + "提出一個適合國際 B2B 批發市場的英文產品名稱（不超過 6 個單字，清晰具體，符合專業品牌調性）。只輸出產品名稱。";
+    const txt = await aiGenerate(prompt);
+    const el = document.getElementById("pfName");
+    if(txt && el){ el.value = txt; showToast("AI 名稱草稿已填入 — 審閱後再儲存"); }
+  });
+}
+/* ---- 3b. 產品：AI 屬性描述（每行「屬性: 值」） ---- */
+async function aiGenProductDesc(btn){
+  _aiBtnRun(btn, async () => {
+    const nameEl = document.getElementById("pfName");
+    const name = nameEl ? nameEl.value.trim() : "";
+    const catEl = document.getElementById("pfCat");
+    const catStr = catEl && catEl.value ? catName(catEl.value) : "";
+    const prompt = "你是產品資料專員。請為產品「" + name + "」（分類：" + catStr + "）撰寫 4-6 行屬性清單，每行格式「屬性: 值」（例如 Country of Origin: China、Scent: Rose、Volume: 100ml）。只輸出屬性行，不要編造品牌認證、具體成分濃度或數值，不確定的項目不要寫。";
+    const txt = await aiGenerate(prompt);
+    const el = document.getElementById("pfDesc");
+    if(txt && el){ el.value = txt; showToast("AI 描述草稿已填入 — 審閱後再儲存"); }
+  });
+}
+/* ---- 3c. 產品：AI SEO meta description ---- */
+async function aiGenProductMeta(btn){
+  _aiBtnRun(btn, async () => {
+    const nameEl = document.getElementById("pfName");
+    const name = nameEl ? nameEl.value.trim() : "";
+    const catEl = document.getElementById("pfCat");
+    const catStr = catEl && catEl.value ? catName(catEl.value) : "";
+    const descEl = document.getElementById("pfDesc");
+    const desc = descEl ? descEl.value.trim().slice(0, 300) : "";
+    const prompt = "請為 B2B 批發網站上的產品「" + name + "」（分類 " + catStr + (desc ? "，屬性 " + desc.replace(/\n/g, ", ") : "") + "）寫一句英文 SEO meta description（40-150 字元，自然包含 wholesale supplier、OEM/ODM 等關鍵字，吸引專業買家）。只輸出描述本身。";
+    const txt = await aiGenerate(prompt);
+    const el = document.getElementById("pfMeta");
+    if(txt && el){ el.value = txt; showToast("AI SEO meta 草稿已填入 — 審閱後再儲存"); }
+  });
+}
+/* ---- 3d. 分類：AI 描述 ---- */
+async function aiGenCatDesc(btn){
+  _aiBtnRun(btn, async () => {
+    const nameEl = document.getElementById("cfName");
+    const name = nameEl ? nameEl.value.trim() : "";
+    const prompt = "用英文為 B2B 護膚品批發網站的分類「" + name + "」寫 1-2 句描述（含 wholesale 與 OEM/ODM 相關字眼，適合採購商閱讀）。只輸出描述本身。";
+    const txt = await aiGenerate(prompt);
+    const el = document.getElementById("cfDesc");
+    if(txt && el){ el.value = txt; showToast("AI 分類描述草稿已填入 — 審閱後再儲存"); }
+  });
 }
