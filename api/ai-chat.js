@@ -75,59 +75,85 @@ export default async function handler(req) {
     // 添加當前消息
     contents.push({ role: 'user', parts: [{ text: message }] });
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: contents,
-          systemInstruction: {
-            parts: [{ text: SYSTEM_PROMPT }],
+    // 模型降級鏈：新模型流量過高或停用時，自動切換到穩定備選模型
+    const models = [
+      process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+      'gemini-3.7-flash',
+      'gemini-3.5-flash-lite',
+    ];
+
+    let lastError = 'AI service error';
+    let lastStatus = 503;
+
+    for (const model of models) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 1024,
-          },
-          safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          ],
-        }),
+          body: JSON.stringify({
+            contents: contents,
+            systemInstruction: {
+              parts: [{ text: SYSTEM_PROMPT }],
+            },
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 1024,
+            },
+            safetySettings: [
+              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            ],
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        lastError = data.error?.message || 'AI service error';
+        lastStatus = response.status;
+        console.error(`Gemini API error (${model}):`, data);
+        // 僅在模型不可用 / 流量過高等可降級錯誤時嘗試下一個模型
+        const canFallback = /high demand|no longer available|not found|unavailable|quota|RESOURCE_EXHAUSTED/i.test(lastError) || [404, 429, 500, 502, 503].includes(response.status);
+        if (canFallback) continue;
+        return new Response(JSON.stringify({ 
+          error: lastError,
+          fallback: true 
+        }), {
+          status: response.status,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
-    );
 
-    const data = await response.json();
+      const aiReply = data.candidates?.[0]?.content?.parts?.[0]?.text || 
+                      'I apologize, but I could not generate a response. Please try again or contact us directly.';
 
-    if (!response.ok) {
-      console.error('Gemini API error:', data);
       return new Response(JSON.stringify({ 
-        error: data.error?.message || 'AI service error',
-        fallback: true 
+        reply: aiReply,
+        usage: data.usageMetadata
       }), {
-        status: response.status,
-        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store'
+        },
       });
     }
 
-    const aiReply = data.candidates?.[0]?.content?.parts?.[0]?.text || 
-                    'I apologize, but I could not generate a response. Please try again or contact us directly.';
-
+    // 所有模型都失敗，返回最後一個錯誤
     return new Response(JSON.stringify({ 
-      reply: aiReply,
-      usage: data.usageMetadata
+      error: lastError,
+      fallback: true 
     }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-store'
-      },
+      status: lastStatus,
+      headers: { 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
