@@ -46,9 +46,9 @@
 (function(){
   try{
     if(location.hostname !== "nebulasecret.com"){
-      var m = document.createElement("meta");
-      m.name = "robots"; m.content = "noindex,nofollow";
-      document.head.appendChild(m);
+      var m = document.querySelector('meta[name="robots"]');
+      if(!m){ m = document.createElement("meta"); m.name = "robots"; document.head.appendChild(m); }
+      m.content = "noindex,nofollow";
     }
   }catch(e){}
 })();
