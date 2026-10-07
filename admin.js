@@ -2125,35 +2125,43 @@ async function doLogin(){
         supabaseErrorMsg = error.message || "Unknown error";
         console.warn("Supabase Auth login failed:", supabaseErrorMsg);
       } else if(!error && data && data.user){
-        /* Check if user has admin role in profiles table */
+        /* Check if user has admin role: use profiles table when it exists,
+           otherwise fall back to the site's own admin list (getAdmins).
+           A successful Supabase Auth already proved the password. */
+        let roleOK = false;
         try {
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('role, name, email')
+            .select('role')
             .eq('email', data.user.email)
-            .single();
-          
+            .maybeSingle();
           if(!profileError && profileData && (profileData.role === 'admin' || profileData.role === 'superadmin')){
-            /* User is an admin, keep Supabase Auth session active */
-            showToast("Welcome, " + (profileData.name || data.user.email) + " — loading admin data...");
-            /* Reload all data with admin permissions (orders, accounts, quotes, etc.) */
-            try {
-              _cache.loaded = false;
-              await sbLoadAll();
-            } catch(e) {
-              console.warn("Failed to reload admin data:", e);
-            }
-            location.hash = "#/admin/dashboard";
-            return;
-          }else{
-            /* Not an admin, sign out and try legacy method */
-            await supabase.auth.signOut();
-            supabaseLoginFailed = true;
-            supabaseErrorMsg = "User does not have admin role";
+            roleOK = true;
           }
         } catch(profileErr) {
           console.warn("Failed to check admin role:", profileErr.message);
-          /* Continue to legacy method */
+        }
+        const siteAdmins = getAdmins();
+        const matchesSiteAdmin = siteAdmins.some(a =>
+          String(a.user || a.email || "").toLowerCase() === String(data.user.email || "").toLowerCase()
+        );
+        if(roleOK || matchesSiteAdmin){
+          /* User is an admin, keep Supabase Auth session active */
+          showToast("Welcome, " + (data.user.email) + " — loading admin data...");
+          /* Reload all data with admin permissions (orders, accounts, quotes, etc.) */
+          try {
+            _cache.loaded = false;
+            await sbLoadAll();
+          } catch(e) {
+            console.warn("Failed to reload admin data:", e);
+          }
+          location.hash = "#/admin/dashboard";
+          return;
+        }else{
+          /* Not an admin, sign out and try legacy method */
+          await supabase.auth.signOut();
+          supabaseLoginFailed = true;
+          supabaseErrorMsg = "User does not have admin role";
         }
       }
     } catch(e) {
