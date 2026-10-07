@@ -1341,7 +1341,7 @@ try {
     supabaseAvailable = true;
     dbg("Client created successfully");
     /* Test connection with a simple query */
-    supabase.from('profiles').select('id').limit(1).then(({error}) => {
+    supabase.from('site_settings').select('id').limit(1).then(({error}) => {
       if(error) {
         console.warn("[Supabase] Connection test failed (may be RLS or network):", error.message);
       } else {
@@ -1926,6 +1926,11 @@ function getTierById(tierId){
 function getCurrentCustomerTier(){
   try {
     const session = getSession();
+    /* Preferred: tier captured at login via the privileged my_tier RPC */
+    if(session && session.tier){
+      const t = getTierById(session.tier);
+      if(t) return t;
+    }
     if(session && session.email){
       const accounts = getAccounts();
       const account = accounts.find(a => a.email && a.email.toLowerCase() === session.email.toLowerCase());
@@ -2091,11 +2096,17 @@ function qCustCountry(q){ const c = q.customer || {}; return c.country || ""; }
 /* Secure password hashing using PBKDF2 with random salt */
 /* Format: pbkdf2::<iterations>::<salt_hex>::<hash_hex> */
 async function hashPass(pw){
-  /* Generate random salt */
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const iterations = 100000;
+  /* Deterministic salt = first 16 bytes of SHA-256(password), so the same
+     password always hashes identically. Required because the legacy RPC path
+     (legacy_login / admin_login / legacy_change_pass) compares hashes
+     server-side and the accounts/admins rows are no longer publicly readable.
+     (Supabase Auth remains the primary login path; this is the legacy bridge.) */
   const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
+  const pwBytes = enc.encode(pw);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", pwBytes));
+  const salt = digest.slice(0, 16);
+  const iterations = 100000;
+  const keyMaterial = await crypto.subtle.importKey("raw", pwBytes, "PBKDF2", false, ["deriveBits"]);
   const hashBuffer = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" }, keyMaterial, 256);
   const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("");
   const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
@@ -2863,7 +2874,7 @@ function openQuoteRequest(){
   }, 100);
 }
 function closeQuoteModal(){ $("#quoteModal").classList.remove("open"); }
-function submitQuoteRequest(){
+async function submitQuoteRequest(){
   const first = $("#qrFirst").value.trim();
   const last = $("#qrLast").value.trim();
   const email = $("#qrEmail").value.trim();
@@ -2901,9 +2912,29 @@ function submitQuoteRequest(){
     quoteNotes: "",
     history: [{ status: "Pending", date: new Date().toISOString(), note: "Quote request submitted" }]
   };
+  /* Submit through the privileged submit_quote RPC (append-only) */
+  const _sess = getSession();
+  quote.customerEmail = (_sess && _sess.email) ? _sess.email : email;
+  let saved = false;
+  try{
+    if(supabase){
+      const rpc = await supabase.rpc('submit_quote', { p: quote });
+      saved = !!(rpc.data && rpc.data.ok);
+      if(!saved) console.warn("submit_quote RPC failed:", rpc.error ? (rpc.error.message || rpc.error) : 'not-ok');
+    }else{
+      saved = true;
+    }
+  }catch(e){
+    console.error("submitQuoteRequest: RPC exception:", e);
+  }
+  if(!saved){
+    showToast("Failed to submit quote. Please try again.");
+    return;
+  }
+  /* Keep local cache in sync */
   const quotes = getQuotes();
   quotes.unshift(quote);
-  saveQuotes(quotes);
+  _cache.quotes = quotes;
   cart = []; saveCart(); updateCartUI();
   closeQuoteModal();
   closeCart();
@@ -2987,21 +3018,40 @@ async function placeOrder(){
   
   console.log("placeOrder: order object created, id:", o.id, "total:", o.total);
   
-  const orders = getOrders();
-  console.log("placeOrder: current orders count:", orders.length);
-  orders.unshift(o);
-  console.log("placeOrder: new orders count:", orders.length);
-  
-  const saved = await saveOrders(orders);
-  console.log("placeOrder: saveOrders result:", saved, "order id:", o.id);
+  /* Persist order through the privileged place_order RPC (appends server-side;
+     anon has no direct write access to the orders row). */
+  const _sess = getSession();
+  o.customerEmail = (_sess && _sess.email) ? _sess.email : email;
+  let saved = false;
+  try{
+    if(supabase){
+      const rpc = await supabase.rpc('place_order', { p: o });
+      saved = !!(rpc.data && rpc.data.ok);
+      if(!saved) console.warn("place_order RPC failed:", rpc.error ? (rpc.error.message || rpc.error) : 'not-ok');
+    }else{
+      /* No Supabase: fall back to local-only order (best effort) */
+      const orders = getOrders();
+      orders.unshift(o);
+      _cache.orders = orders;
+      saved = true;
+    }
+  }catch(e){
+    console.error("placeOrder: RPC exception:", e);
+  }
+  console.log("placeOrder: save result:", saved, "order id:", o.id);
   
   if(!saved){
     console.error("placeOrder: Failed to save order to Supabase!");
     showToast("Failed to save order. Please try again.");
     // Revert the order from local cache
-    const idx = orders.findIndex(x => x.id === o.id);
-    if(idx >= 0) orders.splice(idx, 1);
+    const idx = getOrders().findIndex(x => x.id === o.id);
+    if(idx >= 0) getOrders().splice(idx, 1);
     return;
+  }else{
+    /* Keep local cache in sync */
+    const orders = getOrders();
+    orders.unshift(o);
+    _cache.orders = orders;
   }
   
   lastOrder = o;
@@ -4201,10 +4251,10 @@ function viewAccount(){
   /* Always show reset view if in reset mode, even if signed in */
   const inner = isResetMode ? accountResetView() : (s ? accountSignedIn(s) : accountSignIn());
   $("#app").innerHTML = '<section class="block animate-on-scroll"><div class="page"><div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<span class="cur">My Account</span></div><div class="acct-wrap">' + inner + '</div></div></section>';
-  /* Refresh latest orders & quotes from Supabase when signed in */
+  /* Refresh the customer's own orders & quotes from Supabase when signed in
+     (via privileged RPCs — the raw rows are admin-only) */
   if(s && supabase && !isResetMode){
-    sbRefreshKey("orders").catch(()=>{});
-    sbRefreshKey("quotes").catch(()=>{});
+    sbRefreshMyData().catch(()=>{});
   }
   /* If this is a Supabase Auth recovery callback, show new password form.
      Guard on _resetState: re-rendering while the form is already shown
@@ -4229,6 +4279,23 @@ async function sbRefreshKey(key){
   try{
     const { data, error } = await supabase.from('site_settings').select('data').eq('id', key).single();
     if(!error && data){ _cache[key] = data.data; }
+  }catch(e){}
+}
+/* Fetch the signed-in customer's own orders & quotes (RLS-safe) and re-render
+   the account section if still on it. Admins skip this — they hold the full
+   dataset in _cache after login. */
+async function sbRefreshMyData(){
+  try{
+    const s = getSession();
+    if(!s) return;
+    if(s.role === 'admin' || s.role === 'superadmin') return;
+    const [o, q] = await Promise.all([
+      supabase.rpc('my_orders'),
+      supabase.rpc('my_quotes')
+    ]);
+    if(!o.error) _cache.myOrders = o.data || [];
+    if(!q.error) _cache.myQuotes = q.data || [];
+    if(location.hash === '#/account' || location.hash === '#/account/') viewAccount();
   }catch(e){}
 }
 function accountSignIn(){
@@ -4613,27 +4680,30 @@ async function acctRegister(){
   }
   
   /* Always save to legacy accounts for backward compatibility */
+  /* Register in the admin-visible account list via RPC (best effort — Supabase
+     Auth is the source of truth; anon has no direct write access to accounts) */
   console.log("acctRegister: saving to legacy accounts");
-  const accs = getAccounts();
-  if(!accs.some(a => a.email === email)){
+  try{
     const hash = await hashPass(pass);
-    accs.push({ name, email, pass: hash, created: new Date().toISOString(), tier: 'new' });
-    const saved = await saveAccounts(accs);
-    console.log("acctRegister: legacy account saved to Supabase:", saved, "email:", email, "count:", accs.length);
-    if(!saved){
-      console.error("acctRegister: Failed to save account to Supabase!");
-      err.textContent = "Failed to save account. Please try again.";
-      return;
+    if(supabase){
+      const rpc = await supabase.rpc('register_account', { n: name, e: email, h: hash });
+      if(rpc.error) console.warn("register_account RPC:", rpc.error.message || rpc.error);
+    }else{
+      const accs = getAccounts();
+      if(!accs.some(a => a.email === email)){
+        accs.push({ name, email, pass: hash, created: new Date().toISOString(), tier: 'new' });
+        _cache.accounts = accs;
+      }
     }
-  } else {
-    console.log("acctRegister: account already exists in legacy accounts");
+  }catch(e){
+    console.warn("acctRegister: legacy record best-effort failed:", e.message);
   }
   
   /* Set session and redirect */
   if(supabaseAuthSuccess){
-    setSession({ name, email, supabaseAuth: true, userId: supabaseUserId });
+    setSession({ name, email, supabaseAuth: true, userId: supabaseUserId, tier: 'new' });
   } else {
-    setSession({ name, email });
+    setSession({ name, email, tier: 'new' });
   }
   updateAcctLabel();
   showToast("Welcome, " + name.split(" ")[0] + "!");
@@ -4652,22 +4722,14 @@ async function acctLogin(){
       const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
       if(!error && data && data.user){
         const name = data.user.user_metadata?.name || email.split('@')[0];
-        setSession({ name, email, supabaseAuth: true, userId: data.user.id });
-        updateAcctLabel();
-        /* Record last login time for Supabase Auth users too */
+        /* Fetch the customer's tier via RPC (accounts list is admin-only now) */
+        let tier = null;
         try{
-          const all = getAccounts();
-          const i = all.findIndex(a => a.email === email);
-          if(i >= 0){ 
-            all[i].lastLogin = new Date().toISOString(); 
-            all[i].name = all[i].name || name;
-            saveAccounts(all); 
-          } else {
-            /* Add to legacy accounts for tracking if not exists */
-            all.push({ name, email, pass: 'supabase_auth', created: new Date().toISOString(), lastLogin: new Date().toISOString(), tier: 'new' });
-            saveAccounts(all);
-          }
-        }catch(e){ /* Ignore login time recording errors */ }
+          const tr = await supabase.rpc('my_tier');
+          if(!tr.error && tr.data && tr.data.tier) tier = tr.data.tier;
+        }catch(e){}
+        setSession({ name, email, supabaseAuth: true, userId: data.user.id, tier: tier || 'new' });
+        updateAcctLabel();
         showToast("Signed in as " + name.split(" ")[0]);
         route();
         return;
@@ -4677,37 +4739,35 @@ async function acctLogin(){
     console.warn("Supabase Auth login failed, trying legacy method");
   }
   
-  /* Method 2: Legacy account system with throttle + PBKDF2 upgrade */
+  /* Method 2: Legacy account system via privileged RPC (accounts list is not
+     publicly readable) with client-side throttle */
   const wait = checkLoginThrottle("acct:" + email);
   if(wait > 0){ err.textContent = "Too many failed attempts. Try again in " + wait + "s."; return; }
-  const acc = getAccounts().find(a => a.email === email);
-  if(!acc){ recordLoginFail("acct:" + email); err.textContent = "No account found with this email — create one above"; return; }
-  return verifyPass(pass, acc.pass).then(async valid => {
-    if(!valid){ recordLoginFail("acct:" + email); err.textContent = "Incorrect password"; return; }
+  if(!supabase){ recordLoginFail("acct:" + email); err.textContent = "No account found with this email — create one above"; return; }
+  try{
+    const hash = await hashPass(pass);
+    const { data, error } = await supabase.rpc('legacy_login', { e: email, h: hash });
+    if(error || !data || !data.ok){
+      recordLoginFail("acct:" + email);
+      err.textContent = "No account found with this email — create one above";
+      return;
+    }
     clearLoginFails("acct:" + email);
-    /* Upgrade legacy password hashes to PBKDF2 on successful login */
-    try{
-      if(String(acc.pass).indexOf("pbkdf2::") !== 0){
-        const all = getAccounts();
-        const i = all.findIndex(a => a.email === email);
-        if(i >= 0){ all[i].pass = await hashPass(pass); saveAccounts(all); }
-      }
-    }catch(e){ /* Ignore upgrade errors */ }
-    /* Record last login time */
-    try{
-      const all = getAccounts();
-      const i = all.findIndex(a => a.email === email);
-      if(i >= 0){ all[i].lastLogin = new Date().toISOString(); saveAccounts(all); }
-    }catch(e){ /* Ignore login time recording errors */ }
-    setSession({ name: acc.name, email: acc.email, ts: Date.now() });
+    setSession({ name: data.name || email.split('@')[0], email: email, tier: data.tier || 'new', ts: Date.now() });
     updateAcctLabel();
-    showToast("Signed in as " + acc.name.split(" ")[0]);
+    showToast("Signed in as " + (data.name || email.split('@')[0]).split(" ")[0]);
     route();
-  });
+  }catch(e){
+    recordLoginFail("acct:" + email);
+    err.textContent = "No account found with this email — create one above";
+  }
 }
 function accountSignedIn(s){
-  const orders = myOrders(s.email);
-  const quotes = myQuotes(s.email);
+  /* Customers read only their own orders/quotes (fetched via RPC into
+     _cache.myOrders/_cache.myQuotes); admins use the full cache. */
+  const isAdminUser = s.role === 'admin' || s.role === 'superadmin';
+  const orders = isAdminUser ? myOrders(s.email) : (_cache.myOrders || myOrders(s.email));
+  const quotes = isAdminUser ? myQuotes(s.email) : (_cache.myQuotes || myQuotes(s.email));
   const customerTier = getCurrentCustomerTier();
   const customerDiscount = customerTier.discount || 0;
   const orderHtml = orders.length
@@ -4773,7 +4833,7 @@ function accountSignedIn(s){
   '<div class="acct-card"><h2>My orders</h2>' + orderHtml + '</div>';
 }
 
-function viewCustomerQuote(id){
+async function viewCustomerQuote(id){
   try{
   // If we're not already on the quote URL, update the hash and let the router handle it
   const expectedHash = "#/quote/" + id;
@@ -4781,8 +4841,16 @@ function viewCustomerQuote(id){
     location.hash = expectedHash;
     return;
   }
-  const q = findQuoteById(id);
+  let q = findQuoteById(id);
   const s = getSession();
+  const isAdminUser = s && (s.role === 'admin' || s.role === 'superadmin');
+  /* Customers: quotes are admin-only at rest — fetch own list via RPC */
+  if(!q && s && !isAdminUser && supabase){
+    try{
+      const { data, error } = await supabase.rpc('my_quotes');
+      if(!error && data){ _cache.myQuotes = data; q = data.find(x => x.id === id); }
+    }catch(e){}
+  }
   if(!q){
     /* Data may not be loaded yet on direct navigation — stay on this hash;
        the post-load route() will retry. */
@@ -4797,7 +4865,6 @@ function viewCustomerQuote(id){
   }
   const quoteEmail = String(qCustEmail(q)).toLowerCase();
   const userEmail = String(s.email).toLowerCase();
-  const isAdminUser = s.role === 'admin' || s.role === 'superadmin';
   if(quoteEmail && quoteEmail !== userEmail && !isAdminUser){
     showToast("This quote belongs to another account");
     location.hash = "#/account";
@@ -4995,16 +5062,23 @@ function quotePDFHtml(q){
   '</div>';
 }
 
-function viewCustomerOrder(id){
+async function viewCustomerOrder(id){
   // If we're not already on the order URL, update the hash and let the router handle it
   const expectedHash = "#/order/" + id;
   if(location.hash !== expectedHash){
     location.hash = expectedHash;
     return;
   }
-  const o = findOrderById(id);
+  let o = findOrderById(id);
   const s = getSession();
   const isAdminUser = s && (s.role === 'admin' || s.role === 'superadmin');
+  /* Customers: orders are admin-only at rest — fetch own list via RPC */
+  if(!o && s && !isAdminUser && supabase){
+    try{
+      const { data, error } = await supabase.rpc('my_orders');
+      if(!error && data){ _cache.myOrders = data; o = data.find(x => x.id === id); }
+    }catch(e){}
+  }
   if(!o || !s || (String(custEmail(o)).toLowerCase() !== String(s.email).toLowerCase() && !isAdminUser)){
     /* Data may not be loaded yet on direct navigation (boot route() runs before
        sbLoadAll finishes) — stay on this hash; the post-load route() will retry. */
@@ -5113,14 +5187,12 @@ async function changePassSave(){
         /* Update password */
         const { error: updateError } = await supabase.auth.updateUser({ password: newP });
         if(!updateError){
-          /* Also update legacy account for backward compatibility */
-          const accs = getAccounts();
-          const acc = accs.find(a => a.email === s.email);
-          if(acc){
+          /* Keep the admin-visible account list in sync via privileged RPC
+             (accounts is admin-only; failures are non-blocking) */
+          try{
             const nh = await hashPass(newP);
-            acc.pass = nh;
-            saveAccounts(accs);
-          }
+            if(supabase) await supabase.rpc('update_account_pass', { e: s.email, h: nh });
+          }catch(e){ console.warn("update_account_pass best-effort:", e.message); }
           showToast("Password updated");
           const o1 = $("#cpOld"), o2 = $("#cpNew");
           if(o1) o1.value = ""; if(o2) o2.value = "";
@@ -5133,22 +5205,24 @@ async function changePassSave(){
     }
   }
   
-  /* Method 2: Legacy account system */
-  const accs = getAccounts();
-  const acc = accs.find(a => a.email === s.email);
-  if(!acc){ err.textContent = "Account not found"; return; }
-  return verifyPass(oldP, acc.pass).then(valid => {
-    if(!valid){ err.textContent = "Current password is incorrect"; return; }
-    if(newP.length < 6){ err.textContent = "New password must be at least 6 characters"; return; }
-    return hashPass(newP).then(nh => {
-      acc.pass = nh;
-      saveAccounts(accs);
-      showToast("Password updated");
-      const o1 = $("#cpOld"), o2 = $("#cpNew");
-      if(o1) o1.value = ""; if(o2) o2.value = "";
-      const b = $("#passBox"); if(b) b.style.display = "none";
-    });
-  });
+  /* Method 2: Legacy account system (verified + updated via privileged RPC;
+     the accounts list is not publicly readable) */
+  if(newP.length < 6){ err.textContent = "New password must be at least 6 characters"; return; }
+  try{
+    const oldH = await hashPass(oldP);
+    const newH = await hashPass(newP);
+    const { data, error } = await supabase.rpc('legacy_change_pass', { e: s.email, old_h: oldH, new_h: newH });
+    if(error || !data){
+      err.textContent = "Current password is incorrect";
+      return;
+    }
+    showToast("Password updated");
+    const o1 = $("#cpOld"), o2 = $("#cpNew");
+    if(o1) o1.value = ""; if(o2) o2.value = "";
+    const b = $("#passBox"); if(b) b.style.display = "none";
+  }catch(e){
+    err.textContent = "Account not found";
+  }
 }
 async function acctLogout(){
   /* Sign out from Supabase Auth if logged in */

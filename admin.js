@@ -1996,19 +1996,16 @@ async function viewAdminLogin(msg){
   const admins = getAdmins();
   let hasAdmins = admins && admins.length > 0;
   
-  /* Also check profiles table for admin accounts (Supabase Auth) */
+  /* Also check the server-side admin count via privileged RPC (RLS-safe —
+     the raw admins row is admin-only, so getAdmins() is empty pre-login) */
   if(!hasAdmins && typeof supabase !== 'undefined'){
     try{
-      const { data: profileData, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .in('role', ['admin', 'superadmin'])
-        .limit(1);
-      if(!error && profileData && profileData.length > 0){
+      const { data, error } = await supabase.rpc('admin_count');
+      if(!error && data > 0){
         hasAdmins = true;
       }
     }catch(e){
-      console.log("Failed to check profiles for admins:", e.message);
+      console.log("Failed to check admin count:", e.message);
     }
   }
   
@@ -2088,7 +2085,16 @@ async function doInitAdmin(){
       created: new Date().toISOString()
     };
     
-    saveAdmins([newAdmin]).then(r => { if(r && r.ok) showToast("Admin account created successfully"); });
+    /* Create admin via privileged bootstrap RPC (only works while the admins
+       list is empty; the raw row is admin-only) */
+    const rpcRes = await supabase.rpc('bootstrap_admin', { u: email, pass_hash: hashedPass, n: name });
+    if(rpcRes.error || !rpcRes.data){
+      if(err) err.textContent = "An admin account already exists — please sign in.";
+      if(err && err.classList) err.classList.add("show");
+      if(btn){ btn.disabled = false; btn.textContent = "Create Admin Account"; }
+      return;
+    }
+    showToast("Admin account created successfully");
     
     /* Also try to create Supabase Auth user */
     try{
@@ -2138,22 +2144,14 @@ async function doLogin(){
         supabaseErrorMsg = error.message || "Unknown error";
         console.warn("Supabase Auth login failed:", supabaseErrorMsg);
       } else if(!error && data && data.user){
-        /* Check if user has admin role: use profiles table when it exists,
-           otherwise fall back to the site's own admin list (getAdmins).
-           A successful Supabase Auth already proved the password. */
+        /* Check if user has admin role: JWT user_metadata first (authoritative),
+           then the site's own admin list (getAdmins). A successful Supabase
+           Auth already proved the password. */
         let roleOK = false;
-        try {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('email', data.user.email)
-            .maybeSingle();
-          if(!profileError && profileData && (profileData.role === 'admin' || profileData.role === 'superadmin')){
-            roleOK = true;
-          }
-        } catch(profileErr) {
-          console.warn("Failed to check admin role:", profileErr.message);
-        }
+        try{
+          const meta = data.user.user_metadata || {};
+          if(meta.role === 'admin' || meta.role === 'superadmin') roleOK = true;
+        }catch(metaErr){}
         const siteAdmins = getAdmins();
         const matchesSiteAdmin = siteAdmins.some(a =>
           String(a.user || a.email || "").toLowerCase() === String(data.user.email || "").toLowerCase()
@@ -2186,22 +2184,16 @@ async function doLogin(){
     console.warn("Supabase not available, skipping Supabase Auth login");
   }
 
-  /* Method 2: Try legacy admin system (stored in site_settings) */
+  /* Method 2: Legacy admin system via privileged RPC (the admins row is not
+     publicly readable; verified server-side) */
   try {
-    const admins = getAdmins();
-    /* Match by login name or email */
-    const admin = admins.find(a =>
-      a.user.toLowerCase() === email.toLowerCase() ||
-      (a.email && a.email.toLowerCase() === email.toLowerCase())
-    );
-
-    if(admin){
-      /* Verify password */
-      const isValid = await verifyPass(p, admin.pass);
-      if(isValid){
+    if(supabase){
+      const hashed = await hashPass(p);
+      const { data, error } = await supabase.rpc('admin_login', { e: email, h: hashed });
+      if(!error && data && data.ok){
         /* Set legacy admin session */
-        setAdminSession(admin.user, admin.name || admin.user);
-        showToast("Welcome, " + (admin.name || admin.user) + " — loading admin data...");
+        setAdminSession(data.user, data.name || data.user);
+        showToast("Welcome, " + (data.name || data.user) + " — loading admin data...");
         /* Reload all data with admin permissions */
         try {
           _cache.loaded = false;
