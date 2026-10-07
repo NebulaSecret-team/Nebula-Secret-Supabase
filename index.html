@@ -2126,14 +2126,8 @@ function myOrders(email){ return getOrders().filter(o => String(custEmail(o)).to
 /* ============ Admin user accounts (multiple admins, change password) ============ */
 /* No hardcoded default credentials: with no admins in Supabase, legacy login is
    disabled — provision the first admin via Supabase Auth instead. */
-function getAdmins(){
-  const raw = _cache.admins;
-  if(!raw || !Array.isArray(raw) || raw.length === 0){
-    /* Return empty array — no default admin for security */
-    return [];
-  }
-  // Normalize: support both legacy {u,p} and current {user,pass} formats
-  return raw.map(a => ({
+function _normalizeAdmins(list){
+  return list.map(a => ({
     user: a.user || a.u,
     pass: a.pass || a.p,
     name: a.name || a.user || a.u,
@@ -2141,7 +2135,27 @@ function getAdmins(){
     created: a.created || null
   }));
 }
-function saveAdmins(list){ _cache.admins = list; sbSave("admins", list); }
+function getAdmins(){
+  let raw = _cache.admins;
+  if(!raw || !Array.isArray(raw) || raw.length === 0){
+    /* Supabase INSERT is blocked by RLS for the first admin row (chicken-and-egg),
+       so fall back to the local copy to keep the panel usable on this browser. */
+    raw = null;
+    try{
+      const local = localStorage.getItem(LS.admins);
+      if(local){ const parsed = JSON.parse(local); if(Array.isArray(parsed) && parsed.length) raw = parsed; }
+    }catch(e){}
+    if(!raw) return [];
+  }
+  return _normalizeAdmins(raw);
+}
+function saveAdmins(list){
+  _cache.admins = list;
+  /* Persist locally as well — the server-side 'admins' row can only be created
+     once an admin already exists (RLS), so the first admin lives on this browser. */
+  try{ localStorage.setItem(LS.admins, JSON.stringify(list)); }catch(e){}
+  sbSave("admins", list);
+}
 /* Login brute-force throttle (client-side defense in depth: 5 fails = 5-min lockout.
    A cleared localStorage resets it — server-side limits remain Supabase Auth's.) */
 function _throttleKey(k){ return "ns_login_fail_" + k; }
