@@ -1707,8 +1707,8 @@ function adminTheme(){
           THEME_PRESETS.map((p,i) => '<button class="swatch" style="background:' + p.brand + '" title="' + p.name + '" onclick="applyPreset(' + i + ')"></button>').join("") +
         '</div></div>' +
         '<div class="field"><label>Hero kicker</label><input id="thKicker" value="' + esc(th.heroKicker) + '"></div>' +
-        '<div class="field full"><label>Hero title</label><input id="thTitle" value="' + esc(th.heroTitle) + '"></div>' +
-        '<div class="field full"><label>Hero subtitle</label><textarea id="thSub" rows="2">' + esc(th.heroSub) + '</textarea></div>' +
+        '<div class="field full"><label>Hero title</label><div style="display:flex;gap:8px"><input id="thTitle" value="' + esc(th.heroTitle) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'thTitle\', this)" title="Generate with AI">✨ AI</button></div></div>' +
+        '<div class="field full"><label>Hero subtitle</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="thSub" rows="2" style="flex:1">' + esc(th.heroSub) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'thSub\', this)" title="Generate with AI">✨ AI</button></div></div>' +
         '<div class="field full"><label>Hero banner image (URL or upload)</label><div style="display:flex;gap:8px;align-items:center"><input id="thBanner" value="' + esc(th.banner) + '" style="flex:1" placeholder="Paste image URL or click Upload"><button type="button" class="btn sm" style="flex-shrink:0" onclick="document.getElementById(\'thBannerFile\').click()">Upload Image</button></div><input type="file" id="thBannerFile" accept="image/*" style="display:none" onchange="handleBannerUpload(this)"><div id="thBannerPreview" style="margin-top:8px"></div></div>' +
       '</div>' +
     '</div></div>' +
@@ -1797,24 +1797,24 @@ function adminContent(){
         '</div></details>' +
       '<details class="ct-block" open><summary><b>Footer</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field full"><label>Brand description</label><textarea id="ctFooterDesc" rows="3">' + esc(fo.desc || DEF.footerDesc) + '</textarea></div>' +
+          '<div class="field full"><label>Brand description</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="ctFooterDesc" rows="3" style="flex:1">' + esc(fo.desc || DEF.footerDesc) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctFooterDesc\', this)" title="Generate with AI">✨ AI</button></div></div>' +
           '<div class="field full"><label>Copyright line</label><input id="ctFooterCopy" value="' + esc(fo.copyright || DEF.footerCopy) + '"></div>' +
         '</div></details>' +
       '<details class="ct-block" open><summary><b>About — Our Story</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field"><label>Section title</label><input id="ctStoryT" value="' + esc((ab.story||{}).t || DEF.storyT) + '"></div>' +
-          '<div class="field full"><label>Body (HTML)</label><textarea id="ctStoryB" rows="6">' + esc((ab.story||{}).b || DEF.storyB) + '</textarea></div>' +
+          '<div class="field"><label>Section title</label><div style="display:flex;gap:8px"><input id="ctStoryT" value="' + esc((ab.story||{}).t || DEF.storyT) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctStoryT\', this)" title="Generate with AI">✨ AI</button></div></div>' +
+          '<div class="field full"><label>Body (HTML)</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="ctStoryB" rows="6" style="flex:1">' + esc((ab.story||{}).b || DEF.storyB) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctStoryB\', this)" title="Generate with AI">✨ AI</button></div></div>' +
         '</div></details>' +
       '<details class="ct-block"><summary><b>About — Our Mission</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field"><label>Section title</label><input id="ctMissionT" value="' + esc((ab.mission||{}).t || DEF.missionT) + '"></div>' +
-          '<div class="field"><label>Lead line</label><input id="ctMissionLead" value="' + esc((ab.mission||{}).lead || DEF.missionLead) + '"></div>' +
-          '<div class="field full"><label>Body (HTML)</label><textarea id="ctMissionB" rows="6">' + esc((ab.mission||{}).b || DEF.missionB) + '</textarea></div>' +
+          '<div class="field"><label>Section title</label><div style="display:flex;gap:8px"><input id="ctMissionT" value="' + esc((ab.mission||{}).t || DEF.missionT) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctMissionT\', this)" title="Generate with AI">✨ AI</button></div></div>' +
+          '<div class="field"><label>Lead line</label><div style="display:flex;gap:8px"><input id="ctMissionLead" value="' + esc((ab.mission||{}).lead || DEF.missionLead) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctMissionLead\', this)" title="Generate with AI">✨ AI</button></div></div>' +
+          '<div class="field full"><label>Body (HTML)</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="ctMissionB" rows="6" style="flex:1">' + esc((ab.mission||{}).b || DEF.missionB) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctMissionB\', this)" title="Generate with AI">✨ AI</button></div></div>' +
         '</div></details>' +
       '<details class="ct-block"><summary><b>About — Our Promise</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field"><label>Section title</label><input id="ctPromiseT" value="' + esc((ab.promise||{}).t || DEF.promiseT) + '"></div>' +
-          '<div class="field full"><label>Lead line</label><input id="ctPromiseLead" value="' + esc((ab.promise||{}).lead || DEF.promiseLead) + '"></div>' +
+          '<div class="field"><label>Section title</label><div style="display:flex;gap:8px"><input id="ctPromiseT" value="' + esc((ab.promise||{}).t || DEF.promiseT) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctPromiseT\', this)" title="Generate with AI">✨ AI</button></div></div>' +
+          '<div class="field full"><label>Lead line</label><div style="display:flex;gap:8px"><input id="ctPromiseLead" value="' + esc((ab.promise||{}).lead || DEF.promiseLead) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctPromiseLead\', this)" title="Generate with AI">✨ AI</button></div></div>' +
         '</div></details>' +
     '</div></div>' +
     '<div class="save-bar"><span class="sb-note">Edit any field above and click Save. Empty fields are not saved (keeps current content).</span><button class="btn" onclick="saveContentForm()">Save Content</button></div>';
@@ -2371,3 +2371,46 @@ function filterDashboardActivity(type){
   }
 }
 
+
+/* ============ AI 內容助手：用 Gemini 生成文案草稿，管理員審閱後再儲存 ============ */
+const AI_COPY_PROMPTS = {
+  thTitle: "a short, powerful B2B hero headline (maximum 8 words) for a skincare wholesale & OEM/ODM manufacturer. Professional, confident, international. Output only the headline.",
+  thSub: "a 1-2 sentence hero subtitle for a B2B skincare wholesale & OEM/ODM manufacturer website, mentioning wholesale supply, private label / OEM-ODM and global sourcing. Output only the subtitle.",
+  ctFooterDesc: "a 2-3 sentence brand description for the footer of a B2B skincare wholesale & OEM/ODM manufacturer website. Output only the description.",
+  ctStoryT: "a short section title (maximum 6 words) about the brand story of a skincare wholesale manufacturer. Output only the title.",
+  ctStoryB: "a 4-5 sentence brand story for a B2B skincare wholesale & OEM/ODM manufacturer with UK headquarters, offices in Hong Kong and mainland China, and Asia-Pacific sourcing. Do not invent years, certifications, client names or numbers. Output plain text without HTML.",
+  ctMissionT: "a short section title (maximum 6 words) about the company mission of a skincare wholesale manufacturer. Output only the title.",
+  ctMissionLead: "a single-sentence lead line about the company mission (self-care, quality, accessibility). Output only the sentence.",
+  ctMissionB: "a 3-4 sentence mission statement for a B2B skincare wholesale & OEM/ODM manufacturer, covering sourcing, formulation, packaging, quality control and trust. Do not invent facts. Output plain text without HTML.",
+  ctPromiseT: "a short section title (maximum 6 words) about the brand promise of a skincare wholesale manufacturer. Output only the title.",
+  ctPromiseLead: "a single-sentence brand promise about quality, integrity and partnership. Output only the sentence."
+};
+async function aiGenerateCopy(target, btn){
+  const prompt = AI_COPY_PROMPTS[target];
+  if(!prompt){ showToast("Unknown field"); return; }
+  const el = document.getElementById(target);
+  if(!el){ showToast("Field not found"); return; }
+  const oldLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "…";
+  try{
+    const res = await fetch("/api/ai-chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "You are a professional B2B e-commerce copywriter. Write " + prompt, history: [] })
+    });
+    const data = await res.json();
+    if(data.reply){
+      let txt = data.reply.replace(/^["'\s]+|["'\s]+$/g, "").replace(/\s*\n\s*/g, " ").trim();
+      if(target === "ctStoryB" || target === "ctMissionB"){ txt = "<p>" + txt + "</p>"; }
+      el.value = txt;
+      showToast("AI draft ready — review before saving");
+    } else {
+      showToast("AI service busy — try again later");
+    }
+  }catch(e){
+    console.error("AI copy error:", e);
+    showToast("AI service error");
+  }finally{
+    btn.disabled = false; btn.textContent = oldLabel;
+  }
+}

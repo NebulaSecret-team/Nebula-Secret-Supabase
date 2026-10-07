@@ -40,26 +40,81 @@
 <meta name="keywords" content="wholesale skincare, OEM cosmetics, ODM beauty products, private label skincare, wholesale body care, home wellness products, bulk cosmetics, custom formulation">
 <meta name="author" content="Nebula Secret">
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="https://nebula-secret-supabase.vercel.app/">
+<link rel="canonical" href="https://nebulasecret.com/">
+<script>
+/* Preview/staging hosts (uat, vercel.app) must not be indexed; canonical stays on the production domain */
+(function(){
+  try{
+    if(location.hostname !== "nebulasecret.com"){
+      var m = document.createElement("meta");
+      m.name = "robots"; m.content = "noindex,nofollow";
+      document.head.appendChild(m);
+    }
+  }catch(e){}
+})();
+</script>
+<meta name="theme-color" content="#ff5983">
+<meta name="application-name" content="Nebula Secret">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://nebulasecret.com/#organization",
+      "name": "Nebula Secret",
+      "url": "https://nebulasecret.com/",
+      "email": "sales@nebulasecret.com",
+      "description": "Wholesale supplier and OEM/ODM manufacturer of skincare, body care, home wellness products and everyday essentials found in department stores.",
+      "logo": { "@type": "ImageObject", "url": "https://nebulasecret.com/images/nebula-logo-noText.png" },
+      "contactPoint": { "@type": "ContactPoint", "contactType": "sales", "email": "sales@nebulasecret.com", "availableLanguage": "English" }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://nebulasecret.com/#website",
+      "url": "https://nebulasecret.com/",
+      "name": "Nebula Secret — Wholesale Supplier & OEM/ODM Manufacturer",
+      "publisher": { "@id": "https://nebulasecret.com/#organization" },
+      "inLanguage": "en"
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://nebulasecret.com/#faq",
+      "mainEntity": [
+        {"@type":"Question","name":"Is Nebula Secret a retail or wholesale company?","acceptedAnswer":{"@type":"Answer","text":"Nebula Secret is a wholesale and OEM/ODM supplier. We do not sell retail to end consumers. Our products are available for bulk purchase by retailers, distributors, salons, spas, and brands looking for private label or custom formulation services."}},
+        {"@type":"Question","name":"What is the minimum order quantity (MOQ)?","acceptedAnswer":{"@type":"Answer","text":"Minimum order quantities vary by product. In-stock items may have lower MOQs, while made-to-order and custom formulation products typically require a minimum order. Contact us at sales@nebulasecret.com with the products you are interested in and we will provide specific MOQ and pricing information."}},
+        {"@type":"Question","name":"Can I order samples before placing a bulk order?","acceptedAnswer":{"@type":"Answer","text":"Yes! We strongly recommend ordering samples before committing to a large wholesale order. Samples allow you to evaluate product quality, scent, texture, and packaging. Contact us to request samples — sample shipping is typically via express courier."}},
+        {"@type":"Question","name":"What payment methods do you accept?","acceptedAnswer":{"@type":"Answer","text":"We operate on a quote-to-order model — online checkout payment is not available. After you place an order, our sales team will contact you to confirm payment options including Bank Transfer (T/T), PayPal, Letter of Credit (L/C), and Western Union."}},
+        {"@type":"Question","name":"Do you require a deposit?","acceptedAnswer":{"@type":"Answer","text":"For made-to-order and custom formulation products, a deposit (typically 30–50%) is required before production begins. The balance is due before shipment. For in-stock items, full payment is typically required before shipment. Deposit terms are confirmed in your proforma invoice."}},
+        {"@type":"Question","name":"Can I cancel my order?","acceptedAnswer":{"@type":"Answer","text":"For in-stock items, cancellation may be possible before shipment — please contact us immediately. For made-to-order products, once a deposit is received and production has begun, orders cannot be cancelled and the deposit is non-refundable."}},
+        {"@type":"Question","name":"What is your return policy?","acceptedAnswer":{"@type":"Answer","text":"As a wholesale supplier, we do not accept returns for change-of-mind or unsold stock. All sales are final once the order is confirmed and shipped. If you receive damaged or defective goods, please contact us within 7 days of delivery with photos."}},
+        {"@type":"Question","name":"How long does production and delivery take?","acceptedAnswer":{"@type":"Answer","text":"Production and delivery times vary by product. In-stock items typically ship within 3–7 business days of payment confirmation. Made-to-order items have longer lead times. Transit depends on your destination and shipping method: express 3–7 days, air 7–14 days, sea 20–45 days."}},
+        {"@type":"Question","name":"Do you offer OEM/ODM and private label services?","acceptedAnswer":{"@type":"Answer","text":"Yes! We offer comprehensive OEM/ODM services including custom formulations, custom packaging, private labeling, and product development. Contact us to discuss your custom project."}},
+        {"@type":"Question","name":"Will I have to pay customs duties or taxes?","acceptedAnswer":{"@type":"Answer","text":"For FOB/CIF shipments, import taxes, customs duties, and fees are the responsibility of the buyer. For DDP (Delivered Duty Paid) shipments, all duties and taxes are included in the quoted price."}}
+      ]
+    }
+  ]
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Varela+Round&family=Tilt+Neon&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://nebula-secret-supabase.vercel.app/">
+<meta property="og:url" content="https://nebulasecret.com/">
 <meta property="og:title" content="Nebula Secret — Wholesale Supplier & OEM/ODM Manufacturer">
 <meta property="og:description" content="Wholesale supplier and OEM/ODM manufacturer of skincare, body care, home wellness and more. Everyday products found in department stores, sourced globally and tailored to your requirements.">
-<meta property="og:image" content="https://nebula-secret-supabase.vercel.app/images/Neubla_logo_black_1729172124.png">
+<meta property="og:image" content="https://nebulasecret.com/images/Neubla_logo_black_1729172124.png">
 <meta property="og:site_name" content="Nebula Secret">
 <meta property="og:locale" content="en_US">
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:url" content="https://nebula-secret-supabase.vercel.app/">
+<meta name="twitter:url" content="https://nebulasecret.com/">
 <meta name="twitter:title" content="Nebula Secret — Wholesale Supplier & OEM/ODM Manufacturer">
 <meta name="twitter:description" content="Wholesale supplier and OEM/ODM manufacturer of skincare, body care, home wellness and more.">
-<meta name="twitter:image" content="https://nebula-secret-supabase.vercel.app/images/Neubla_logo_black_1729172124.png">
+<meta name="twitter:image" content="https://nebulasecret.com/images/Neubla_logo_black_1729172124.png">
 
 <link rel="icon" type="image/png" href="images/icon_512x512_android_ODEwMj.png">
 <link rel="apple-touch-icon" href="images/icon_512x512_android_ODEwMj.png">
@@ -1416,6 +1471,41 @@ async function sbSave(key, data){
     console.warn("Supabase save exception (" + key + "):", e);
     return {ok:false, error: String(e)};
   }
+}
+
+/* Inject Product ItemList JSON-LD after products are loaded (SEO rich results) */
+function injectProductJsonLd(){
+  try{
+    var prods = (_cache && _cache.products) || getProducts();
+    if(!prods || !prods.length) return;
+    if(document.getElementById("ns-product-jsonld")) return;
+    var items = prods.slice(0, 100).map(function(p, i){
+      var img = imgUrl(p.i, 600);
+      if(img.indexOf("http") !== 0){ img = location.origin + "/" + img.replace(/^\//, ""); }
+      return {
+        "@type": "ListItem",
+        "position": i + 1,
+        "item": {
+          "@type": "Product",
+          "name": p.n,
+          "image": img,
+          "category": p.cs || "",
+          "description": (Array.isArray(p.d) ? p.d.join(". ") : (p.d || "")).slice(0, 300)
+        }
+      };
+    });
+    var script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "ns-product-jsonld";
+    script.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": "Nebula Secret — Wholesale Products",
+      "numberOfItems": prods.length,
+      "itemListElement": items
+    });
+    document.head.appendChild(script);
+  }catch(e){ console.warn("JSON-LD product injection failed:", e); }
 }
 
 /* Wait for cache to be loaded (used by async init) */
@@ -5113,6 +5203,7 @@ function loadAdminScript(callback){
 }
 
 function route(){
+  currentProduct = null; /* clear last-viewed product context on navigation */
   closeCart(); closeCheckout(); closeAdminModal(); closeMegaMenu();
   window.scrollTo(0, 0);
   const h = location.hash || "#/";
@@ -5417,6 +5508,7 @@ sbLoadAll().then(() => {
   applyFooterContent();
   renderCatNav();
   buildCurSel();
+  injectProductJsonLd();
   /* Sync Supabase Auth session to localStorage */
   if(typeof syncAuthSession === 'function') syncAuthSession();
   updateAcctLabel();
@@ -5736,6 +5828,29 @@ function sendChatbotMessage(){
     showLeadForm();
     return;
   }
+
+  /* AI 訂單助手：偵測 NS- 訂單編號，用本地訂單資料直接回覆（與訂單追蹤頁相同的驗證條件） */
+  const _orderMatch = text.match(/\bNS[- ]?\d{3,}\b/i);
+  if(_orderMatch){
+    const _oid = _orderMatch[0].toUpperCase().replace(/\s+/g, "");
+    const _em = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    if(!_em){
+      addChatbotMessage('bot', 'I found the order number <b>' + esc(_oid) + '</b>. For security, please also provide the email address used on the order — for example: "Check ' + _oid + ' with john@example.com".');
+      _chatbotHistory.push({role: 'assistant', content: 'Requested email for order ' + _oid});
+      return;
+    }
+    const _ord = getOrders().find(x => x.id.toUpperCase() === _oid && (x.customer.email || "").toLowerCase() === _em[0].toLowerCase());
+    if(_ord){
+      const _cur = _ord.cur || "EUR"; const _r = _ord.rate ?? rateOf(_cur);
+      const _nItems = _ord.items.reduce((s, it) => s + it.qty, 0);
+      addChatbotMessage('bot', '📦 Order <b>' + esc(_ord.id) + '</b> — Status: <b>' + esc(_ord.status || "New") + '</b> · Placed ' + esc(fmtDT(_ord.date)) + ' · ' + _nItems + ' item(s) · Total ' + esc(fmtIn(_ord.total, _cur, _r)) + ' (' + _cur + '). For full details, see <a href="#/info/track" onclick="toggleChatbot()">Order Tracking</a>.');
+      _chatbotHistory.push({role: 'assistant', content: 'Order status for ' + _ord.id});
+      return;
+    }
+    addChatbotMessage('bot', 'I couldn\'t find order <b>' + esc(_oid) + '</b> with that email. Please double-check both, or contact sales@nebulasecret.com and we will help.');
+    _chatbotHistory.push({role: 'assistant', content: 'Order not found: ' + _oid});
+    return;
+  }
   
   showTyping();
   
@@ -5745,7 +5860,18 @@ function sendChatbotMessage(){
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        message: text,
+        message: (function(){
+          /* 產品上下文：瀏覽產品頁時，讓 AI 能回答具體產品問題 */
+          if(currentProduct){
+            const cp = currentProduct;
+            let tierStr = "";
+            if(cp.priceTiers && cp.priceTiers.length){
+              tierStr = cp.priceTiers.map(t => t.minQty + " units @ " + t.price).join(", ");
+            }
+            return text + "\n\n[Context] The customer is currently viewing this product on the website — name: \"" + cp.n + "\", category: " + (cp.cs || "N/A") + ", features: " + (Array.isArray(cp.d) ? cp.d.join("; ") : (cp.d || "N/A")) + (tierStr ? ", price tiers: " + tierStr : "") + ". Answer product-specific questions using this context when relevant. Never invent prices, MOQ or lead times — advise requesting a quote instead.";
+          }
+          return text;
+        })(),
         history: _chatbotHistory
       })
     })
