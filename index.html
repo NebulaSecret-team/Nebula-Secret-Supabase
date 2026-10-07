@@ -104,7 +104,21 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:auto}
-body{font-family:var(--font-body);background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-body);background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased;position:relative;overflow-x:hidden}
+.bubble-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.bubble{position:absolute;bottom:-150px;border-radius:50%;border:2px solid;opacity:0;animation:bubbleFloat linear infinite}
+.bubble.gray{border-color:rgba(140,140,150,.3);background:rgba(140,140,150,.04)}
+.bubble.teal{border-color:rgba(37,186,181,.35);background:rgba(37,186,181,.05)}
+@keyframes bubbleFloat{
+  0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:0}
+  10%{opacity:1}
+  25%{transform:translateY(-25vh) translateX(calc(var(--sway,40px) * 1)) rotate(90deg)}
+  50%{transform:translateY(-50vh) translateX(calc(var(--sway,40px) * -0.7)) rotate(180deg)}
+  75%{transform:translateY(-75vh) translateX(calc(var(--sway,40px) * 1.2)) rotate(270deg)}
+  90%{opacity:1}
+  100%{transform:translateY(-110vh) translateX(calc(var(--sway,40px) * -0.5)) rotate(360deg);opacity:0}
+}
+#app{position:relative;z-index:1}
 img{display:block;max-width:100%}
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
@@ -216,11 +230,13 @@ section.block{padding:40px 0}
 
 /* ================= Category cards ================= */
 .cat-strip{display:grid;grid-template-columns:repeat(8,1fr);gap:14px}
-.cat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;transition:transform .2s,box-shadow .2s,border-color .2s;text-align:center}
-.cat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:var(--brand)}
+.cat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;transition:transform .3s cubic-bezier(.4,0,.2,1),box-shadow .3s,border-color .3s;text-align:center;position:relative}
+.cat-card::before{content:'';position:absolute;inset:0;border-radius:var(--radius);padding:1px;background:linear-gradient(135deg,var(--brand),var(--accent));-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .3s;pointer-events:none;z-index:1}
+.cat-card:hover{transform:translateY(-6px) scale(1.02);box-shadow:0 12px 32px color-mix(in srgb,var(--brand) 18%,transparent),0 4px 12px rgba(0,0,0,.08);border-color:transparent}
+.cat-card:hover::before{opacity:1}
 .cat-card .thumb{aspect-ratio:1/1;background:var(--bg);display:grid;place-items:center;overflow:hidden;position:relative}
-.cat-card .thumb img{width:100%;height:100%;object-fit:cover;transition:transform .35s}
-.cat-card:hover .thumb img{transform:scale(1.07)}
+.cat-card .thumb img{width:100%;height:100%;object-fit:cover;transition:transform .5s cubic-bezier(.4,0,.2,1)}
+.cat-card:hover .thumb img{transform:scale(1.1)}
 .cat-card .name{padding:12px 8px;font-size:13px;font-weight:700;font-family:var(--font-display)}
 .cat-card .count{font-size:11px;color:var(--ink-soft);display:block;margin-top:2px;font-family:var(--font-body)}
 
@@ -313,9 +329,14 @@ section.block{padding:40px 0}
 
 /* ============ Wholesale / OEM Services ============ */
 .svc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:8px}
-.svc-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 20px;transition:transform .2s,box-shadow .2s,border-color .2s;position:relative;overflow:hidden}
-.svc-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.08);border-color:var(--brand)}
-.svc-card .svc-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--brand),#ff8fb1);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.svc-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 20px;transition:transform .3s cubic-bezier(.4,0,.2,1),box-shadow .3s,border-color .3s;position:relative;overflow:hidden}
+.svc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--brand),var(--accent));transform:scaleX(0);transform-origin:left;transition:transform .4s cubic-bezier(.4,0,.2,1)}
+.svc-card::after{content:'';position:absolute;inset:0;border-radius:14px;padding:1px;background:linear-gradient(135deg,var(--brand),var(--accent));-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .3s;pointer-events:none}
+.svc-card:hover{transform:translateY(-5px);box-shadow:0 14px 36px color-mix(in srgb,var(--brand) 14%,transparent),0 5px 14px rgba(0,0,0,.07);border-color:transparent}
+.svc-card:hover::before{transform:scaleX(1)}
+.svc-card:hover::after{opacity:1}
+.svc-card .svc-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--accent));display:flex;align-items:center;justify-content:center;margin-bottom:14px;transition:transform .3s,box-shadow .3s}
+.svc-card:hover .svc-icon{transform:scale(1.1) rotate(-5deg);box-shadow:0 6px 16px color-mix(in srgb,var(--brand) 30%,transparent)}
 .svc-card .svc-icon svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .svc-card h4{font-size:15px;font-weight:700;margin-bottom:6px;color:var(--ink)}
 .svc-card p{font-size:13px;color:var(--ink-soft);line-height:1.6}
@@ -352,12 +373,14 @@ section.block{padding:40px 0}
 
 /* ================= Product grid & card ================= */
 .product-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
-.product-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;position:relative;transition:transform .2s,box-shadow .25s;display:flex;flex-direction:column}
-.product-card:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:var(--line-dark)}
+.product-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;position:relative;transition:transform .3s cubic-bezier(.4,0,.2,1),box-shadow .3s;display:flex;flex-direction:column}
+.product-card::before{content:'';position:absolute;inset:0;border-radius:var(--radius);padding:1px;background:linear-gradient(135deg,var(--brand),var(--accent));-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .3s;pointer-events:none;z-index:3}
+.product-card:hover{transform:translateY(-6px) scale(1.015);box-shadow:0 16px 40px color-mix(in srgb,var(--brand) 15%,transparent),0 6px 16px rgba(0,0,0,.08);border-color:transparent}
+.product-card:hover::before{opacity:1}
 .product-card .ph{aspect-ratio:1/1;background:#fff;overflow:hidden;position:relative;border-bottom:1px solid var(--line)}
 .product-card .ph>a{display:block;width:100%;height:100%}
-.product-card .ph img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
-.product-card:hover .ph img{transform:scale(1.05)}
+.product-card .ph img{width:100%;height:100%;object-fit:cover;transition:transform .5s cubic-bezier(.4,0,.2,1)}
+.product-card:hover .ph img{transform:scale(1.08)}
 .badge{position:absolute;top:10px;left:10px;background:var(--brand);color:#fff;font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:999px;z-index:2;letter-spacing:.04em;display:inline-flex;align-items:center;justify-content:center;line-height:1;text-transform:uppercase}
 .badge.tag-new{background:var(--accent)}
 .quick-add{position:absolute;left:10px;right:10px;bottom:10px;background:var(--card);color:var(--ink);border-radius:8px;padding:10px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;box-shadow:var(--shadow-sm);border:1px solid var(--line)}
@@ -557,7 +580,7 @@ section.block{padding:40px 0}
 }
 
 /* ================= Footer ================= */
-.site-footer{background:var(--nav-bg);color:#b9b6bf;margin-top:56px}
+.site-footer{background:var(--nav-bg);color:#b9b6bf;margin-top:56px;position:relative;z-index:2}
 .footer-inner{max-width:1400px;margin:0 auto;padding:52px 24px 30px;display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr;gap:36px}
 .footer-brand img{width:50px;height:50px;object-fit:contain;background:#fff;border-radius:10px;margin-bottom:14px}
 .footer-logo-notext{width:auto !important;height:40px !important;max-width:140px;object-fit:contain;background:transparent !important;border-radius:0 !important}
@@ -946,6 +969,9 @@ details.ct-block > .form-grid{padding:14px 16px}
 </head>
 <body>
 
+<!-- ================= BUBBLE BACKGROUND ================= -->
+<div class="bubble-bg" id="bubbleBg"></div>
+
 <!-- ================= PRELOADER ================= -->
 <div id="preloader" class="preloader">
   <div class="preloader-content">
@@ -1036,10 +1062,10 @@ details.ct-block > .form-grid{padding:14px 16px}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
     </div>
     <div class="chatbot-header-info">
-      <h4>Nebula Secret Support</h4>
+      <h4>Nebula Secret AI Assistant</h4>
       <div class="chatbot-status">
         <span class="chatbot-status-dot" id="chatbotStatusDot"></span>
-        <span id="chatbotStatusText">Online — We reply within 15 mins</span>
+        <span id="chatbotStatusText">AI Online — Instant replies</span>
       </div>
     </div>
     <button class="chatbot-close" onclick="toggleChatbot()">
@@ -1198,6 +1224,27 @@ details.ct-block > .form-grid{padding:14px 16px}
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous"></script>
 <script>
+
+/* ============ Bubble Background ============ */
+(function initBubbles(){
+  const bg = document.getElementById('bubbleBg');
+  if(!bg) return;
+  const colors = ['gray','teal'];
+  const count = 12;
+  for(let i=0;i<count;i++){
+    const b = document.createElement('div');
+    b.className = 'bubble ' + colors[i%2];
+    const size = 20 + Math.random()*80;
+    b.style.width = size + 'px';
+    b.style.height = size + 'px';
+    b.style.left = Math.random()*100 + '%';
+    b.style.animationDuration = (15 + Math.random()*20) + 's';
+    b.style.animationDelay = (Math.random()*25) + 's';
+    b.style.borderWidth = (1 + Math.random()*2) + 'px';
+    b.style.setProperty('--sway', (20 + Math.random()*60) + 'px');
+    bg.appendChild(b);
+  }
+})();
 
 /* ============ Supabase Backend ============ */
 const SB_URL = "https://xwhhsoppcpkijxxychjm.supabase.co";
@@ -5581,6 +5628,8 @@ const CHATBOT_FAQ = [
 
 let _chatbotOpen = false;
 let _chatbotInitialized = false;
+let _chatbotHistory = [];
+let _aiChatAvailable = true;
 
 function isBusinessHours(){
   const now = new Date();
@@ -5677,26 +5726,66 @@ function sendChatbotMessage(){
   addChatbotMessage('user', text);
   input.value = '';
   
+  // 保存到聊天歷史
+  _chatbotHistory.push({role: 'user', content: text});
+  
   // Check for callback request
   if(text.toLowerCase().includes('callback') || text.toLowerCase().includes('call me') || 
      text.toLowerCase().includes('phone') || text.toLowerCase().includes('talk to human') ||
-     text.toLowerCase().includes('request a callback')){
+     text.toLowerCase().includes('request a callback') || text.toLowerCase().includes('human')){
     showLeadForm();
     return;
   }
   
   showTyping();
   
-  setTimeout(() => {
-    hideTyping();
-    const response = findChatbotResponse(text);
-    addChatbotMessage('bot', response);
-    
-    // If business hours and no good match, suggest callback
-    if(isBusinessHours() && response.includes('I\'m not sure')){
-      setTimeout(() => showLeadForm(), 1000);
-    }
-  }, 800 + Math.random() * 700);
+  // 優先使用 Gemini AI
+  if(_aiChatAvailable){
+    fetch('/api/ai-chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        message: text,
+        history: _chatbotHistory
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      hideTyping();
+      if(data.reply){
+        addChatbotMessage('bot', data.reply);
+        _chatbotHistory.push({role: 'assistant', content: data.reply});
+        // 限制歷史記錄長度
+        if(_chatbotHistory.length > 20){
+          _chatbotHistory = _chatbotHistory.slice(-20);
+        }
+      } else {
+        // AI 不可用，使用關鍵詞匹配
+        _aiChatAvailable = false;
+        const response = findChatbotResponse(text);
+        addChatbotMessage('bot', response);
+      }
+    })
+    .catch(err => {
+      console.error('AI chat error:', err);
+      hideTyping();
+      _aiChatAvailable = false;
+      const response = findChatbotResponse(text);
+      addChatbotMessage('bot', response);
+    });
+  } else {
+    // AI 不可用，使用關鍵詞匹配
+    setTimeout(() => {
+      hideTyping();
+      const response = findChatbotResponse(text);
+      addChatbotMessage('bot', response);
+      
+      // If business hours and no good match, suggest callback
+      if(isBusinessHours() && response.includes('I\'m not sure')){
+        setTimeout(() => showLeadForm(), 1000);
+      }
+    }, 800 + Math.random() * 700);
+  }
 }
 
 function findChatbotResponse(text){

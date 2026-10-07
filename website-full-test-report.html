@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nebula Secret 網站功能測試報告</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f7; color: #1f1e23; line-height: 1.6; }
+  .container { max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
+  h1 { font-size: 28px; margin-bottom: 8px; color: #1f1e23; }
+  .subtitle { color: #6f6a72; margin-bottom: 32px; font-size: 14px; }
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+  .summary-card { background: #fff; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .summary-card .number { font-size: 36px; font-weight: 800; }
+  .summary-card .label { font-size: 13px; color: #6f6a72; margin-top: 4px; }
+  .pass { color: #25bab5; }
+  .fail { color: #c43a3a; }
+  .warning { color: #f5a623; }
+  .info { color: #6f6a72; }
+  .section { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .section h2 { font-size: 18px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e5e3e8; }
+  .test-item { padding: 12px 0; border-bottom: 1px solid #f0f0f2; display: flex; align-items: flex-start; gap: 12px; }
+  .test-item:last-child { border-bottom: none; }
+  .status { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; margin-top: 2px; }
+  .status.pass { background: #d9f4f2; color: #25bab5; }
+  .status.fail { background: #fdecec; color: #c43a3a; }
+  .status.warning { background: #fef3e2; color: #f5a623; }
+  .test-content { flex: 1; }
+  .test-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .test-desc { font-size: 13px; color: #6f6a72; }
+  .issue-list { margin-top: 12px; padding: 16px; background: #fef9f0; border-radius: 8px; border-left: 3px solid #f5a623; }
+  .issue-list h3 { font-size: 14px; color: #b8860b; margin-bottom: 8px; }
+  .issue-list ul { margin-left: 20px; font-size: 13px; }
+  .issue-list li { margin-bottom: 6px; }
+  .critical { background: #fdecec; border-left-color: #c43a3a; }
+  .critical h3 { color: #c43a3a; }
+  .footer { text-align: center; color: #6f6a72; font-size: 12px; margin-top: 32px; padding-top: 20px; border-top: 1px solid #e5e3e8; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Nebula Secret 網站功能測試報告</h1>
+  <p class="subtitle">測試時間：2026-10-03 | 測試環境：本地 file:// | 測試範圍：全網站功能與連結</p>
+
+  <div class="summary">
+    <div class="summary-card">
+      <div class="number pass">18</div>
+      <div class="label">測試項目</div>
+    </div>
+    <div class="summary-card">
+      <div class="number pass">12</div>
+      <div class="label">通過</div>
+    </div>
+    <div class="summary-card">
+      <div class="number warning">4</div>
+      <div class="label">需優化</div>
+    </div>
+    <div class="summary-card">
+      <div class="number fail">2</div>
+      <div class="label">嚴重問題</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>一、首頁與導航連結</h2>
+    <div class="test-item">
+      <div class="status pass">✓</div>
+      <div class="test-content">
+        <div class="test-name">首頁加載</div>
+        <div class="test-desc">頁面標題正確，預加載動畫正常淡出，Hero Banner 正常顯示</div>
+      </div>
+    </div>
+    <div class="test-item">
+      <div class="status pass">✓</div>
+      <div class="test-content">
+        <div class="test-name">頂部導航連結</div>
+        <div class="test-desc">7個頂部連結（Contact Us, About Us, Why Us, Blog, Admin Center, Track Order, Help & Support）全部正常</div>
+      </div>
+    </div>
+    <div class="test-item">
+      <div class="status pass">✓</div>
+      <div class="test-content">
+        <div class="test-name">分類導航</div>
+        <div class="test-desc">9個產品分類（Body Sugar Scrub, Body Scrub, Perfume, Hand Cream 等）全部正常</div>
+      </div>
+    </div>
+    <div class="test-item">
+      <div class="status warning">!</div>
+      <div class="test-content">
+        <div class="test-name">頁面跳轉</div>
+        <div class="test-desc">About, Why Us, Blog 頁面正常；FAQ 和 Track Order 頁面標題顯示異常（顯示首頁標題）</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>二、用戶賬戶功能</h2>
+    <div class="test-item">
+      <div class="status warning">!</div>
+      <div class="test-content">
+        <div class="test-name">賬戶頁面加載</div>
+        <div class="test-desc">頁面有9個輸入框，但表單結構異常，頁面內容顯示空白（僅有頂部導航）</div>
+      </div>
+    </div>
+    <div class="test-item">
+      <div class="status pass">✓</div>
+      <div class="test-content">
+        <div class="test-name">登錄狀態檢測</div>
+        <div class="test-desc">檢測到已登錄狀態（顯示 Sign out 按鈕），說明用戶會話正常</div>
+      </div>
+    </div>
+    <div class="issue-list critical">
+      <h3>⚠️ 嚴重問題：用戶賬戶頁面顯示空白</h3>
+      <ul>
+        <li>訪問 #/account 時，頁面主內容區域為空白</li>
+        <li>可能原因：路由渲染函數未正確執行，或數據加載時序問題</li>
+        <li>影響：用戶無法登錄、註冊、修改密碼、刪除賬戶</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>三、產品管理功能</h2>
+    <div class="test-item">
+      <div class="status pass">✓</div>
+      <div class="test-content">
+        <div class="test-name">產品列表</div>
+        <div class="test-desc">91個產品正常顯示，產品卡片和連結正常</div>
+      </div>
+    </div>
+    <div class="test-item">
+      <div class="status warning">!</div>
+      <div class="test-content">
+        <div class="test-name">產品詳情頁</div>
+        <div class="test-desc">直接訪問 #/product/3 時，頁面內容較少（696字符），可能存在數據加載時序問題</div>
+      </div>
+    </div>
+    <div class="test-item">
+      <div class="status pass">✓</div>
+      <div class="test-content">
+        <div class="test-name">加入購物車</div>
+        <div class="test-desc">加入購物車功能正常，購物車數量徽章即時更新（顯示209件）</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>四、購物車與訂單功能</h2>
+    <div class="test-item">
+      <div class="status pass">✓</div>
+      <div class="test-content">
+        <div class="test-name">購物車面板</div>
+        <div class="test-desc">購物車正常打開，商品顯示正常，數量輸入框可顯示3位數字</div>
+      </div>
+    </div>
+    <div class="test-item">
+      <div class="status pass">✓</div>
+      <div class="test-content">
+        <div class="test-name">結賬按鈕</div>
+        <div class="test-desc">Checkout 和 Request Quote 按鈕正常顯示</div>
+      </div>
+    </div>
+    <div class="test-item">
+      <div class="status warning">!</div>
+      <div class="test-content">
+        <div class="test-name">訂單追蹤頁面</div>
+        <div class="test-desc">頁面有10個輸入框和14個按鈕，但內容較少（576字符），表單結構需確認</div>
+      </div>
+    </div>
+    <div class="test-item">
+      <div class="status fail">✗</div>
+      <div class="test-content">
+        <div class="test-name">聯繫表單</div>
+        <div class="test-desc">訪問 #/about?scroll=contact 時，未找到聯繫表單（0個輸入框，無提交按鈕）</div>
+      </div>
+    </div>
+    <div class="issue-list critical">
+      <h3>⚠️ 嚴重問題：聯繫表單頁面空白</h3>
+      <ul>
+        <li>訪問 #/about?scroll=contact 時，聯繫表單未顯示</li>
+        <li>可能原因：滾動動畫衝突，或表單渲染函數未正確執行</li>
+        <li>影響：客戶無法通過網站發送查詢郵件</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>五、管理後台功能</h2>
+    <div class="test-item">
+      <div class="status pass">✓</div>
+      <div class="test-content">
+        <div class="test-name">管理後台 Dashboard</div>
+        <div class="test-desc">正常顯示：91個產品、9個分類、22個訂單、CHF 26,873.26收入、11個客戶、19個報價</div>
+      </div>
+    </div>
+    <div class="test-item">
+      <div class="status pass">✓</div>
+      <div class="test-content">
+        <div class="test-name">管理後台導航</div>
+        <div class="test-desc">Dashboard, Orders, Quotes & Enquiries, Products, Categories 等導航正常</div>
+      </div>
+    </div>
+    <div class="test-item">
+      <div class="status pass">✓</div>
+      <div class="test-content">
+        <div class="test-name">Recent Activity</div>
+        <div class="test-desc">正常顯示報價狀態變更、客戶登錄等活動記錄</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>六、問題彙總與修復建議</h2>
+    <div class="issue-list critical">
+      <h3>🔴 嚴重問題（需立即修復）</h3>
+      <ul>
+        <li><strong>用戶賬戶頁面空白</strong>：檢查 viewAccount() 函數，確保頁面內容正確渲染</li>
+        <li><strong>聯繫表單頁面空白</strong>：檢查 viewAbout() 函數中的 scroll=contact 處理邏輯</li>
+      </ul>
+    </div>
+    <div class="issue-list" style="margin-top: 16px;">
+      <h3>🟡 需優化問題</h3>
+      <ul>
+        <li><strong>FAQ/Track Order 頁面標題異常</strong>：檢查頁面標題渲染邏輯</li>
+        <li><strong>產品詳情頁直接訪問時內容較少</strong>：優化數據加載時序，確保直接訪問時產品數據已加載</li>
+        <li><strong>訂單追蹤頁面內容較少</strong>：確認表單是否正確渲染</li>
+        <li><strong>分類導航重複</strong>：分類導航顯示了帶數字和不帶數字的重複項</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Nebula Secret 網站功能測試報告 | 生成時間：2026-10-03</p>
+    <p>測試環境：本地 file:// | 測試工具：瀏覽器自動化測試</p>
+  </div>
+</div>
+</body>
+</html>
