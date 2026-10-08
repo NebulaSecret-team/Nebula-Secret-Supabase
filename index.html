@@ -649,6 +649,19 @@ section.block{padding:40px 0}
 .footer-bottom .admin-link{color:var(--brand);font-weight:600}
 .footer-bottom .admin-link:hover{text-decoration:underline}
 
+/* ================= Admin mode ================= */
+/* Hide storefront chrome while inside the admin panel (the shell has its own nav) */
+.admin-mode .topbar,
+.admin-mode .site-header,
+.admin-mode .catnav,
+.admin-mode .bubble-bg{display:none !important}
+.admin-mode .chatbot-fab{display:none !important}
+@media (max-width:960px){
+  /* Let admin tables scroll horizontally instead of clipping cells on small screens */
+  .admin-mode .admin-panel{overflow:visible}
+  .admin-mode .panel-body{overflow-x:auto}
+}
+
 /* ================= Admin login ================= */
 .admin-login{min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,var(--nav-bg) 0%,#3a3340 100%);padding:24px}
 .login-card{background:#fff;border-radius:18px;padding:38px 36px;width:100%;max-width:400px;box-shadow:0 30px 70px rgba(0,0,0,.35)}
@@ -2696,7 +2709,10 @@ function fallbackCopy(txt, done){
 }
 /* CSV export (UTF-8 BOM so Excel opens it correctly) */
 function csvCell(v){
-  const s = String(v ?? "");
+  let s = String(v ?? "");
+  // Formula-injection guard: cells starting with = + - @ (or tab/CR) are prefixed
+  // with a single quote so Excel/LibreOffice treat them as text, never formulas.
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
   return '"' + s.replace(/"/g, '""') + '"';
 }
 function downloadCSV(filename, rows){
@@ -3081,7 +3097,9 @@ async function placeOrder(){
       });
     }else{
       const st = $("#ocEmailState");
-      if(st) st.textContent = "Order saved. Email not configured — set MAIL_ENABLED and email env vars in Vercel.";
+      if(st) st.textContent = /localhost|127\.0\.0\.1|\.local/.test(location.hostname)
+        ? "Order saved. Email not configured — set MAIL_ENABLED and email env vars in Vercel."
+        : "Order confirmed. A confirmation email will be sent to your inbox.";
     }
   });
   $("#orderModal").classList.add("open");
@@ -4251,6 +4269,10 @@ function viewAccount(){
   /* Always show reset view if in reset mode, even if signed in */
   const inner = isResetMode ? accountResetView() : (s ? accountSignedIn(s) : accountSignIn());
   $("#app").innerHTML = '<section class="block animate-on-scroll"><div class="page"><div class="crumbs"><a href="#/">Home</a>' + IC.chev + '<span class="cur">My Account</span></div><div class="acct-wrap">' + inner + '</div></div></section>';
+  /* Account page re-renders after async RPCs (sbRefreshMyData) — the delayed
+     route() animation init only sees the FIRST render, so re-init here to
+     keep the section visible (fixes blank account page on all viewports). */
+  initScrollAnimations();
   /* Refresh the customer's own orders & quotes from Supabase when signed in
      (via privileged RPCs — the raw rows are admin-only) */
   if(s && supabase && !isResetMode){
@@ -4911,6 +4933,9 @@ async function viewCustomerQuote(id){
       '</div>' +
     '</div>' +
   '</div></section>';
+  /* Re-init scroll animations: this async view re-renders after RPC fetches,
+     the delayed route() init would leave the section invisible otherwise. */
+  initScrollAnimations();
   }catch(e){
     console.error("viewCustomerQuote error:", e);
     showToast("Error loading quote: " + e.message);
@@ -5139,6 +5164,9 @@ async function viewCustomerOrder(id){
       '</div>' +
     '</div>' +
   '</div></section>';
+  /* Re-init scroll animations: this async view re-renders after RPC fetches,
+     the delayed route() init would leave the section invisible otherwise. */
+  initScrollAnimations();
 }
 
 function submitCustomerOrderNote(id){

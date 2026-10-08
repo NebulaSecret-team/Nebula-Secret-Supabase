@@ -430,13 +430,24 @@ export default async function handler(req) {
 
 function getCorsHeaders(req) {
   const origin = req.headers.get('origin');
-  
-  // Allow all origins (rate limiting and other security measures are in place)
+  // Strict allowlist: only Nebula Secret sites (and local dev) may call this API
+  // from a browser. Unknown origins get no CORS grant; server-to-server callers
+  // are still covered by the per-instance rate limit + param allowlist.
+  const allowed = (process.env.ALLOWED_ORIGINS ||
+    'https://uat.nebulasecret.com,https://nebulasecret.com,http://localhost:4173')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  if (origin && allowed.includes(origin)) {
+    return {
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400',
+      'Vary': 'Origin',
+    };
+  }
   return {
-    'Access-Control-Allow-Origin': origin || '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Max-Age': '86400',
     'Vary': 'Origin',
   };
 }
