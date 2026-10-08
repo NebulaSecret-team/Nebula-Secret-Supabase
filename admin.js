@@ -272,9 +272,9 @@ function adminDashboard(){
       '<div class="stat-card"><span class="s-icon">' + IC.doc + '</span><div class="s-label">Quotes</div><div class="s-value">' + (quotes.length || 0) + '</div><div class="s-sub"><a href="#/admin/quotes" style="color:var(--accent)">View quotes &amp; enquiries</a></div></div>' +
     '</div>' +
     // AI Operational Summary
-    '<div class="admin-panel"><div class="panel-head"><div><h3>🤖 AI 營運摘要</h3><div class="ph-sub">Gemini 分析今日訂單、營收、待辦事項並給出建議（僅供參考，不直接改動任何資料）</div></div>' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>🤖 AI Operations Summary</h3><div class="ph-sub">Gemini analyzes orders, revenue and pending tasks for today, then offers suggestions (for reference only — no data is modified)</div></div>' +
       '<div style="display:flex;gap:8px;align-items:center">' +
-        '<button class="btn sm" onclick="aiDashboardSummary(this)">🤖 生成摘要</button>' +
+        '<button class="btn sm" onclick="aiDashboardSummary(this)">🤖 Generate Summary</button>' +
         '<button class="btn sm ghost" onclick="copyAiSummary()" style="display:none" id="aiCopyBtn">Copy</button>' +
       '</div></div>' +
     '<div class="panel-body" id="aiSummaryBox" style="display:none;font-size:13.5px;line-height:1.7;color:var(--ink);white-space:pre-wrap"></div></div>' +
@@ -811,13 +811,13 @@ function viewOrder(id){
     '</div>' +
     '<div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">' +
       '<button class="btn sm" onclick="mailOrder(lastOrder)">' + IC.mail + ' Email Order</button>' +
-      '<button class="btn sm ghost" onclick="aiOrderReplyDraft(\'' + escJs(o.id) + '\')" title="AI 生成給客戶的英文回覆草稿">🤖 AI 回覆草稿</button>' +
+      '<button class="btn sm ghost" onclick="aiOrderReplyDraft(\'' + escJs(o.id) + '\')" title="AI draft reply for customer in English">🤖 AI Reply Draft</button>' +
       '<button class="btn sm ghost" onclick="copyOrderSummary(lastOrder)">Copy Summary</button>' +
       '<button class="btn sm ghost" onclick="downloadOrderPDF(\'' + escJs(o.id) + '\')">' + IC.down + ' Download PDF</button>' +
     '</div>' +
     '<div id="aiDraftBox" style="display:none;margin-top:14px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:10px">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
-        '<span style="font-weight:600;font-size:13px">🤖 AI 回覆草稿（審閱後再寄出）</span>' +
+        '<span style="font-weight:600;font-size:13px">🤖 AI Reply Draft (review before sending)</span>' +
         '<button class="btn sm ghost" onclick="copyAiDraft()">Copy</button>' +
       '</div>' +
       '<textarea id="aiDraftText" rows="8" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);background:var(--bg-soft);resize:vertical"></textarea>' +
@@ -906,12 +906,12 @@ function viewAdminQuote(id){
     '</div>' +
     '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">' +
       '<button class="btn sm ghost" onclick="downloadQuotePDF(\'' + escJs(q.id) + '\')">' + IC.down + ' Download Quote PDF</button>' +
-      '<button class="btn sm ghost" onclick="aiQuoteReplyDraft(\'' + escJs(q.id) + '\')" title="AI 生成給客戶的英文回覆草稿">🤖 AI 回覆草稿</button>' +
+      '<button class="btn sm ghost" onclick="aiQuoteReplyDraft(\'' + escJs(q.id) + '\')" title="AI draft reply for customer in English">🤖 AI Reply Draft</button>' +
       '<button class="btn sm ghost" onclick="mailQuote(\'' + escJs(q.id) + '\')">' + IC.mail + ' Email Customer</button>' +
     '</div>' +
     '<div id="aiDraftBox" style="display:none;margin-top:14px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:10px">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
-        '<span style="font-weight:600;font-size:13px">🤖 AI 回覆草稿（審閱後再寄出）</span>' +
+        '<span style="font-weight:600;font-size:13px">🤖 AI Reply Draft (review before sending)</span>' +
         '<button class="btn sm ghost" onclick="copyAiDraft()">Copy</button>' +
       '</div>' +
       '<textarea id="aiDraftText" rows="8" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);background:var(--bg-soft);resize:vertical"></textarea>' +
@@ -2388,7 +2388,7 @@ function filterDashboardActivity(type){
 }
 
 
-/* ============ AI 內容助手：用 Gemini 生成文案草稿，管理員審閱後再儲存 ============ */
+/* ============ AI content assistant: Gemini drafts copy, admin reviews before saving ============ */
 const AI_COPY_PROMPTS = {
   thTitle: "a short, powerful B2B hero headline (maximum 8 words) for a skincare wholesale & OEM/ODM manufacturer. Professional, confident, international. Output only the headline.",
   thSub: "a 1-2 sentence hero subtitle for a B2B skincare wholesale & OEM/ODM manufacturer website, mentioning wholesale supply, private label / OEM-ODM and global sourcing. Output only the subtitle.",
@@ -2431,9 +2431,9 @@ async function aiGenerateCopy(target, btn){
   }
 }
 
-/* ============ AI 進階助手：營運摘要 / 回覆草稿 / 產品與分類文案 ============ */
+/* ============ AI advanced assistant: ops summary / reply drafts / product & category copy ============ */
 
-/* 統一呼叫 AI 端點，回傳純文字回覆（無回覆時回傳 null） */
+/* Unified AI endpoint call, returns plain text (null when no reply) */
 async function aiGenerate(prompt){
   const res = await fetch("/api/ai-chat", {
     method: "POST",
@@ -2455,9 +2455,9 @@ async function _aiBtnRun(btn, fn){
 /* 複製文字（剪貼簿，失敗時回退選取提示） */
 function copyText(txt){
   if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(txt).then(() => showToast("已複製")).catch(() => showToast("請手動複製"));
+    navigator.clipboard.writeText(txt).then(() => showToast("Copied")).catch(() => showToast("Please copy manually"));
   } else {
-    showToast("請手動複製");
+    showToast("Please copy manually");
   }
 }
 
@@ -2475,7 +2475,7 @@ async function aiDashboardSummary(btn){
     const totalRevenue = orders.filter(o => o.status !== "Cancelled").reduce((s,o) => s + Number(o.total || 0), 0);
     const qtyMap = {};
     orders.forEach(o => (o.items || []).forEach(it => { qtyMap[it.name] = (qtyMap[it.name] || 0) + (Number(it.qty) || 0); }));
-    const topProducts = Object.entries(qtyMap).sort((a,b) => b[1] - a[1]).slice(0, 5).map(([n,q]) => n + "（" + q + " 件）");
+    const topProducts = Object.entries(qtyMap).sort((a,b) => b[1] - a[1]).slice(0, 5).map(([n,q]) => n + " (" + q + " pcs)");
     const statusCount = {};
     orders.forEach(o => { statusCount[o.status] = (statusCount[o.status] || 0) + 1; });
     const pendingQuotes = quotes.filter(q => (q.status || "Pending") === "Pending").length;
@@ -2496,7 +2496,7 @@ async function aiDashboardSummary(btn){
       newCustomersToday: newCustToday,
       totalCustomers: accounts.length
     };
-    const prompt = "你是電商營運分析師。請根據以下今日營運數據，用繁體中文輸出精簡的營運摘要（4-6 段）：先總結今日訂單與營收表現，再列出熱銷商品、待處理報價、新客戶，最後給 2-3 條具體可執行的建議。不要編造數據，不要逐項複述原始資料。數據：" + JSON.stringify(context);
+    const prompt = "You are an e-commerce operations analyst. Based on the following operational data for today, output a concise operations summary in English (4-6 paragraphs): first summarize today's orders and revenue, then list top-selling products, pending quotes and new customers, and finally give 2-3 concrete actionable suggestions. Do not invent data, do not restate raw data item by item. Data: " + JSON.stringify(context);
     const txt = await aiGenerate(prompt);
     const box = document.getElementById("aiSummaryBox");
     if(!box) return;
@@ -2505,9 +2505,9 @@ async function aiDashboardSummary(btn){
       box.style.display = "block";
       const copyBtn = document.getElementById("aiCopyBtn");
       if(copyBtn) copyBtn.style.display = "";
-      showToast("AI 摘要已生成");
+      showToast("AI summary generated");
     } else {
-      box.textContent = "AI 服務忙碌，請稍後再試。";
+      box.textContent = "AI service is busy, please try again later.";
       box.style.display = "block";
     }
   });
@@ -2524,7 +2524,7 @@ async function aiOrderReplyDraft(id){
   const btn = event && event.target;
   _aiBtnRun(btn, async () => {
     const cur = o.cur || "EUR";
-    const itemsTxt = (o.items || []).map(it => it.name + " ×" + it.qty + "（" + Number(it.price).toFixed(2) + " " + cur + "/件）").join("；");
+    const itemsTxt = (o.items || []).map(it => it.name + " x" + it.qty + " (" + Number(it.price).toFixed(2) + " " + cur + "/件）").join("；");
     const context = {
       orderId: o.id,
       date: o.date,
@@ -2547,10 +2547,10 @@ async function aiOrderReplyDraft(id){
     if(txt && box && ta){
       ta.value = txt;
       box.style.display = "block";
-      showToast("AI 回覆草稿已生成 — 審閱後再寄出");
+      showToast("AI reply draft generated — review before sending");
     } else if(box){
       box.style.display = "block";
-      ta.value = "AI 服務忙碌，請稍後再試。";
+      ta.value = "AI service is busy, please try again later.";
     }
   });
 }
@@ -2565,7 +2565,7 @@ async function aiQuoteReplyDraft(id){
   const q = findQuoteById(id); if(!q) return;
   const btn = event && event.target;
   _aiBtnRun(btn, async () => {
-    const itemsTxt = (q.items || []).map(it => it.name + " ×" + it.qty + "（" + Number(it.price).toFixed(2) + " EUR/件）").join("；");
+    const itemsTxt = (q.items || []).map(it => it.name + " x" + it.qty + " (" + Number(it.price).toFixed(2) + " EUR/件）").join("；");
     const context = {
       quoteId: q.id,
       date: q.date,
@@ -2593,15 +2593,15 @@ async function aiQuoteReplyDraft(id){
     if(txt && box && ta){
       ta.value = txt;
       box.style.display = "block";
-      showToast("AI 回覆草稿已生成 — 審閱後再寄出");
+      showToast("AI reply draft generated — review before sending");
     } else if(box){
       box.style.display = "block";
-      ta.value = "AI 服務忙碌，請稍後再試。";
+      ta.value = "AI service is busy, please try again later.";
     }
   });
 }
 
-/* ---- 3a. 產品：AI 名稱 ---- */
+/* ---- 3a. Product: AI name ---- */
 async function aiGenProductName(btn){
   _aiBtnRun(btn, async () => {
     const catEl = document.getElementById("pfCat");
@@ -2611,10 +2611,10 @@ async function aiGenProductName(btn){
     const prompt = "你是 B2B 護膚品批發選品專家。請為分類「" + catStr + "」" + (desc ? "、屬性「" + desc.replace(/\n/g, ", ") + "」" : "") + "提出一個適合國際 B2B 批發市場的英文產品名稱（不超過 6 個單字，清晰具體，符合專業品牌調性）。只輸出產品名稱。";
     const txt = await aiGenerate(prompt);
     const el = document.getElementById("pfName");
-    if(txt && el){ el.value = txt; showToast("AI 名稱草稿已填入 — 審閱後再儲存"); }
+    if(txt && el){ el.value = txt; showToast("AI name draft filled — review before saving"); }
   });
 }
-/* ---- 3b. 產品：AI 屬性描述（每行「屬性: 值」） ---- */
+/* ---- 3b. Product: AI attribute list (one "attribute: value" per line) ---- */
 async function aiGenProductDesc(btn){
   _aiBtnRun(btn, async () => {
     const nameEl = document.getElementById("pfName");
@@ -2624,10 +2624,10 @@ async function aiGenProductDesc(btn){
     const prompt = "你是產品資料專員。請為產品「" + name + "」（分類：" + catStr + "）撰寫 4-6 行屬性清單，每行格式「屬性: 值」（例如 Country of Origin: China、Scent: Rose、Volume: 100ml）。只輸出屬性行，不要編造品牌認證、具體成分濃度或數值，不確定的項目不要寫。";
     const txt = await aiGenerate(prompt);
     const el = document.getElementById("pfDesc");
-    if(txt && el){ el.value = txt; showToast("AI 描述草稿已填入 — 審閱後再儲存"); }
+    if(txt && el){ el.value = txt; showToast("AI description draft filled — review before saving"); }
   });
 }
-/* ---- 3c. 產品：AI SEO meta description ---- */
+/* ---- 3c. Product: AI SEO meta description ---- */
 async function aiGenProductMeta(btn){
   _aiBtnRun(btn, async () => {
     const nameEl = document.getElementById("pfName");
@@ -2639,7 +2639,7 @@ async function aiGenProductMeta(btn){
     const prompt = "請為 B2B 批發網站上的產品「" + name + "」（分類 " + catStr + (desc ? "，屬性 " + desc.replace(/\n/g, ", ") : "") + "）寫一句英文 SEO meta description（40-150 字元，自然包含 wholesale supplier、OEM/ODM 等關鍵字，吸引專業買家）。只輸出描述本身。";
     const txt = await aiGenerate(prompt);
     const el = document.getElementById("pfMeta");
-    if(txt && el){ el.value = txt; showToast("AI SEO meta 草稿已填入 — 審閱後再儲存"); }
+    if(txt && el){ el.value = txt; showToast("AI SEO meta draft filled — review before saving"); }
   });
 }
 /* ---- 3d. 分類：AI 描述 ---- */
@@ -2650,6 +2650,6 @@ async function aiGenCatDesc(btn){
     const prompt = "用英文為 B2B 護膚品批發網站的分類「" + name + "」寫 1-2 句描述（含 wholesale 與 OEM/ODM 相關字眼，適合採購商閱讀）。只輸出描述本身。";
     const txt = await aiGenerate(prompt);
     const el = document.getElementById("cfDesc");
-    if(txt && el){ el.value = txt; showToast("AI 分類描述草稿已填入 — 審閱後再儲存"); }
+    if(txt && el){ el.value = txt; showToast("AI category description draft filled — review before saving"); }
   });
 }
