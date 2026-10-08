@@ -266,7 +266,8 @@ section.block{padding:40px 0}
 
 /* ================= Hero ================= */
 .hero{position:relative;overflow:hidden;border-radius:16px;margin:22px auto 0;width:calc(100% - 48px);max-width:1400px;min-height:440px;display:flex;align-items:center;justify-content:center}
-.hero img.hero-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center}
+.hero img.hero-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:0;transition:opacity 1.1s ease}
+.hero img.hero-bg.active{opacity:1}
 .hero-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(31,30,35,.28) 0%,rgba(31,30,35,.42) 55%,rgba(31,30,35,.58) 100%)}
 .hero-content{position:relative;z-index:2;padding:54px 52px;max-width:720px;color:#fff;text-align:center;margin:0 auto}
 .hero-kicker{display:inline-block;font-size:11.5px;letter-spacing:.3em;text-transform:uppercase;font-weight:700;background:var(--brand);padding:6px 14px;border-radius:999px;margin-bottom:18px}
@@ -705,6 +706,8 @@ section.block{padding:40px 0}
 table.admin-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .admin-table th{background:var(--bg);text-align:left;padding:11px 14px;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);border-bottom:1px solid var(--line);white-space:nowrap}
 .admin-table td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+.admin-table td.td-email{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-table td.td-email a{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .admin-table tr:hover td{background:#faf9fb}
 .admin-table .td-img{width:46px;height:46px;border-radius:8px;object-fit:cover;background:var(--bg);border:1px solid var(--line)}
 .table-actions{display:flex;gap:6px}
@@ -810,7 +813,8 @@ details.ct-block > .form-grid{padding:14px 16px}
   .cat-strip{grid-template-columns:repeat(2,1fr);gap:12px}
   .shop-layout{grid-template-columns:1fr}
   .sidebar{display:none}
-  .mobile-cats{display:block;overflow-x:auto;white-space:nowrap;margin-bottom:14px;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+  .mobile-cats{display:block;overflow-x:auto;white-space:nowrap;margin-bottom:14px;-webkit-overflow-scrolling:touch;padding-bottom:4px;position:relative}
+  .mobile-cats::after{content:"";position:absolute;right:0;top:0;bottom:0;width:36px;background:linear-gradient(to left,var(--bg),transparent);pointer-events:none}
   .mobile-cats button{display:inline-block;padding:8px 15px;border-radius:999px;background:var(--card);border:1px solid var(--line-dark);font-size:12.5px;margin-right:8px;font-weight:500}
   .mobile-cats button.active{background:var(--brand);color:#fff;border-color:var(--brand)}
   .detail-wrap{grid-template-columns:1fr;gap:22px;padding:16px 0 36px}
@@ -871,6 +875,7 @@ details.ct-block > .form-grid{padding:14px 16px}
   .ov-grid{grid-template-columns:1fr}
   .admin-table{font-size:12.5px}
   .admin-table th,.admin-table td{padding:9px 8px}
+  .admin-table td.td-email{max-width:110px}
   .admin-table .td-img{width:40px;height:40px;display:block}
   .admin-table td:first-child{min-width:56px;text-align:center}
   .panel-body{padding:14px}
@@ -903,11 +908,6 @@ details.ct-block > .form-grid{padding:14px 16px}
 }
 .chatbot-fab:hover{transform:scale(1.08);box-shadow:0 6px 24px rgba(0,0,0,0.25)}
 .chatbot-fab svg{width:26px;height:26px}
-.chatbot-fab .chatbot-badge{
-  position:absolute;top:-2px;right:-2px;width:18px;height:18px;border-radius:50%;
-  background:#e74c3c;color:#fff;font-size:10px;font-weight:700;
-  display:flex;align-items:center;justify-content:center;border:2px solid #fff;
-}
 .chatbot-panel{
   position:fixed;bottom:90px;right:24px;width:360px;max-width:calc(100vw - 48px);
   height:520px;max-height:calc(100vh - 120px);
@@ -1121,7 +1121,6 @@ details.ct-block > .form-grid{padding:14px 16px}
 <!-- ================= CHATBOT WIDGET ================= -->
 <div class="chatbot-fab" id="chatbotFab" onclick="toggleChatbot()">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="10" x="3" y="11" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" x2="8" y1="16" y2="16"/><line x1="16" x2="16" y1="16" y2="16"/></svg>
-  <span class="chatbot-badge" id="chatbotBadge" style="display:none">1</span>
 </div>
 
 <div class="chatbot-panel" id="chatbotPanel">
@@ -1538,6 +1537,13 @@ function _waitCache(){
 
 const ORIGIN = "https://nebula-secret.weeblysite.com";
 const BANNER = "images/hero-banner.jpg";
+/* Hero slideshow images (rotates on the homepage). Swap entries here to
+   refresh the look without touching the code — keep them in /images/. */
+const HERO_SLIDES = [
+  BANNER,
+  "images/Picture2_1729173553.jpg",
+  "images/perfume/perfume_01_glamourous_dreamscape.jpg"
+];
 const PLACEHOLDER = "images/placeholder.svg";
 
 /* ============ Storage keys ============ */
@@ -3758,9 +3764,13 @@ function trackOrderLookup(){
 function viewHome(){
   const products = getProducts(); const th = getTheme();
   const featured = products.slice(0, 8);
+  /* Hero slideshow: theme banner first (if custom), then the default slide set */
+  const slides = th.banner && HERO_SLIDES.indexOf(th.banner) === -1 ? [th.banner].concat(HERO_SLIDES) : HERO_SLIDES;
   $("#app").innerHTML =
   '<section class="hero">' +
-    '<img class="hero-bg" src="' + imgUrl(th.banner, 1600) + '" alt="' + esc(th.heroTitle) + '">' +
+    slides.map((src, i) =>
+      '<img class="hero-bg' + (i === 0 ? ' active' : '') + '" src="' + imgUrl(src, 1600) + '" alt="' + esc(th.heroTitle) + '" loading="' + (i === 0 ? 'eager' : 'lazy') + '">'
+    ).join("") +
     '<div class="hero-overlay"></div>' +
     '<div class="hero-content">' +
       '<span class="hero-kicker">' + esc(th.heroKicker) + '</span>' +
@@ -3835,7 +3845,22 @@ function viewHome(){
       '</form>' +
     '</div>' +
   '</div></section>';
+  startHeroSlideshow();
   setTimeout(showPopupIfNeeded, 700);
+}
+
+/* Homepage hero slideshow — auto-rotates every 5.5s (respects reduced motion) */
+function startHeroSlideshow(){
+  const imgs = document.querySelectorAll('.hero .hero-bg');
+  if(imgs.length < 2) return;
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if(window._heroTimer) clearInterval(window._heroTimer);
+  let i = 0;
+  window._heroTimer = setInterval(() => {
+    imgs[i].classList.remove('active');
+    i = (i + 1) % imgs.length;
+    imgs[i].classList.add('active');
+  }, 5500);
 }
 
 /* ============ Homepage popup ============ */
@@ -5317,7 +5342,7 @@ function loadAdminScript(callback){
   }
   _adminLoading = true;
   const script = document.createElement("script");
-  script.src = "admin.js?v=20261007b";
+  script.src = "admin.js?v=20261008a";
   script.onload = () => { _adminLoaded = true; _adminLoading = false; if(callback) callback(); };
   script.onerror = () => {
     _adminLoading = false;
@@ -5900,7 +5925,6 @@ function toggleChatbot(){
   if(_chatbotOpen){
     panel.classList.add('open');
     initChatbot();
-    document.getElementById('chatbotBadge').style.display = 'none';
     setTimeout(() => document.getElementById('chatbotInput').focus(), 300);
   } else {
     panel.classList.remove('open');
@@ -6132,13 +6156,6 @@ function submitChatbotLead(){
     btn.textContent = 'Submit Request';
   });
 }
-
-// Show unread badge after 5 seconds if not opened
-setTimeout(() => {
-  if(!_chatbotOpen){
-    document.getElementById('chatbotBadge').style.display = 'flex';
-  }
-}, 5000);
 </script>
 </body>
 </html>

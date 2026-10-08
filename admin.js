@@ -698,7 +698,7 @@ function adminOrders(){
           '<td style="font-weight:600">' + esc(o.id) + '</td>' +
           '<td style="white-space:nowrap">' + fmtDT(o.date) + '</td>' +
           '<td>' + esc(custName(o)) + '</td>' +
-          '<td><a href="mailto:' + esc(custEmail(o)) + '" style="color:var(--accent)">' + esc(custEmail(o)) + '</a></td>' +
+          '<td class="td-email"><a href="mailto:' + esc(custEmail(o)) + '" style="color:var(--accent)">' + esc(custEmail(o)) + '</a></td>' +
           '<td>' + o.items.reduce((s,i) => s + i.qty, 0) + '</td>' +
           '<td style="font-weight:700">' + fmtIn(o.total, cur, orate(o)) + ' <span style="font-weight:400;color:var(--ink-soft);font-size:11px">' + cur + '</span></td>' +
           '<td><select class="order-status ' + orderStatusColor(o.status) + '" onchange="setOrderStatus(\'' + esc(o.id) + '\', this.value)">' +
