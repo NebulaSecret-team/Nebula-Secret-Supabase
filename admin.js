@@ -2176,6 +2176,11 @@ async function doLogin(){
           await supabase.auth.signOut();
           supabaseLoginFailed = true;
           supabaseErrorMsg = "User does not have admin role";
+          /* If the account exists but has no admin role, tell the user which
+             email is the actual admin (catches typos like nebulasecret.com) */
+          if(email.toLowerCase() !== "admin@nebulaecret.com"){
+            supabaseErrorMsg += " for account \"" + email + "\". The admin email is admin@nebulaecret.com";
+          }
         }
       }
     } catch(e) {
