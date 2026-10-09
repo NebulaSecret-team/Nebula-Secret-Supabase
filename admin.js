@@ -496,28 +496,28 @@ async function adminAnalytics(){
         '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">' +
           '<div class="stat-card" style="background:linear-gradient(135deg,#2d3748,#1a202c);position:relative;overflow:hidden;border:none">' +
             '<div style="position:absolute;top:-10px;right:-10px;opacity:0.08;color:white;transform:scale(2.5)">' + icons.users + '</div>' +
-            '<span class="s-icon" style="color:#a0aec0;position:relative;z-index:1">' + icons.users + '</span>' +
+            
             '<div class="s-label" style="color:rgba(255,255,255,0.6);position:relative;z-index:1">Total Visitors</div>' +
             '<div class="s-value" style="color:white;position:relative;z-index:1">' + uniqueSessions.size + '</div>' +
             '<div class="s-sub" style="color:rgba(255,255,255,0.45);position:relative;z-index:1">Unique sessions</div>' +
           '</div>' +
           '<div class="stat-card" style="background:linear-gradient(135deg,#2c5282,#1a365d);position:relative;overflow:hidden;border:none">' +
             '<div style="position:absolute;top:-10px;right:-10px;opacity:0.08;color:white;transform:scale(2.5)">' + icons.eye + '</div>' +
-            '<span class="s-icon" style="color:#90cdf4;position:relative;z-index:1">' + icons.eye + '</span>' +
+            
             '<div class="s-label" style="color:rgba(255,255,255,0.6);position:relative;z-index:1">Total Page Views</div>' +
             '<div class="s-value" style="color:white;position:relative;z-index:1">' + totalPageViews + '</div>' +
             '<div class="s-sub" style="color:rgba(255,255,255,0.45);position:relative;z-index:1">All time</div>' +
           '</div>' +
           '<div class="stat-card" style="background:linear-gradient(135deg,#285e61,#1a4749);position:relative;overflow:hidden;border:none">' +
             '<div style="position:absolute;top:-10px;right:-10px;opacity:0.08;color:white;transform:scale(2.5)">' + icons.calendar + '</div>' +
-            '<span class="s-icon" style="color:#81e6d9;position:relative;z-index:1">' + icons.calendar + '</span>' +
+            
             '<div class="s-label" style="color:rgba(255,255,255,0.6);position:relative;z-index:1">Today</div>' +
             '<div class="s-value" style="color:white;position:relative;z-index:1">' + todaySessions.size + '</div>' +
             '<div class="s-sub" style="color:rgba(255,255,255,0.45);position:relative;z-index:1">Visitors · ' + todayPageViews + ' views</div>' +
           '</div>' +
           '<div class="stat-card" style="background:linear-gradient(135deg,#553c9a,#322659);position:relative;overflow:hidden;border:none">' +
             '<div style="position:absolute;top:-10px;right:-10px;opacity:0.08;color:white;transform:scale(2.5)">' + icons.trending + '</div>' +
-            '<span class="s-icon" style="color:#b794f4;position:relative;z-index:1">' + icons.trending + '</span>' +
+            
             '<div class="s-label" style="color:rgba(255,255,255,0.6);position:relative;z-index:1">This Week</div>' +
             '<div class="s-value" style="color:white;position:relative;z-index:1">' + weekSessions.size + '</div>' +
             '<div class="s-sub" style="color:rgba(255,255,255,0.45);position:relative;z-index:1">Visitors · ' + weekPageViews + ' views</div>' +
