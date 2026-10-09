@@ -272,9 +272,9 @@ function adminDashboard(){
       '<div class="stat-card"><span class="s-icon">' + IC.doc + '</span><div class="s-label">Quotes</div><div class="s-value">' + (quotes.length || 0) + '</div><div class="s-sub"><a href="#/admin/quotes" style="color:var(--accent)">View quotes &amp; enquiries</a></div></div>' +
     '</div>' +
     // AI Operational Summary
-    '<div class="admin-panel"><div class="panel-head"><div><h3>🤖 AI Operations Summary</h3><div class="ph-sub">Gemini analyzes orders, revenue and pending tasks for today, then offers suggestions (for reference only — no data is modified)</div></div>' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>AI Operations Summary</h3><div class="ph-sub">Gemini analyzes orders, revenue and pending tasks for today, then offers suggestions (for reference only: no data is modified)</div></div>' +
       '<div style="display:flex;gap:8px;align-items:center">' +
-        '<button class="btn sm" onclick="aiDashboardSummary(this)">🤖 Generate Summary</button>' +
+        '<button class="btn sm" onclick="aiDashboardSummary(this)">Generate Summary</button>' +
         '<button class="btn sm ghost" onclick="copyAiSummary()" style="display:none" id="aiCopyBtn">Copy</button>' +
       '</div></div>' +
     '<div class="panel-body" id="aiSummaryBox" style="display:none;font-size:13.5px;line-height:1.7;color:var(--ink);white-space:pre-wrap"></div></div>' +
@@ -772,8 +772,8 @@ function viewOrder(id){
     '<div class="ov-grid">' +
       '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(custName(o)) + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v"><a href="mailto:' + esc(custEmail(o)) + '" style="color:var(--accent)">' + esc(custEmail(o)) + '</a></div></div>' +
-      '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(custPhone(o) || "—") + '</div></div>' +
-      '<div class="ov-box"><div class="ov-k">Preferred Contact</div><div class="ov-v">' + esc(custContact(o) || "—") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(custPhone(o) || "-") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Preferred Contact</div><div class="ov-v">' + esc(custContact(o) || "-") + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc(custAddr(o)) + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Status</div><div class="ov-v"><select class="order-status ' + orderStatusColor(o.status) + '" onchange="setOrderStatus(\'' + esc(o.id) + '\', this.value)">' + ORDER_STATUSES.map(s => '<option ' + (o.status === s ? "selected" : "") + '>' + s + '</option>').join("") + '</select></div></div>' +
       '<div class="ov-box"><div class="ov-k">Total (' + cur + ')</div><div class="ov-v" style="font-weight:800">' + fmtIn(o.total, cur, orate(o)) + '</div></div>' +
@@ -811,13 +811,13 @@ function viewOrder(id){
     '</div>' +
     '<div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">' +
       '<button class="btn sm" onclick="mailOrder(lastOrder)">' + IC.mail + ' Email Order</button>' +
-      '<button class="btn sm ghost" onclick="aiOrderReplyDraft(\'' + escJs(o.id) + '\')" title="AI draft reply for customer in English">🤖 AI Reply Draft</button>' +
+      '<button class="btn sm ghost" onclick="aiOrderReplyDraft(\'' + escJs(o.id) + '\')" title="AI draft reply for customer in English">AI Reply Draft</button>' +
       '<button class="btn sm ghost" onclick="copyOrderSummary(lastOrder)">Copy Summary</button>' +
       '<button class="btn sm ghost" onclick="downloadOrderPDF(\'' + escJs(o.id) + '\')">' + IC.down + ' Download PDF</button>' +
     '</div>' +
     '<div id="aiDraftBox" style="display:none;margin-top:14px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:10px">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
-        '<span style="font-weight:600;font-size:13px">🤖 AI Reply Draft (review before sending)</span>' +
+        '<span style="font-weight:600;font-size:13px">AI Reply Draft (review before sending)</span>' +
         '<button class="btn sm ghost" onclick="copyAiDraft()">Copy</button>' +
       '</div>' +
       '<textarea id="aiDraftText" rows="8" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);background:var(--bg-soft);resize:vertical"></textarea>' +
@@ -851,7 +851,7 @@ function adminQuotes(){
           '<td style="text-align:center">' + q.items.reduce((s,i) => s + i.qty, 0) + '</td>' +
           '<td style="font-weight:700;white-space:nowrap">' + (q.quotedPrice ? fmt(q.quotedPrice) : '<span style="color:var(--ink-soft);font-weight:400">Pending</span>') + '</td>' +
           '<td><span class="pill ' + (q.status === "Pending" ? "yellow" : q.status === "Quoted" ? "blue" : q.status === "Accepted" ? "green" : "gray") + '">' + esc(statusDisplay) + '</span></td>' +
-          '<td style="white-space:nowrap">' + (q.validUntil ? fmtD(q.validUntil) : "—") + '</td>' +
+          '<td style="white-space:nowrap">' + (q.validUntil ? fmtD(q.validUntil) : "-") + '</td>' +
           '<td><div class="table-actions">' +
             '<button onclick="viewAdminQuote(\'' + escJs(q.id) + '\')" title="View">' + IC.search + '</button>' +
             '<button onclick="downloadQuotePDF(\'' + escJs(q.id) + '\')" title="Download PDF">' + IC.down + '</button>' +
@@ -872,13 +872,13 @@ function viewAdminQuote(id){
     '<div class="ov-grid">' +
       '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(qCustName(q)) + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v"><a href="mailto:' + esc(qCustEmail(q)) + '" style="color:var(--accent)">' + esc(qCustEmail(q)) + '</a></div></div>' +
-      '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(qCustPhone(q) || "—") + '</div></div>' +
-      '<div class="ov-box"><div class="ov-k">Company</div><div class="ov-v">' + esc(qCustCompany(q) || "—") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(qCustPhone(q) || "-") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Company</div><div class="ov-v">' + esc(qCustCompany(q) || "-") + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc(qCustAddr(q)) + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Status</div><div class="ov-v"><span class="pill ' + (q.status === "Pending" ? "yellow" : q.status === "Quoted" ? "blue" : q.status === "Accepted" ? "green" : "gray") + '">' + esc(isExpired && q.status === "Quoted" ? "Expired" : q.status) + '</span></div></div>' +
       '<div class="ov-box"><div class="ov-k">Est. Total</div><div class="ov-v">' + fmt(q.subtotal) + '</div></div>' +
       (q.customerTargetPrice ? '<div class="ov-box" style="background:rgba(250,173,20,0.08);border:1px solid rgba(250,173,20,0.3)"><div class="ov-k">Customer Target Price</div><div class="ov-v" style="font-weight:800;color:#b8860b">' + fmt(q.customerTargetPrice) + '</div></div>' : '') +
-      '<div class="ov-box"><div class="ov-k">Quoted Price</div><div class="ov-v" style="font-weight:800;color:var(--brand)">' + (q.quotedPrice ? fmt(q.quotedPrice) : "—") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Quoted Price</div><div class="ov-v" style="font-weight:800;color:var(--brand)">' + (q.quotedPrice ? fmt(q.quotedPrice) : "-") + '</div></div>' +
     '</div>' +
     '<table class="admin-table" style="margin-top:14px"><thead><tr><th>Product</th><th>Category</th><th>Qty</th><th>Unit (EUR)</th><th>Line (EUR)</th></tr></thead><tbody>' +
     q.items.map(it => '<tr><td style="font-weight:600">' + esc(it.name) + '</td><td><span class="pill">' + esc(catName(it.cat)) + '</span></td><td>' + it.qty + '</td><td>' + fmt(it.price) + '</td><td style="font-weight:700">' + fmt(it.price * it.qty) + '</td></tr>').join("") +
@@ -906,12 +906,12 @@ function viewAdminQuote(id){
     '</div>' +
     '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">' +
       '<button class="btn sm ghost" onclick="downloadQuotePDF(\'' + escJs(q.id) + '\')">' + IC.down + ' Download Quote PDF</button>' +
-      '<button class="btn sm ghost" onclick="aiQuoteReplyDraft(\'' + escJs(q.id) + '\')" title="AI draft reply for customer in English">🤖 AI Reply Draft</button>' +
+      '<button class="btn sm ghost" onclick="aiQuoteReplyDraft(\'' + escJs(q.id) + '\')" title="AI draft reply for customer in English">AI Reply Draft</button>' +
       '<button class="btn sm ghost" onclick="mailQuote(\'' + escJs(q.id) + '\')">' + IC.mail + ' Email Customer</button>' +
     '</div>' +
     '<div id="aiDraftBox" style="display:none;margin-top:14px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:10px">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
-        '<span style="font-weight:600;font-size:13px">🤖 AI Reply Draft (review before sending)</span>' +
+        '<span style="font-weight:600;font-size:13px">AI Reply Draft (review before sending)</span>' +
         '<button class="btn sm ghost" onclick="copyAiDraft()">Copy</button>' +
       '</div>' +
       '<textarea id="aiDraftText" rows="8" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);background:var(--bg-soft);resize:vertical"></textarea>' +
@@ -1020,7 +1020,7 @@ function exportOrdersCSV(){
   });
   if(orders.length === 0) rows.push(["No orders yet"]);
   downloadCSV("nebula-secret-orders.csv", rows);
-  showToast("Orders exported — open in Excel");
+  showToast("Orders exported: open in Excel");
 }
 function getCurDec(code){ return (CURRENCIES.find(c => c.code === code) || CURRENCIES[0]).dec; }
 function exportItemsCSV(){
@@ -1033,7 +1033,7 @@ function exportItemsCSV(){
   });
   if(rows.length === 1) rows.push(["No orders yet"]);
   downloadCSV("nebula-secret-order-items.csv", rows);
-  showToast("Product order list exported — open in Excel");
+  showToast("Product order list exported: open in Excel");
 }
 
 /* ---- Products admin ---- */
@@ -1253,14 +1253,14 @@ function openProductForm(id){
   $("#amSub").textContent = p ? "Editing: " + p.n : "Fill in the details to add a new product";
   $("#amBody").innerHTML =
     '<div class="form-grid">' +
-      '<div class="field full"><label>Product name *</label><div style="display:flex;gap:8px"><input id="pfName" value="' + (p ? esc(p.n) : "") + '" placeholder="e.g. Rose Body Scrub" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenProductName(this)" title="Generate with AI">✨ AI</button></div></div>' +
+      '<div class="field full"><label>Product name *</label><div style="display:flex;gap:8px"><input id="pfName" value="' + (p ? esc(p.n) : "") + '" placeholder="e.g. Rose Body Scrub" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenProductName(this)" title="Generate with AI">AI</button></div></div>' +
       '<div class="field"><label>Category *</label><select id="pfCat">' + cats.map(c => '<option value="' + c.cs + '"' + (p && p.cs === c.cs ? " selected" : "") + '>' + esc(c.c) + '</option>').join("") + '</select></div>' +
       '<div class="field"><label>Base Price (EUR) *</label><input id="pfPrice" type="number" step="0.01" min="0" value="' + (p ? p.p : "1.00") + '"><div class="form-hint">Default price for 1 unit</div></div>' +
       '<div class="field full"><label>Image URL</label><input id="pfImg" value="' + (p ? esc(p.i) : "") + '" placeholder="https://… (leave empty for placeholder)" oninput="pfPreview(this.value)"></div>' +
       '<div class="field full"><label>Image preview</label><div class="pf-prev"><img id="pfImgPrev" src="' + (p ? imgUrl(p.i, 200) : PLACEHOLDER) + '" alt="" onerror="this.onerror=null;this.src=PLACEHOLDER"></div>' +
-      '<div class="field full"><label>Or upload from your computer</label><label class="upload-btn" for="pfUpload">' + IC.up + ' Choose image file</label><input type="file" id="pfUpload" accept="image/*" style="display:none" onchange="uploadImageTo(\'pfUpload\',\'pfImg\',800)"><div class="form-hint">The image is compressed and stored with this product — no hosting needed. Tip: you can also paste any image URL directly.</div></div>' +
-      '<div class="field full"><label>Description (one attribute per line)</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="pfDesc" rows="5" placeholder="Country of Origin: China&#10;Scent: Rose&#10;Volume: 100ml" style="flex:1">' + (p ? esc((p.d || []).join("\n")) : "") + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenProductDesc(this)" title="Generate with AI">✨ AI</button></div></div>' +
-      '<div class="field full"><label>SEO meta description</label><div style="display:flex;gap:8px"><input id="pfMeta" value="' + (p ? esc(p.meta || "") : "") + '" placeholder="e.g. Wholesale rose body scrub supplier — OEM/ODM private label available" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenProductMeta(this)" title="Generate with AI">✨ AI</button></div><div class="form-hint">Used for Google search results &amp; structured data. 40–150 characters recommended.</div></div>' +
+      '<div class="field full"><label>Or upload from your computer</label><label class="upload-btn" for="pfUpload">' + IC.up + ' Choose image file</label><input type="file" id="pfUpload" accept="image/*" style="display:none" onchange="uploadImageTo(\'pfUpload\',\'pfImg\',800)"><div class="form-hint">The image is compressed and stored with this product: no hosting needed. Tip: you can also paste any image URL directly.</div></div>' +
+      '<div class="field full"><label>Description (one attribute per line)</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="pfDesc" rows="5" placeholder="Country of Origin: China&#10;Scent: Rose&#10;Volume: 100ml" style="flex:1">' + (p ? esc((p.d || []).join("\n")) : "") + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenProductDesc(this)" title="Generate with AI">AI</button></div></div>' +
+      '<div class="field full"><label>SEO meta description</label><div style="display:flex;gap:8px"><input id="pfMeta" value="' + (p ? esc(p.meta || "") : "") + '" placeholder="e.g. Wholesale rose body scrub supplier: OEM/ODM private label available" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenProductMeta(this)" title="Generate with AI">AI</button></div><div class="form-hint">Used for Google search results &amp; structured data. 40-150 characters recommended.</div></div>' +
       '<div class="field full">' +
         '<label>Bulk Pricing Tiers (MOQ & Volume Discounts)</label>' +
         '<div class="form-hint">Set different prices for different order quantities. The first tier should start at 1 (MOQ).</div>' +
@@ -1383,7 +1383,7 @@ function adminCategories(){
           '</div></div>';
       }).join("") +
     '</div></div>' +
-    '<div class="admin-panel"><div class="panel-body"><div style="font-size:13px;color:var(--ink-soft)">Deleting a category does not delete its products — products move to the category you choose (or stay listed under their current slug).</div></div></div>';
+    '<div class="admin-panel"><div class="panel-body"><div style="font-size:13px;color:var(--ink-soft)">Deleting a category does not delete its products: products move to the category you choose (or stay listed under their current slug).</div></div></div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Categories";
 }
@@ -1410,11 +1410,11 @@ function openCatForm(cs){
   $("#amSub").textContent = c ? "Editing: " + c.c : "Create a new product category";
   $("#amBody").innerHTML =
     '<div class="form-grid">' +
-      '<div class="field full"><label>Category name *</label><div style="display:flex;gap:8px"><input id="cfName" value="' + (c ? esc(c.c) : "") + '" placeholder="e.g. Body Lotion" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenCatDesc(this)" title="Generate description with AI">✨ AI</button></div></div>' +
-      '<div class="field full"><label>Description</label><textarea id="cfDesc" rows="2" placeholder="e.g. Wholesale body lotions for brands, retailers & distributors — OEM/ODM available">' + (c ? esc(c.desc || "") : "") + '</textarea></div>' +
+      '<div class="field full"><label>Category name *</label><div style="display:flex;gap:8px"><input id="cfName" value="' + (c ? esc(c.c) : "") + '" placeholder="e.g. Body Lotion" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenCatDesc(this)" title="Generate description with AI">AI</button></div></div>' +
+      '<div class="field full"><label>Description</label><textarea id="cfDesc" rows="2" placeholder="e.g. Wholesale body lotions for brands, retailers & distributors: OEM/ODM available">' + (c ? esc(c.desc || "") : "") + '</textarea></div>' +
       '<div class="field full"><label>Cover image URL</label><input id="cfImg" value="' + (c ? esc(c.i) : "") + '" placeholder="https://… (leave empty for placeholder)" oninput="cfPreview(this.value)"></div>' +
       '<div class="field full"><label>Image preview</label><div class="pf-prev"><img id="cfImgPrev" src="' + (c ? imgUrl(c.i, 200) : PLACEHOLDER) + '" alt="" onerror="this.onerror=null;this.src=PLACEHOLDER"></div></div>' +
-      '<div class="field full"><label>Or upload from your computer</label><label class="upload-btn" for="cfUpload">' + IC.up + ' Choose image file</label><input type="file" id="cfUpload" accept="image/*" style="display:none" onchange="uploadImageTo(\'cfUpload\',\'cfImg\',800)"><div class="form-hint">The image is compressed and stored with this category — no hosting needed. Tip: you can also paste any image URL directly.</div></div>' +
+      '<div class="field full"><label>Or upload from your computer</label><label class="upload-btn" for="cfUpload">' + IC.up + ' Choose image file</label><input type="file" id="cfUpload" accept="image/*" style="display:none" onchange="uploadImageTo(\'cfUpload\',\'cfImg\',800)"><div class="form-hint">The image is compressed and stored with this category: no hosting needed. Tip: you can also paste any image URL directly.</div></div>' +
     '</div>' +
     '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">' +
       '<button class="btn ghost" onclick="closeAdminModal()">Cancel</button>' +
@@ -1498,7 +1498,7 @@ async function adminCustomers(){
         '<button class="btn sm ghost" style="color:#c0392b;border-color:#e0b4b0" onclick="deleteCustomerAccount(\'' + escJs(a.email) + '\')">Delete</button>' +
       '</td>' +
     '</tr>';
-  }).join("") : '<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:24px">No customer accounts yet — accounts appear here when customers create one on the Account page.</td></tr>';
+  }).join("") : '<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:24px">No customer accounts yet: accounts appear here when customers create one on the Account page.</td></tr>';
   const content =
     '<div class="admin-panel"><div class="panel-head"><div><h3>Customer Accounts</h3><div class="ph-sub">Everyone who created an account on the storefront</div></div><div style="display:flex;gap:8px"><button class="btn sm ghost" onclick="adminCustomers()">Refresh</button><button class="btn sm ghost" onclick="location.hash=\'#/admin/tiers\'">Manage Tiers</button><button class="btn sm ghost" onclick="location.hash=\'#/account\'">Open Account page</button></div></div>' +
     '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th>Name</th><th>Email</th><th>Registered</th><th>Orders</th><th>Tier</th><th style="text-align:right">Actions</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>' +
@@ -1723,15 +1723,15 @@ function adminTheme(){
           THEME_PRESETS.map((p,i) => '<button class="swatch" style="background:' + p.brand + '" title="' + p.name + '" onclick="applyPreset(' + i + ')"></button>').join("") +
         '</div></div>' +
         '<div class="field"><label>Hero kicker</label><input id="thKicker" value="' + esc(th.heroKicker) + '"></div>' +
-        '<div class="field full"><label>Hero title</label><div style="display:flex;gap:8px"><input id="thTitle" value="' + esc(th.heroTitle) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'thTitle\', this)" title="Generate with AI">✨ AI</button></div></div>' +
-        '<div class="field full"><label>Hero subtitle</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="thSub" rows="2" style="flex:1">' + esc(th.heroSub) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'thSub\', this)" title="Generate with AI">✨ AI</button></div></div>' +
+        '<div class="field full"><label>Hero title</label><div style="display:flex;gap:8px"><input id="thTitle" value="' + esc(th.heroTitle) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'thTitle\', this)" title="Generate with AI">AI</button></div></div>' +
+        '<div class="field full"><label>Hero subtitle</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="thSub" rows="2" style="flex:1">' + esc(th.heroSub) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'thSub\', this)" title="Generate with AI">AI</button></div></div>' +
         '<div class="field full"><label>Hero banner image (URL or upload)</label><div style="display:flex;gap:8px;align-items:center"><input id="thBanner" value="' + esc(th.banner) + '" style="flex:1" placeholder="Paste image URL or click Upload"><button type="button" class="btn sm" style="flex-shrink:0" onclick="document.getElementById(\'thBannerFile\').click()">Upload Image</button></div><input type="file" id="thBannerFile" accept="image/*" style="display:none" onchange="handleBannerUpload(this)"><div id="thBannerPreview" style="margin-top:8px"></div></div>' +
       '</div>' +
     '</div></div>' +
     '<div class="admin-panel"><div class="panel-head"><div><h3>Homepage Popup</h3><div class="ph-sub">A promotional popup shown once per session on the homepage</div></div></div>' +
     '<div class="panel-body">' +
       '<div class="form-grid">' +
-        '<div class="field"><label>Enable popup</label><select id="thPopupEnabled"><option value="1"' + (th.popupEnabled ? " selected" : "") + '>On — show on homepage</option><option value="0"' + (!th.popupEnabled ? " selected" : "") + '>Off — hidden</option></select></div>' +
+        '<div class="field"><label>Enable popup</label><select id="thPopupEnabled"><option value="1"' + (th.popupEnabled ? " selected" : "") + '>On: show on homepage</option><option value="0"' + (!th.popupEnabled ? " selected" : "") + '>Off: hidden</option></select></div>' +
         '<div class="field full"><label>Popup title</label><input id="thPopupTitle" value="' + esc(th.popupTitle) + '"></div>' +
         '<div class="field full"><label>Popup content (HTML)</label><textarea id="thPopupBody" rows="4">' + esc(th.popupBody) + '</textarea></div>' +
         '<div class="field full"><label>Popup image (URL or upload)</label><div style="display:flex;gap:8px;align-items:center"><input id="thPopupImg" value="' + esc(th.popupImage) + '" style="flex:1" placeholder="Paste image URL or click Upload"><button type="button" class="btn sm" style="flex-shrink:0" onclick="document.getElementById(\'thPopupImgFile\').click()">Upload Image</button></div><input type="file" id="thPopupImgFile" accept="image/*" style="display:none" onchange="handlePopupImgUpload(this)"><div id="thPopupImgPreview" style="margin-top:8px"></div></div>' +
@@ -1745,13 +1745,13 @@ function adminTheme(){
 }
 function adminEmails(){
   const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Auto-send every new order to your inbox — Resend via Vercel Edge Function</div></div></div>' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Auto-send every new order to your inbox: Resend via Vercel Edge Function</div></div></div>' +
     '<div class="panel-body">' +
       '<div class="form-grid">' +
         '<div class="field full" id="emailStatus"><label>Server Status (Vercel Edge Function)</label><div style="padding:10px;border-radius:8px;background:#f0f0f0;color:#666" id="emailStatusText">Checking...</div></div>' +
         '<div class="field full" id="emailParams"><label>Vercel Environment Variables</label><div style="padding:10px;border-radius:8px;background:#f8f9fa;font-family:monospace;font-size:12px" id="emailParamsList">Loading...</div></div>' +
       '</div>' +
-      '<div class="form-hint" style="margin-top:12px">Emails are sent server-side through <code>/api/send-email</code> (Resend). Keys live only in Vercel env vars — nothing to configure here.</div>' +
+      '<div class="form-hint" style="margin-top:12px">Emails are sent server-side through <code>/api/send-email</code> (Resend). Keys live only in Vercel env vars: nothing to configure here.</div>' +
       '<button class="btn ghost" style="margin-top:12px" onclick="sendTestOrderEmail()">Send Test Email</button>' +
       '<div class="form-hint" style="margin-top:10px"><b>Still not receiving order emails?</b> (1) click <b>Send Test Email</b>; (2) check spam folder; (3) verify env vars above are all ✅ in Vercel. Orders are always saved in Admin → Orders and downloadable as Excel/CSV regardless of email.</div>' +
     '</div></div>';
@@ -1794,13 +1794,13 @@ function adminContent(){
   // Default content (shown in editor when no custom override exists)
   const DEF = {
     topbarWelcome: "Welcome to Nebula Secret",
-    footerDesc: "We supply everyday products you find in department stores — skincare, body care, home wellness and much more — tailored to your requirements through wholesale and OEM/ODM.",
+    footerDesc: "We supply everyday products you find in department stores: skincare, body care, home wellness and much more: tailored to your requirements through wholesale and OEM/ODM.",
     footerCopy: "© 2026 Nebula Secret. All rights reserved.",
     storyT: "Our Story",
-    storyB: '<p>Founded in the United Kingdom, <strong>Nebula Secret</strong> is the wholesale and OEM/ODM home of <strong>Nebula Corporate Limited</strong>. With offices in London, Hong Kong and mainland China, and a trusted network of manufacturers across China and the Asia-Pacific region, we bring together global expertise, craftsmanship and a genuine passion for quality.</p><p>What began as a sourcing house with a passion for quality has grown into a brand dedicated to making everyday products a little more special. Every product in our collection is carefully curated to combine on-trend design, superior quality and honest pricing — so your customers can enjoy a little everyday luxury without compromise.</p><p>From body scrubs and facial masks to essential oils, incense and other everyday essentials found in department stores, each item is chosen with care, tested with attention, and delivered with the promise that it deserves a place in your home.</p>',
+    storyB: '<p>Founded in the United Kingdom, <strong>Nebula Secret</strong> is the wholesale and OEM/ODM home of <strong>Nebula Corporate Limited</strong>. With offices in London, Hong Kong and mainland China, and a trusted network of manufacturers across China and the Asia-Pacific region, we bring together global expertise, craftsmanship and a genuine passion for quality.</p><p>What began as a sourcing house with a passion for quality has grown into a brand dedicated to making everyday products a little more special. Every product in our collection is carefully curated to combine on-trend design, superior quality and honest pricing: so your customers can enjoy a little everyday luxury without compromise.</p><p>From body scrubs and facial masks to essential oils, incense and other everyday essentials found in department stores, each item is chosen with care, tested with attention, and delivered with the promise that it deserves a place in your home.</p>',
     missionT: "Our Mission",
     missionLead: "We believe self-care should be simple, joyful and accessible to everyone.",
-    missionB: '<p>From the first concept to the final product, we oversee every step — sourcing, formulation, packaging and quality control — to deliver products that feel good and do good. We bridge global markets so that the finest ingredients, trends and craftsmanship can reach your doorstep, wherever you are.</p><p>We build everything on <strong>trust, integrity and transparency</strong>. We work closely with our manufacturing partners to ensure every batch meets our strict standards, and we are always honest about what goes into our products — because you deserve to know exactly what you are bringing into your home.</p>',
+    missionB: '<p>From the first concept to the final product, we oversee every step: sourcing, formulation, packaging and quality control: to deliver products that feel good and do good. We bridge global markets so that the finest ingredients, trends and craftsmanship can reach your doorstep, wherever you are.</p><p>We build everything on <strong>trust, integrity and transparency</strong>. We work closely with our manufacturing partners to ensure every batch meets our strict standards, and we are always honest about what goes into our products: because you deserve to know exactly what you are bringing into your home.</p>',
     promiseT: "Our Promise to You",
     promiseLead: "Five principles that guide everything we make and do."
   };
@@ -1813,24 +1813,24 @@ function adminContent(){
         '</div></details>' +
       '<details class="ct-block" open><summary><b>Footer</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field full"><label>Brand description</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="ctFooterDesc" rows="3" style="flex:1">' + esc(fo.desc || DEF.footerDesc) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctFooterDesc\', this)" title="Generate with AI">✨ AI</button></div></div>' +
+          '<div class="field full"><label>Brand description</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="ctFooterDesc" rows="3" style="flex:1">' + esc(fo.desc || DEF.footerDesc) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctFooterDesc\', this)" title="Generate with AI">AI</button></div></div>' +
           '<div class="field full"><label>Copyright line</label><input id="ctFooterCopy" value="' + esc(fo.copyright || DEF.footerCopy) + '"></div>' +
         '</div></details>' +
-      '<details class="ct-block" open><summary><b>About — Our Story</b></summary>' +
+      '<details class="ct-block" open><summary><b>About: Our Story</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field"><label>Section title</label><div style="display:flex;gap:8px"><input id="ctStoryT" value="' + esc((ab.story||{}).t || DEF.storyT) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctStoryT\', this)" title="Generate with AI">✨ AI</button></div></div>' +
-          '<div class="field full"><label>Body (HTML)</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="ctStoryB" rows="6" style="flex:1">' + esc((ab.story||{}).b || DEF.storyB) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctStoryB\', this)" title="Generate with AI">✨ AI</button></div></div>' +
+          '<div class="field"><label>Section title</label><div style="display:flex;gap:8px"><input id="ctStoryT" value="' + esc((ab.story||{}).t || DEF.storyT) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctStoryT\', this)" title="Generate with AI">AI</button></div></div>' +
+          '<div class="field full"><label>Body (HTML)</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="ctStoryB" rows="6" style="flex:1">' + esc((ab.story||{}).b || DEF.storyB) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctStoryB\', this)" title="Generate with AI">AI</button></div></div>' +
         '</div></details>' +
-      '<details class="ct-block"><summary><b>About — Our Mission</b></summary>' +
+      '<details class="ct-block"><summary><b>About: Our Mission</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field"><label>Section title</label><div style="display:flex;gap:8px"><input id="ctMissionT" value="' + esc((ab.mission||{}).t || DEF.missionT) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctMissionT\', this)" title="Generate with AI">✨ AI</button></div></div>' +
-          '<div class="field"><label>Lead line</label><div style="display:flex;gap:8px"><input id="ctMissionLead" value="' + esc((ab.mission||{}).lead || DEF.missionLead) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctMissionLead\', this)" title="Generate with AI">✨ AI</button></div></div>' +
-          '<div class="field full"><label>Body (HTML)</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="ctMissionB" rows="6" style="flex:1">' + esc((ab.mission||{}).b || DEF.missionB) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctMissionB\', this)" title="Generate with AI">✨ AI</button></div></div>' +
+          '<div class="field"><label>Section title</label><div style="display:flex;gap:8px"><input id="ctMissionT" value="' + esc((ab.mission||{}).t || DEF.missionT) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctMissionT\', this)" title="Generate with AI">AI</button></div></div>' +
+          '<div class="field"><label>Lead line</label><div style="display:flex;gap:8px"><input id="ctMissionLead" value="' + esc((ab.mission||{}).lead || DEF.missionLead) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctMissionLead\', this)" title="Generate with AI">AI</button></div></div>' +
+          '<div class="field full"><label>Body (HTML)</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="ctMissionB" rows="6" style="flex:1">' + esc((ab.mission||{}).b || DEF.missionB) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctMissionB\', this)" title="Generate with AI">AI</button></div></div>' +
         '</div></details>' +
-      '<details class="ct-block"><summary><b>About — Our Promise</b></summary>' +
+      '<details class="ct-block"><summary><b>About: Our Promise</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field"><label>Section title</label><div style="display:flex;gap:8px"><input id="ctPromiseT" value="' + esc((ab.promise||{}).t || DEF.promiseT) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctPromiseT\', this)" title="Generate with AI">✨ AI</button></div></div>' +
-          '<div class="field full"><label>Lead line</label><div style="display:flex;gap:8px"><input id="ctPromiseLead" value="' + esc((ab.promise||{}).lead || DEF.promiseLead) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctPromiseLead\', this)" title="Generate with AI">✨ AI</button></div></div>' +
+          '<div class="field"><label>Section title</label><div style="display:flex;gap:8px"><input id="ctPromiseT" value="' + esc((ab.promise||{}).t || DEF.promiseT) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctPromiseT\', this)" title="Generate with AI">AI</button></div></div>' +
+          '<div class="field full"><label>Lead line</label><div style="display:flex;gap:8px"><input id="ctPromiseLead" value="' + esc((ab.promise||{}).lead || DEF.promiseLead) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctPromiseLead\', this)" title="Generate with AI">AI</button></div></div>' +
         '</div></details>' +
     '</div></div>' +
     '<div class="save-bar"><span class="sb-note">Edit any field above and click Save. Empty fields are not saved (keeps current content).</span><button class="btn" onclick="saveContentForm()">Save Content</button></div>';
@@ -1884,7 +1884,7 @@ function handleBannerUpload(input){
       if(inp) inp.value = dataUrl;
       const prev = document.getElementById("thBannerPreview");
       if(prev) prev.innerHTML = '<img src="' + dataUrl + '" style="max-width:100%;max-height:140px;border-radius:8px;border:1px solid var(--line)">';
-      showToast("Banner image uploaded — click Save to apply");
+      showToast("Banner image uploaded: click Save to apply");
     };
     img.src = e.target.result;
   };
@@ -1909,7 +1909,7 @@ function handlePopupImgUpload(input){
       if(inp) inp.value = dataUrl;
       const prev = document.getElementById("thPopupImgPreview");
       if(prev) prev.innerHTML = '<img src="' + dataUrl + '" style="max-width:100%;max-height:140px;border-radius:8px;border:1px solid var(--line)">';
-      showToast("Popup image uploaded — click Save to apply");
+      showToast("Popup image uploaded: click Save to apply");
     };
     img.src = e.target.result;
   };
@@ -1922,7 +1922,7 @@ function applyPreset(i){
 }
 async function sendTestOrderEmail(){
   const cfg = await fetch("/api/email-config").then(r => r.json()).catch(() => ({}));
-  if(!cfg.enabled){ showToast("Email not enabled — set MAIL_ENABLED=true and RESEND env vars in Vercel"); return; }
+  if(!cfg.enabled){ showToast("Email not enabled: set MAIL_ENABLED=true and RESEND env vars in Vercel"); return; }
   const n = Math.floor(1000000 + Math.random() * 9000000);
   const test = {
     id: "TEST-" + n,
@@ -1935,7 +1935,7 @@ async function sendTestOrderEmail(){
   showToast("Sending test email…");
   const r = await sendOrderEmail(test);
   if(r.ok){
-    showToast("Test email sent — check inbox");
+    showToast("Test email sent: check inbox");
   }else{
     showToast("Failed: " + (r.detail || r.reason || "unknown error"));
   }
@@ -1976,7 +1976,7 @@ function applyTheme(){
   r.setProperty("--accent", th.accentColor);
   r.setProperty("--accent-soft", shade(th.accentColor, 90, true));
   $("#brandName").innerHTML = esc(th.storeName) + "<small>" + esc(th.tagline) + "</small>";
-  document.title = th.storeName + " — Wholesale Supplier & OEM/ODM Manufacturer";
+  document.title = th.storeName + ": Wholesale Supplier & OEM/ODM Manufacturer";
 }
 
 /* simple color shade util */
@@ -2089,7 +2089,7 @@ async function doInitAdmin(){
        list is empty; the raw row is admin-only) */
     const rpcRes = await supabase.rpc('bootstrap_admin', { u: email, pass_hash: hashedPass, n: name });
     if(rpcRes.error || !rpcRes.data){
-      if(err) err.textContent = "An admin account already exists — please sign in.";
+      if(err) err.textContent = "An admin account already exists: please sign in.";
       if(err && err.classList) err.classList.add("show");
       if(btn){ btn.disabled = false; btn.textContent = "Create Admin Account"; }
       return;
@@ -2161,7 +2161,7 @@ async function doLogin(){
         );
         if(roleOK || matchesSiteAdmin){
           /* User is an admin, keep Supabase Auth session active */
-          showToast("Welcome, " + (data.user.email) + " — loading admin data...");
+          showToast("Welcome, " + (data.user.email) + ": loading admin data...");
           /* Reload all data with admin permissions (orders, accounts, quotes, etc.) */
           try {
             _cache.loaded = false;
@@ -2201,7 +2201,7 @@ async function doLogin(){
       if(!error && data && data.ok){
         /* Set legacy admin session */
         setAdminSession(data.user, data.name || data.user);
-        showToast("Welcome, " + (data.name || data.user) + " — loading admin data...");
+        showToast("Welcome, " + (data.name || data.user) + ": loading admin data...");
         /* Reload all data with admin permissions */
         try {
           _cache.loaded = false;
@@ -2274,7 +2274,7 @@ async function adminArchitecture(){
     const res = await fetch("architecture-admin.html", { cache: "no-store" });
     const frag = await res.text();
     renderAdminShell(
-      '<div class="admin-panel"><div class="panel-head"><div><h3>🏗️ System Architecture</h3><div class="ph-sub">完整系統架構圖 — 系統層級、用戶角色、頁面與外部服務的關係</div></div></div>' +
+      '<div class="admin-panel"><div class="panel-head"><div><h3>🏗️ System Architecture</h3><div class="ph-sub">完整系統架構圖: 系統層級、用戶角色、頁面與外部服務的關係</div></div></div>' +
       '<div class="panel-body" style="padding:6px 14px 20px"><div class="arch-adm">' + frag + '</div></div></div>'
     );
   }catch(e){
@@ -2449,9 +2449,9 @@ async function aiGenerateCopy(target, btn){
       let txt = data.reply.replace(/^["'\s]+|["'\s]+$/g, "").replace(/\s*\n\s*/g, " ").trim();
       if(target === "ctStoryB" || target === "ctMissionB"){ txt = "<p>" + txt + "</p>"; }
       el.value = txt;
-      showToast("AI draft ready — review before saving");
+      showToast("AI draft ready: review before saving");
     } else {
-      showToast("AI service busy — try again later");
+      showToast("AI service busy: try again later");
     }
   }catch(e){
     console.error("AI copy error:", e);
@@ -2577,7 +2577,7 @@ async function aiOrderReplyDraft(id){
     if(txt && box && ta){
       ta.value = txt;
       box.style.display = "block";
-      showToast("AI reply draft generated — review before sending");
+      showToast("AI reply draft generated: review before sending");
     } else if(box){
       box.style.display = "block";
       ta.value = "AI service is busy, please try again later.";
@@ -2623,7 +2623,7 @@ async function aiQuoteReplyDraft(id){
     if(txt && box && ta){
       ta.value = txt;
       box.style.display = "block";
-      showToast("AI reply draft generated — review before sending");
+      showToast("AI reply draft generated: review before sending");
     } else if(box){
       box.style.display = "block";
       ta.value = "AI service is busy, please try again later.";
@@ -2641,7 +2641,7 @@ async function aiGenProductName(btn){
     const prompt = "你是 B2B 護膚品批發選品專家。請為分類「" + catStr + "」" + (desc ? "、屬性「" + desc.replace(/\n/g, ", ") + "」" : "") + "提出一個適合國際 B2B 批發市場的英文產品名稱（不超過 6 個單字，清晰具體，符合專業品牌調性）。只輸出產品名稱。";
     const txt = await aiGenerate(prompt);
     const el = document.getElementById("pfName");
-    if(txt && el){ el.value = txt; showToast("AI name draft filled — review before saving"); }
+    if(txt && el){ el.value = txt; showToast("AI name draft filled: review before saving"); }
   });
 }
 /* ---- 3b. Product: AI attribute list (one "attribute: value" per line) ---- */
@@ -2654,7 +2654,7 @@ async function aiGenProductDesc(btn){
     const prompt = "你是產品資料專員。請為產品「" + name + "」（分類：" + catStr + "）撰寫 4-6 行屬性清單，每行格式「屬性: 值」（例如 Country of Origin: China、Scent: Rose、Volume: 100ml）。只輸出屬性行，不要編造品牌認證、具體成分濃度或數值，不確定的項目不要寫。";
     const txt = await aiGenerate(prompt);
     const el = document.getElementById("pfDesc");
-    if(txt && el){ el.value = txt; showToast("AI description draft filled — review before saving"); }
+    if(txt && el){ el.value = txt; showToast("AI description draft filled: review before saving"); }
   });
 }
 /* ---- 3c. Product: AI SEO meta description ---- */
@@ -2669,7 +2669,7 @@ async function aiGenProductMeta(btn){
     const prompt = "請為 B2B 批發網站上的產品「" + name + "」（分類 " + catStr + (desc ? "，屬性 " + desc.replace(/\n/g, ", ") : "") + "）寫一句英文 SEO meta description（40-150 字元，自然包含 wholesale supplier、OEM/ODM 等關鍵字，吸引專業買家）。只輸出描述本身。";
     const txt = await aiGenerate(prompt);
     const el = document.getElementById("pfMeta");
-    if(txt && el){ el.value = txt; showToast("AI SEO meta draft filled — review before saving"); }
+    if(txt && el){ el.value = txt; showToast("AI SEO meta draft filled: review before saving"); }
   });
 }
 /* ---- 3d. 分類：AI 描述 ---- */
@@ -2680,6 +2680,6 @@ async function aiGenCatDesc(btn){
     const prompt = "用英文為 B2B 護膚品批發網站的分類「" + name + "」寫 1-2 句描述（含 wholesale 與 OEM/ODM 相關字眼，適合採購商閱讀）。只輸出描述本身。";
     const txt = await aiGenerate(prompt);
     const el = document.getElementById("cfDesc");
-    if(txt && el){ el.value = txt; showToast("AI category description draft filled — review before saving"); }
+    if(txt && el){ el.value = txt; showToast("AI category description draft filled: review before saving"); }
   });
 }
