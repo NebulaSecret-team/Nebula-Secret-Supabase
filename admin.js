@@ -121,7 +121,7 @@ function renderAdminShell(content){
         '<div class="sep"></div>' +
         '<a href="#/admin/users" data-av="users">' + IC.shield + ' Admin Users</a>' +
         '<a href="#/admin/analytics" data-av="analytics">' + IC.chart + ' Analytics</a>' +
-        '<a href="architecture.html" target="_blank">' + IC.chart + ' System Architecture</a>' +
+        '<a href="#/admin/architecture" data-av="architecture">' + IC.chart + ' System Architecture</a>' +
         '<a href="#/" >' + IC.store + ' View Store</a>' +
         '<a href="javascript:logout()">' + IC.logout + ' Logout</a>' +
       '</nav>' +
@@ -2253,6 +2253,27 @@ async function logout(){
   location.hash = "#/";
 }
 
+/* System Architecture — embedded into Admin Panel (no more separate page) */
+async function adminArchitecture(){
+  $("#adminTitle").textContent = "System Architecture";
+  renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">🏗️</div><h3>Loading architecture…</h3></div></div>');
+  try{
+    if(!document.getElementById("archAdmCss")){
+      const link = document.createElement("link");
+      link.id = "archAdmCss"; link.rel = "stylesheet"; link.href = "architecture-admin.css";
+      document.head.appendChild(link);
+    }
+    const res = await fetch("architecture-admin.html", { cache: "no-store" });
+    const frag = await res.text();
+    renderAdminShell(
+      '<div class="admin-panel"><div class="panel-head"><div><h3>🏗️ System Architecture</h3><div class="ph-sub">完整系統架構圖 — 系統層級、用戶角色、頁面與外部服務的關係</div></div></div>' +
+      '<div class="panel-body" style="padding:6px 14px 20px"><div class="arch-adm">' + frag + '</div></div></div>'
+    );
+  }catch(e){
+    renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">⚠️</div><h3>Failed to load architecture</h3><p style="color:var(--ink-soft)">' + esc(e.message) + '</p><button class="btn" onclick="adminArchitecture()" style="margin-top:16px">Try Again</button></div></div>');
+  }
+}
+
 function adminRoute(){
   const h = location.hash || "#/";
 
@@ -2274,6 +2295,7 @@ function adminRoute(){
     else if(page === "theme") adminTheme();
     else if(page === "emails") adminEmails();
     else if(page === "content") adminContent();
+    else if(page === "architecture") adminArchitecture();
 
     else {
       /* Unknown page - show friendly 404 with quick links and auto-redirect */
