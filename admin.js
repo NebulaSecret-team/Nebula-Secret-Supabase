@@ -2135,6 +2135,9 @@ async function doLogin(){
   /* Method 1: Try Supabase Auth first (only if Supabase is available) */
   if(supabase && supabaseAvailable){
     try {
+      /* Clear any stale session first — a leftover/expired token from a
+         previous tab can interfere with the fresh login below. */
+      try{ await supabase.auth.signOut(); }catch(e){}
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
         password: p
