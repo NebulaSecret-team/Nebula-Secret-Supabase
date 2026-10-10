@@ -2063,8 +2063,8 @@ async function viewAdminLogin(msg){
   '<div class="admin-login">' +
     '<div class="login-card">' +
       '<img class="l-logo" src="images/Neubla_logo_black_1729172124.png" alt="Nebula Secret">' +
-      '<h1>Admin Login</h1>' +
-      '<p class="l-sub">Nebula Secret management console</p>' +
+      '<h1>Sign In</h1>' +
+      '<p class="l-sub">Welcome back: sign in with your account</p>' +
       '<div class="login-err' + (msg ? " show" : "") + '" id="loginErr">' + (msg ? esc(msg) : "") + '</div>' +
       '<div class="field"><label>Email</label><input id="loginEmail" name="ns-login-id" type="email" placeholder="Enter your email" autocomplete="off" readonly onfocus="this.removeAttribute(\'readonly\')"></div>' +
       '<div class="field"><label>Password</label><input id="loginPass" name="ns-login-key" type="password" placeholder="••••••••" autocomplete="new-password" readonly onfocus="this.removeAttribute(\'readonly\')" onkeydown="if(event.key===\'Enter\')doLogin()"></div>' +
@@ -2202,15 +2202,10 @@ async function doLogin(){
           location.hash = "#/admin/dashboard";
           return;
         }else{
-          /* Not an admin, sign out and try legacy method */
-          await supabase.auth.signOut();
-          supabaseLoginFailed = true;
-          supabaseErrorMsg = "User does not have admin role";
-          /* If the account exists but has no admin role, tell the user which
-             email is the actual admin (catches typos like nebulasecret.com) */
-          if(email.toLowerCase() !== "admin@nebulaecret.com"){
-            supabaseErrorMsg += " for account \"" + email + "\". The admin email is admin@nebulaecret.com";
-          }
+          /* Regular customer: keep the session and open the customer area */
+          showToast("Signed in successfully");
+          location.hash = "#/account";
+          return;
         }
       }
     } catch(e) {
@@ -2427,6 +2422,9 @@ function adminRoute(){
         renderAdminPage();
         return;
       }
+      /* Logged in as a regular customer: send them to the customer area */
+      location.hash = "#/account";
+      return;
     }
 
     /* Method 2: Check legacy admin session */
