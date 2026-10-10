@@ -130,10 +130,54 @@ function renderAdminShell(content){
       '<div class="admin-top"><h2 id="adminTitle"></h2><div class="at-actions"><span class="at-user" style="font-size:13px;color:var(--ink-soft);margin-right:12px">' + esc(getAdminDisplayName()) + '</span><a class="btn ghost sm" href="#/">View Store</a></div></div>' +
       '<div class="admin-body">' + inner + '</div>' +
     '</div>' +
+    '<nav class="admin-tabs" aria-label="Admin quick navigation">' +
+      '<a href="#/admin/dashboard" data-av="dashboard">' + IC.dashboard + '<span>Dashboard</span></a>' +
+      '<a href="#/admin/orders" data-av="orders">' + IC.orders + '<span>Orders</span></a>' +
+      '<a href="#/admin/products" data-av="products">' + IC.box + '<span>Products</span></a>' +
+      '<a href="#/admin/customers" data-av="customers">' + IC.users + '<span>Customers</span></a>' +
+      '<a href="#/admin/analytics" data-av="analytics">' + IC.chart + '<span>Analytics</span></a>' +
+      '<button class="at-more" id="adminMoreBtn" aria-haspopup="true" aria-expanded="false" aria-label="More admin pages">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg><span>More</span>' +
+      '</button>' +
+    '</nav>' +
+    '<div class="admin-more-backdrop" id="adminMoreBackdrop"></div>' +
+    '<div class="admin-more-sheet" id="adminMoreSheet" aria-label="More admin pages">' +
+      '<div class="ams-head"><span>More</span><button id="adminMoreClose" aria-label="Close more menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button></div>' +
+      '<nav class="ams-links">' +
+        '<a href="#/admin/quotes" data-av="quotes">' + IC.mail + ' Quotes &amp; Enquiries</a>' +
+        '<a href="#/admin/categories" data-av="categories">' + IC.tag + ' Categories</a>' +
+        '<a href="#/admin/tiers" data-av="tiers">' + IC.tag + ' Customer Tiers</a>' +
+        '<a href="#/admin/theme" data-av="theme">' + IC.palette + ' Theme</a>' +
+        '<a href="#/admin/emails" data-av="emails">' + IC.mail + ' Order Emails</a>' +
+        '<a href="#/admin/content" data-av="content">' + IC.edit + ' Site Content</a>' +
+        '<a href="#/admin/users" data-av="users">' + IC.shield + ' Admin Users</a>' +
+        '<a href="#/admin/architecture" data-av="architecture">' + IC.chart + ' System Architecture</a>' +
+        '<div class="sep"></div>' +
+        '<a href="#/">' + IC.store + ' View Store</a>' +
+        '<a href="javascript:logout()">' + IC.logout + ' Logout</a>' +
+      '</nav>' +
+    '</div>' +
   '</div>';
   // mark active nav
   const av = location.hash.split("/")[2] || "dashboard";
   $$("[data-av]").forEach(a => a.classList.toggle("active", a.dataset.av === av));
+  // More sheet wiring (mobile bottom bar)
+  const moreBtn = document.getElementById('adminMoreBtn');
+  const sheet = document.getElementById('adminMoreSheet');
+  const bd = document.getElementById('adminMoreBackdrop');
+  const closeBtn = document.getElementById('adminMoreClose');
+  const setMore = (open) => {
+    if(!sheet) return;
+    sheet.classList.toggle('open', open);
+    if(bd) bd.classList.toggle('open', open);
+    if(moreBtn){ moreBtn.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+  };
+  if(moreBtn) moreBtn.addEventListener('click', () => setMore(!sheet.classList.contains('open')));
+  if(closeBtn) closeBtn.addEventListener('click', () => setMore(false));
+  if(bd) bd.addEventListener('click', () => setMore(false));
+  const sheetLinks = document.querySelectorAll('.admin-more-sheet a');
+  sheetLinks.forEach(a => a.addEventListener('click', () => setMore(false)));
+  document.addEventListener('keydown', (e) => { if(e.key === 'Escape') setMore(false); });
 }
 
 function adminDashboard(){
