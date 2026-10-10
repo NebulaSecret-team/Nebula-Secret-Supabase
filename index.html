@@ -141,22 +141,24 @@
 
 /* ================= Design tokens ================= */
 :root{
-  --brand:#ff5983; --brand-dark:#ff6f95; --brand-soft:rgba(255,89,131,.18); --brand-light:rgba(255,89,131,.18);
-  --accent:#25bab5; --accent-soft:rgba(37,186,181,.16);
-  --nav-bg:#15141a; --nav-link:#e8e6ec;
-  --bg:#121116; --card:#1d1b22; --bg-soft:rgba(255,255,255,.045);
-  --ink:#eceaf1; --ink-soft:#a29cab;
-  --line:#2d2a35; --line-dark:#3b3745; --border:#2d2a35;
-  --danger:#c43a3a; --danger-soft:rgba(196,58,58,.18);
-  --success:#4caf50; --success-soft:rgba(76,175,80,.16);
-  --warning:#d99a2b; --warning-soft:rgba(217,154,43,.2);
-  --shadow:0 10px 30px rgba(0,0,0,.45);
-  --shadow-sm:0 2px 8px rgba(0,0,0,.35);
+  --brand:#ff5983; --brand-dark:#d6336b; --brand-soft:#ffe3ec; --brand-light:#ffe3ec;
+  --accent:#25bab5; --accent-soft:#d9f4f2;
+  --nav-bg:#232228; --nav-link:#e8e6ec;
+  --bg:#f4f4f6; --card:#ffffff; --bg-soft:rgba(0,0,0,.04);
+  --ink:#1f1e23; --ink-soft:#6f6a72;
+  --line:#e5e3e8; --line-dark:#d5d2da; --border:#e5e3e8;
+  --danger:#c43a3a; --danger-soft:#fdecec;
+  --success:#1e8e3e; --success-soft:#e6f4ea;
+  --warning:#b96a00; --warning-soft:#fef4e2;
+  --shadow:0 10px 30px rgba(31,30,35,.09);
+  --shadow-sm:0 2px 8px rgba(31,30,35,.06);
   --radius:12px; --radius-sm:8px;
   --font-display:'Montserrat','Noto Sans SC',-apple-system,'Segoe UI',sans-serif;
   --font-body:'Noto Sans SC',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box}
+a.skip-link:focus{left:0}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 html{scroll-behavior:auto}
 body{font-family:var(--font-body);background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased;position:relative;overflow-x:hidden}
 .bubble-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
@@ -181,7 +183,7 @@ h1,h2,h3,.display{font-family:var(--font-display)}
 ::selection{background:var(--brand-soft)}
 
 /* ================= Buttons ================= */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--brand);color:#fff;font-weight:600;font-size:14.5px;line-height:1.2;padding:12px 26px;border-radius:8px;transition:background .2s,transform .15s,box-shadow .2s;border:1px solid transparent;white-space:nowrap;flex-shrink:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;font-weight:600;font-size:14.5px;line-height:1.2;padding:12px 26px;border-radius:8px;transition:background .2s,transform .15s,box-shadow .2s;border:1px solid transparent;white-space:nowrap;flex-shrink:0}
 .btn:hover{background:var(--brand-dark);transform:translateY(-1px);box-shadow:0 6px 18px rgba(230,67,110,.3)}
 .btn.sm{padding:8px 16px;font-size:13px}
 .btn.full{width:100%;justify-content:center}
@@ -713,7 +715,7 @@ table.admin-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .admin-table tr:hover td{background:var(--bg-soft)}
 .admin-table .td-img{width:46px;height:46px;border-radius:8px;object-fit:cover;background:var(--bg);border:1px solid var(--line)}
 .table-actions{display:flex;gap:6px}
-.table-actions button{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--bg);transition:background .15s,color .15s}
+.table-actions button{width:36px;height:36px;border-radius:8px;display:grid;place-items:center;background:var(--bg);transition:background .15s,color .15s}
 .table-actions button:hover{background:var(--brand-soft);color:var(--brand-dark)}
 .table-actions button.del:hover{background:var(--danger-soft);color:var(--danger)}
 .table-actions svg{width:15px;height:15px;stroke:currentColor}
@@ -1038,6 +1040,7 @@ details.ct-block > .form-grid{padding:14px 16px}
 </style>
 </head>
 <body>
+<a class="skip-link" href="#app" style="position:absolute;left:-999px;top:0;background:var(--brand);color:#fff;padding:10px 18px;border-radius:0 0 8px 0;z-index:9999;font-size:14px;font-weight:600">Skip to content</a>
 
 <!-- ================= BUBBLE BACKGROUND ================= -->
 <div class="bubble-bg" id="bubbleBg"></div>
@@ -5345,7 +5348,7 @@ function loadAdminScript(callback){
   }
   _adminLoading = true;
   const script = document.createElement("script");
-  script.src = "admin.js?v=20261011a";
+  script.src = "admin.js?v=20261011b";
   script.onload = () => { _adminLoaded = true; _adminLoading = false; if(callback) callback(); };
   script.onerror = () => {
     _adminLoading = false;

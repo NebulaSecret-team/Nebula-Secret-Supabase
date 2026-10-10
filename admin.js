@@ -340,7 +340,7 @@ async function adminAnalytics(){
   $("#adminTitle").textContent = "Site Analytics";
   
   /* Show loading state */
-  renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">📊</div><h3>Loading analytics...</h3><p style="color:var(--ink-soft)">Fetching visitor data from database</p></div></div>');
+  renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><path d="M3 3v18h18"/><path d="M7 15v-4M12 15V9M17 15v-7"/></svg></div><h3>Loading analytics...</h3><p style="color:var(--ink-soft)">Fetching visitor data from database</p></div></div>');
   
   try {
     /* Get analytics data from Supabase */
@@ -441,23 +441,23 @@ async function adminAnalytics(){
     
     /* Build page name mapping for display */
     const pageDisplayNames = {
-      'home': '🏠 Home Page',
-      'shop': '🛍️ Shop',
-      'account': '👤 My Account',
-      'about': 'ℹ️ About Us',
+      'home': 'Home Page',
+      'shop': 'Shop',
+      'account': 'My Account',
+      'about': 'About Us',
       'why-us': '⭐ Why Us',
-      'blog': '📝 Blog',
-      'cart': '🛒 Shopping Cart',
-      'checkout': '💳 Checkout',
-      'info': '❓ Info / FAQ'
+      'blog': 'Blog',
+      'cart': 'Shopping Cart',
+      'checkout': 'Checkout',
+      'info': 'Info / FAQ'
     };
     
     const getPageDisplayName = (page) => {
       if(pageDisplayNames[page]) return pageDisplayNames[page];
-      if(page.startsWith('shop-')) return '🛍️ Category: ' + page.replace('shop-', '');
-      if(page.startsWith('product-')) return '📦 Product #' + page.replace('product-', '');
-      if(page.startsWith('quote-')) return '📄 Quote ' + page.replace('quote-', '');
-      if(page.startsWith('order-')) return '📋 Order ' + page.replace('order-', '');
+      if(page.startsWith('shop-')) return 'Category: ' + page.replace('shop-', '');
+      if(page.startsWith('product-')) return 'Product #' + page.replace('product-', '');
+      if(page.startsWith('quote-')) return 'Quote ' + page.replace('quote-', '');
+      if(page.startsWith('order-')) return 'Order ' + page.replace('order-', '');
       return page.charAt(0).toUpperCase() + page.slice(1);
     };
     
@@ -544,7 +544,7 @@ async function adminAnalytics(){
                 '</div>';
               }).join('') +
             '</div>'
-          : '<div style="text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:14px">📊 No traffic data yet. Visit some pages to see the trend here.</div>') +
+          : '<div style="text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:14px">No traffic data yet. Visit some pages to see the trend here.</div>') +
         '</div>' +
         
         /* Two Column Layout */
@@ -564,7 +564,7 @@ async function adminAnalytics(){
                 const barColors = ['#f5576c', '#f093fb', '#f6a26b', '#f7b733', '#4facfe', '#43e97b', '#667eea', '#764ba2', '#00f2fe', '#38f9d7'];
                 return '<div>' +
                   '<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px">' +
-                    '<span style="color:var(--ink);font-weight:' + (idx < 3 ? '600' : '400') + '">' + (idx < 3 ? ['🥇','🥈','🥉'][idx] + ' ' : '') + getPageDisplayName(page) + '</span>' +
+                    '<span style="color:var(--ink);font-weight:' + (idx < 3 ? '600' : '400') + '">' + (idx < 3 ? ['#1 ','#2 ','#3 '][idx] : '') + getPageDisplayName(page) + '</span>' +
                     '<span style="color:var(--ink-soft);font-weight:600">' + count + ' views</span>' +
                   '</div>' +
                   '<div style="height:6px;background:var(--bg-soft);border-radius:3px;overflow:hidden">' +
@@ -572,7 +572,7 @@ async function adminAnalytics(){
                   '</div>' +
                 '</div>';
               }).join('') +
-            '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px">🏆 No page data yet. Visit some pages to see rankings here.</div>') +
+            '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;margin:0 auto 10px"><path d="M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0V4z"/><path d="M7 5H3v2a3 3 0 0 0 4 2.7M17 5h4v2a3 3 0 0 1-4 2.7"/></svg>No page data yet. Visit some pages to see rankings here.</div>') +
           '</div>' +
           
           /* Device Breakdown */
@@ -608,7 +608,7 @@ async function adminAnalytics(){
                   '</div>' +
                 '</div>';
               }).join('') +
-            '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px">📱 No device data yet. Visit some pages to see device distribution here.</div>') +
+            '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;margin:0 auto 10px"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>No device data yet. Visit some pages to see device distribution here.</div>') +
           '</div>' +
         '</div>' +
         
@@ -642,13 +642,13 @@ async function adminAnalytics(){
                 '<div style="font-size:11px;color:var(--ink-soft);opacity:0.7;margin-top:2px">' + percent + '%</div>' +
               '</div>';
             }).join('') +
-          '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px">🌐 No referrer data yet. Most traffic will show as "Direct" initially.</div>') +
+          '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;margin:0 auto 10px"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>No referrer data yet. Most traffic will show as "Direct" initially.</div>') +
         '</div>' +
         
         /* Info Box */
         '<div style="background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.2);border-radius:10px;padding:16px;margin-top:20px">' +
           '<div style="display:flex;align-items:flex-start;gap:12px">' +
-            '<div style="font-size:24px">💡</div>' +
+            '<div style="font-size:24px;color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px;margin:0 auto"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 4 10.5c-.7.6-1 1.5-1 2.5h-6c0-1-.3-1.9-1-2.5A6 6 0 0 1 12 3z"/></svg></div>' +
             '<div>' +
               '<h5 style="margin:0 0 6px;font-size:14px;color:var(--ink)">About Analytics</h5>' +
               '<p style="margin:0;font-size:13px;color:var(--ink-soft);line-height:1.6">' +
@@ -668,7 +668,7 @@ async function adminAnalytics(){
     
   } catch(e) {
     console.error("Analytics error:", e);
-    renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">⚠️</div><h3>Error Loading Analytics</h3><p style="color:var(--ink-soft)">' + esc(e.message) + '</p><button class="btn" onclick="adminAnalytics()" style="margin-top:16px">Try Again</button></div></div>');
+    renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--danger)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg></div><h3>Error Loading Analytics</h3><p style="color:var(--ink-soft)">' + esc(e.message) + '</p><button class="btn" onclick="adminAnalytics()" style="margin-top:16px">Try Again</button></div></div>');
   }
 }
 
@@ -1164,7 +1164,7 @@ function openBulkEditModal(){
         '<button class="btn sm ghost" style="margin-top:8px" onclick="addBulkTier()">+ Add Volume Discount Tier</button>' +
       '</div>' +
       '<div class="field full" style="background:var(--warning-soft);padding:12px;border-radius:8px;border:1px solid var(--warning)">' +
-        '<label style="font-weight:600;color:#8a6d00">⚠️ Important</label>' +
+        '<label style="font-weight:600;color:var(--warning)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Important</label>' +
         '<div style="font-size:13px;color:#8a6d00;margin-top:6px">This will overwrite the existing price tiers for all selected products. Make sure the first tier\'s MOQ matches the MOQ you set above.</div>' +
       '</div>' +
     '</div>' +
@@ -1756,7 +1756,7 @@ function adminEmails(){
       '</div>' +
       '<div class="form-hint" style="margin-top:12px">Emails are sent server-side through <code>/api/send-email</code> (Resend). Keys live only in Vercel env vars: nothing to configure here.</div>' +
       '<button class="btn ghost" style="margin-top:12px" onclick="sendTestOrderEmail()">Send Test Email</button>' +
-      '<div class="form-hint" style="margin-top:10px"><b>Still not receiving order emails?</b> (1) click <b>Send Test Email</b>; (2) check spam folder; (3) verify env vars above are all ✅ in Vercel. Orders are always saved in Admin → Orders and downloadable as Excel/CSV regardless of email.</div>' +
+      '<div class="form-hint" style="margin-top:10px"><b>Still not receiving order emails?</b> (1) click <b>Send Test Email</b>; (2) check spam folder; (3) verify the env vars above all show a check mark in Vercel. Orders are always saved in Admin → Orders and downloadable as Excel/CSV regardless of email.</div>' +
     '</div></div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Order Emails";
@@ -1778,7 +1778,7 @@ function adminEmails(){
     const pl = $("#emailParamsList");
     if(pl && cfg.params){
       const rows = Object.entries(cfg.params).map(([k,v]) => {
-        const icon = v ? "✅" : "❌";
+        const icon = v ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;color:var(--success)"><path d="M20 6 9 17l-5-5"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;color:var(--danger)"><path d="M18 6 6 18M6 6l12 12"/></svg>';
         const val = v ? "set" : "not set";
         return '<div style="padding:3px 0;display:flex;align-items:center;gap:8px"><span>' + icon + '</span><code style="flex:1">' + k + '</code><span style="color:' + (v ? '#155724' : '#721c24') + '">' + val + '</span></div>';
       });
@@ -2294,7 +2294,7 @@ async function logout(){
 /* System Architecture — embedded into Admin Panel (no more separate page) */
 async function adminArchitecture(){
   $("#adminTitle").textContent = "System Architecture";
-  renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">🏗️</div><h3>Loading architecture…</h3></div></div>');
+  renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><path d="M2 20h20"/><path d="M4 20V8l6-4v16M10 20V4l6 4v12M16 20v-8h4v8"/></svg></div><h3>Loading architecture...</h3></div></div>');
   try{
     if(!document.getElementById("archAdmCss")){
       const link = document.createElement("link");
@@ -2304,12 +2304,33 @@ async function adminArchitecture(){
     const res = await fetch("architecture-admin.html", { cache: "no-store" });
     const frag = await res.text();
     renderAdminShell(
-      '<div class="admin-panel"><div class="panel-head"><div><h3>🏗️ System Architecture</h3><div class="ph-sub">完整系統架構圖: 系統層級、用戶角色、頁面與外部服務的關係</div></div></div>' +
+      '<div class="admin-panel"><div class="panel-head"><div><h3>System Architecture</h3><div class="ph-sub">完整系統架構圖: 系統層級、用戶角色、頁面與外部服務的關係</div></div></div>' +
       '<div class="panel-body" style="padding:6px 14px 20px"><div class="arch-adm">' + frag + '</div></div></div>'
     );
   }catch(e){
-    renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">⚠️</div><h3>Failed to load architecture</h3><p style="color:var(--ink-soft)">' + esc(e.message) + '</p><button class="btn" onclick="adminArchitecture()" style="margin-top:16px">Try Again</button></div></div>');
+    renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--danger)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg></div><h3>Failed to load architecture</h3><p style="color:var(--ink-soft)">' + esc(e.message) + '</p><button class="btn" onclick="adminArchitecture()" style="margin-top:16px">Try Again</button></div></div>');
   }
+}
+
+
+/* A11Y helpers: associate orphan labels with inputs, name icon-only buttons, expose truncated emails */
+function fixA11y(){
+  try{
+    document.querySelectorAll('label:not([for])').forEach(l => {
+      let inp = l.querySelector('input,select,textarea');
+      if(!inp || !inp.matches('input,select,textarea')){ inp = l.nextElementSibling; }
+      if(!inp || !inp.matches('input,select,textarea')){ inp = l.closest('.field,.form-grid') ? l.closest('.field,.form-grid').querySelector('input,select,textarea') : null; }
+      if(inp && !inp.id){ inp.id = 'f_' + Math.random().toString(36).slice(2,8); }
+      if(inp && inp.id){ l.setAttribute('for', inp.id); }
+    });
+    document.querySelectorAll('button[title]:not([aria-label])').forEach(b => {
+      const t = b.getAttribute('title');
+      if(t) b.setAttribute('aria-label', t);
+    });
+    document.querySelectorAll('.td-email a[href^="mailto:"]').forEach(a => {
+      if(!a.getAttribute('aria-label')) a.setAttribute('aria-label', 'Email ' + (a.textContent || '').trim());
+    });
+  }catch(e){}
 }
 
 function adminRoute(){
@@ -2338,15 +2359,15 @@ function adminRoute(){
     else {
       /* Unknown page - show friendly 404 with quick links and auto-redirect */
       const content = '<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px">' +
-        '<div style="font-size:72px;margin-bottom:20px">🔍</div>' +
+        '<div style="font-size:72px;margin-bottom:20px;color:var(--brand)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:64px;height:64px;margin:0 auto"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>' +
         '<h2 style="margin-bottom:12px;font-size:28px">Page Not Found</h2>' +
         '<p style="color:var(--ink-soft);margin-bottom:8px;font-size:15px">The page <strong style="color:var(--accent)">"' + esc(page) + '"</strong> does not exist.</p>' +
         '<p style="color:var(--ink-soft);margin-bottom:32px;font-size:13px">You will be automatically redirected to Dashboard in <span id="redirectCountdown" style="font-weight:600;color:var(--accent)">5</span> seconds.</p>' +
         '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:40px">' +
-          '<a href="#/admin/dashboard" class="btn" onclick="stopRedirect()">🏠 Dashboard</a>' +
-          '<a href="#/admin/products" class="btn ghost" onclick="stopRedirect()">📦 Products</a>' +
-          '<a href="#/admin/orders" class="btn ghost" onclick="stopRedirect()">📋 Orders</a>' +
-          '<a href="#/admin/customers" class="btn ghost" onclick="stopRedirect()">👥 Customers</a>' +
+          '<a href="#/admin/dashboard" class="btn" onclick="stopRedirect()">Dashboard</a>' +
+          '<a href="#/admin/products" class="btn ghost" onclick="stopRedirect()">Products</a>' +
+          '<a href="#/admin/orders" class="btn ghost" onclick="stopRedirect()">Orders</a>' +
+          '<a href="#/admin/customers" class="btn ghost" onclick="stopRedirect()">Customers</a>' +
         '</div>' +
         '<div style="border-top:1px solid var(--line);padding-top:24px;margin-top:24px">' +
           '<p style="font-size:12px;color:var(--ink-soft)">Quick Links:</p>' +
@@ -2383,6 +2404,7 @@ function adminRoute(){
       renderAdminShell(content);
       $("#adminTitle").textContent = "Page Not Found";
     }
+    fixA11y();
   };
 
   /* Method 1: Check Supabase Auth session */
