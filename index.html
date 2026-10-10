@@ -141,31 +141,20 @@
 
 /* ================= Design tokens ================= */
 :root{
-  --brand:#ff5983; --brand-dark:#e6436e; --brand-soft:#ffe3ec; --brand-light:#ffe3ec;
-  --accent:#25bab5; --accent-soft:#d9f4f2;
-  --nav-bg:#232228; --nav-link:#e8e6ec;
-  --bg:#f4f4f6; --card:#ffffff;
-  --ink:#1f1e23; --ink-soft:#6f6a72;
-  --line:#e5e3e8; --line-dark:#d5d2da; --border:#e5e3e8;
-  --danger:#c43a3a; --danger-soft:#fdecec;
-  --success:#1e8e3e; --success-soft:#e6f4ea;
-  --warning:#b96a00; --warning-soft:#fef4e2;
-  --shadow:0 10px 30px rgba(31,30,35,.09);
-  --shadow-sm:0 2px 8px rgba(31,30,35,.06);
+  --brand:#ff5983; --brand-dark:#ff6f95; --brand-soft:rgba(255,89,131,.18); --brand-light:rgba(255,89,131,.18);
+  --accent:#25bab5; --accent-soft:rgba(37,186,181,.16);
+  --nav-bg:#15141a; --nav-link:#e8e6ec;
+  --bg:#121116; --card:#1d1b22; --bg-soft:rgba(255,255,255,.045);
+  --ink:#eceaf1; --ink-soft:#a29cab;
+  --line:#2d2a35; --line-dark:#3b3745; --border:#2d2a35;
+  --danger:#c43a3a; --danger-soft:rgba(196,58,58,.18);
+  --success:#4caf50; --success-soft:rgba(76,175,80,.16);
+  --warning:#d99a2b; --warning-soft:rgba(217,154,43,.2);
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+  --shadow-sm:0 2px 8px rgba(0,0,0,.35);
   --radius:12px; --radius-sm:8px;
   --font-display:'Montserrat','Noto Sans SC',-apple-system,'Segoe UI',sans-serif;
   --font-body:'Noto Sans SC',-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;
-}
-@media (prefers-color-scheme: dark){
-  :root{
-    --nav-bg:#15141a; --nav-link:#e8e6ec;
-    --bg:#121116; --card:#1d1b22;
-    --ink:#eceaf1; --ink-soft:#a29cab;
-    --line:#2d2a35; --line-dark:#3b3745; --border:#2d2a35;
-    --brand-soft:rgba(255,89,131,.18); --accent-soft:rgba(37,186,181,.16);
-    --danger-soft:rgba(196,58,58,.18); --success-soft:rgba(30,142,62,.18); --warning-soft:rgba(185,106,0,.22);
-    --shadow:0 10px 30px rgba(0,0,0,.45); --shadow-sm:0 2px 8px rgba(0,0,0,.35);
-  }
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:auto}
@@ -214,7 +203,7 @@ h1,h2,h3,.display{font-family:var(--font-display)}
 .topbar-left,.topbar-right{display:flex;gap:18px;align-items:center}
 .topbar-right .sep{opacity:.35}
 .cur-sel{background:transparent;border:1px solid rgba(255,255,255,.22);color:#cfccd4;border-radius:8px;padding:2px 6px;font-size:12px;outline:none;cursor:pointer}
-.cur-sel option{color:#1f1e23;background:var(--card)}
+.cur-sel option{color:var(--ink);background:var(--card)}
 
 /* ================= Header ================= */
 .site-header{position:sticky;top:0;z-index:80;background:var(--card);border-bottom:1px solid var(--line);box-shadow:0 2px 12px rgba(31,30,35,.05)}
@@ -505,7 +494,7 @@ section.block{padding:40px 0}
 .spec-row{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px dashed var(--line-dark);font-size:13.5px}
 .spec-row:last-child{border-bottom:none}
 .spec-k{font-weight:600;color:var(--ink);flex-shrink:0}
-.spec-v{color:#4d4a52;text-align:right}
+.spec-v{color:var(--ink-soft);text-align:right}
 .buy-panel{margin-top:20px;border:1px solid var(--line);border-radius:var(--radius);padding:18px;background:var(--card)}
 .qty-row{display:flex;align-items:center;gap:14px;margin-bottom:14px}
 .qty-label{font-size:13px;font-weight:600;color:var(--ink-soft)}
@@ -570,7 +559,7 @@ section.block{padding:40px 0}
 .popup-backdrop.open{display:flex}
 .popup-modal{background:var(--card);border-radius:16px;max-width:460px;width:100%;overflow:hidden;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.35);animation:popupIn .3s ease}
 @keyframes popupIn{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:none}}
-.popup-img{max-height:220px;overflow:hidden;background:#f0f0f0}
+.popup-img{max-height:220px;overflow:hidden;background:var(--bg-soft)}
 .popup-img img{width:100%;height:auto;display:block}
 .popup-body{padding:24px}
 .popup-body h3{font-size:20px;margin:0 0 10px;color:var(--ink)}
@@ -659,7 +648,7 @@ section.block{padding:40px 0}
 .footer-col h4{color:#fff;font-family:var(--font-display);font-size:13.5px;letter-spacing:.04em;margin-bottom:14px;font-weight:700}
 .footer-col a{display:block;font-size:13px;color:#9d99a5;padding:4px 0;transition:color .2s}
 .footer-col a:hover{color:var(--brand)}
-.footer-bottom{border-top:1px solid #3a3940;max-width:1400px;margin:0 auto;padding:18px 24px;display:flex;justify-content:space-between;gap:12px;font-size:12px;color:#8f8b96;flex-wrap:wrap}
+.footer-bottom{border-top:1px solid #3a3940;max-width:1400px;margin:0 auto;padding:18px 24px;display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--ink-soft);flex-wrap:wrap}
 .footer-bottom .admin-link{color:var(--brand);font-weight:600}
 .footer-bottom .admin-link:hover{text-decoration:underline}
 
@@ -682,7 +671,7 @@ section.block{padding:40px 0}
 .login-card .l-logo{width:64px;height:64px;object-fit:contain;margin:0 auto 16px;display:block;background:var(--bg);border-radius:12px;padding:6px}
 .login-card h1{font-size:21px;text-align:center;margin-bottom:4px}
 .login-card .l-sub{text-align:center;color:var(--ink-soft);font-size:13px;margin-bottom:24px}
-.login-err{background:#fdecec;color:#c43a3a;border:1px solid #f5c6c6;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:none}
+.login-err{background:var(--danger-soft);color:var(--danger);border:1px solid #f5c6c6;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:none}
 .login-err.show{display:block}
 .login-card .field{margin-bottom:14px}
 
@@ -692,7 +681,7 @@ section.block{padding:40px 0}
 .admin-side .as-brand{display:flex;align-items:center;gap:10px;padding:18px 18px;border-bottom:1px solid #3a3940}
 .admin-side .as-brand img{width:36px;height:36px;object-fit:contain;background:var(--card);border-radius:8px;padding:3px}
 .admin-side .as-brand .t{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff}
-.admin-side .as-brand .t small{display:block;font-family:var(--font-body);font-size:9.5px;letter-spacing:.2em;color:#8f8b96;text-transform:uppercase}
+.admin-side .as-brand .t small{display:block;font-family:var(--font-body);font-size:9.5px;letter-spacing:.2em;color:var(--ink-soft);text-transform:uppercase}
 .admin-nav{flex:1;padding:12px 10px;overflow-y:auto}
 .admin-nav a{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:8px;font-size:14px;color:#cfccd4;transition:background .15s,color .15s;margin-bottom:2px}
 .admin-nav a svg{width:18px;height:18px;stroke:currentColor;flex-shrink:0}
@@ -721,20 +710,20 @@ table.admin-table{width:100%;border-collapse:collapse;font-size:13.5px}
 .admin-table td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
 .admin-table td.td-email{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .admin-table td.td-email a{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.admin-table tr:hover td{background:#faf9fb}
+.admin-table tr:hover td{background:var(--bg-soft)}
 .admin-table .td-img{width:46px;height:46px;border-radius:8px;object-fit:cover;background:var(--bg);border:1px solid var(--line)}
 .table-actions{display:flex;gap:6px}
 .table-actions button{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--bg);transition:background .15s,color .15s}
 .table-actions button:hover{background:var(--brand-soft);color:var(--brand-dark)}
-.table-actions button.del:hover{background:#fdecec;color:#c43a3a}
+.table-actions button.del:hover{background:var(--danger-soft);color:var(--danger)}
 .table-actions svg{width:15px;height:15px;stroke:currentColor}
-.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--brand-soft);color:var(--brand-dark)}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--brand-soft);color:var(--brand)}
 .pill.gray{background:var(--bg);color:var(--ink-soft)}
-.pill.green{background:var(--accent-soft);color:#1a8f8b}
-.pill.red{background:#fdecec;color:#c43a3a}
+.pill.green{background:var(--accent-soft);color:var(--accent)}
+.pill.red{background:var(--danger-soft);color:var(--danger)}
 .order-status{border:1px solid var(--line-dark);border-radius:8px;padding:5px 8px;font-size:12px;font-weight:600;outline:none;background:var(--card);color:var(--ink);cursor:pointer}
-.order-status.green{color:#1a8f8b}
-.order-status.red{color:#c43a3a}
+.order-status.green{color:var(--accent)}
+.order-status.red{color:var(--danger)}
 .ov-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ov-box{background:var(--bg);border-radius:8px;padding:11px 13px}
 .ov-k{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;margin-bottom:3px}
@@ -958,7 +947,7 @@ details.ct-block > .form-grid{padding:14px 16px}
 .chatbot-close:hover{background:rgba(255,255,255,0.15)}
 .chatbot-close svg{width:18px;height:18px}
 .chatbot-messages{
-  flex:1;overflow-y:auto;padding:16px;background:#f7f8fa;
+  flex:1;overflow-y:auto;padding:16px;background:var(--bg-soft);
   display:flex;flex-direction:column;gap:12px;
 }
 .chatbot-msg{
@@ -974,11 +963,11 @@ details.ct-block > .form-grid{padding:14px 16px}
   background:var(--brand);color:#fff;border-bottom-right-radius:4px;align-self:flex-end;
 }
 .chatbot-msg.system{
-  background:#e8f5e9;color:#2e7d32;font-size:12px;text-align:center;
+  background:var(--success-soft);color:var(--success);font-size:12px;text-align:center;
   padding:8px 12px;border-radius:8px;align-self:center;max-width:90%;
 }
 .chatbot-quick-replies{
-  display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px;background:#f7f8fa;
+  display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px;background:var(--bg-soft);
 }
 .chatbot-quick-btn{
   background:var(--card);border:1px solid var(--brand);color:var(--brand-dark);
@@ -3567,10 +3556,10 @@ function viewInfo(page){
   if(page === "shipping"){
     title = "Shipping & Delivery"; subtitle = "Wholesale shipping tailored to each product and destination.";
     body =
-    '<div class="pay-banner" style="border-color:#e8d5e0;background:#faf5f7">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;flex-shrink:0;color:#b07a90"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
-      '<div><h4 style="color:#8a5a70">Delivery times vary by product</h4>' +
-      '<p style="color:#6b5560">As a wholesale supplier, our products have different production and lead times. Some items are ready to ship from stock, while others are manufactured to order after deposit confirmation. Exact delivery timelines are confirmed in your order quotation.</p></div>' +
+    '<div class="pay-banner" style="border-color:var(--line);background:var(--card)">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;flex-shrink:0;color:var(--brand)"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
+      '<div><h4 style="color:var(--ink)">Delivery times vary by product</h4>' +
+      '<p style="color:var(--ink-soft)">As a wholesale supplier, our products have different production and lead times. Some items are ready to ship from stock, while others are manufactured to order after deposit confirmation. Exact delivery timelines are confirmed in your order quotation.</p></div>' +
     '</div>' +
     '<div class="info-grid">' +
       '<div class="info-card"><h4>' + ic('<rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>') + 'Production & Lead Time</h4><p>Each product has its own lead time. <strong>In-stock items</strong> typically ship within <strong>3-7 business days</strong> of payment confirmation. <strong>Made-to-order items</strong> require a deposit and have longer lead times: confirmed in your quotation.</p></div>' +
@@ -3753,10 +3742,10 @@ function trackOrderLookup(){
   const id = (document.getElementById("trOrder").value || "").trim().toUpperCase();
   const email = (document.getElementById("trEmail").value || "").trim().toLowerCase();
   const result = document.getElementById("trResult");
-  if(!id || !email){ result.style.display = "block"; result.innerHTML = '<div class="track-result" style="color:#c0392b;font-weight:600">Please enter both your order number and email address.</div>'; return; }
+  if(!id || !email){ result.style.display = "block"; result.innerHTML = '<div class="track-result" style="color:var(--danger);font-weight:600">Please enter both your order number and email address.</div>'; return; }
   const orders = getOrders();
   const o = orders.find(x => x.id.toUpperCase() === id && x.customer.email.toLowerCase() === email);
-  if(!o){ result.style.display = "block"; result.innerHTML = '<div class="track-result" style="color:#c0392b;font-weight:600">No order found with these details. Please check your order number and email, or contact us at sales@nebulasecret.com.</div>'; return; }
+  if(!o){ result.style.display = "block"; result.innerHTML = '<div class="track-result" style="color:var(--danger);font-weight:600">No order found with these details. Please check your order number and email, or contact us at sales@nebulasecret.com.</div>'; return; }
   const cur = o.cur || "EUR"; const r = o.rate ?? rateOf(cur);
   result.style.display = "block";
   result.innerHTML =
