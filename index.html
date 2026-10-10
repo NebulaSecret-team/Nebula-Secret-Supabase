@@ -4341,14 +4341,30 @@ async function sbRefreshMyData(){
   try{
     const s = getSession();
     if(!s) return;
+    /* Skip admins entirely: they hold the full dataset in _cache. Check both
+       the local session role AND the Supabase JWT user_metadata, because
+       admin login goes through admin.js and may not set the local role. */
     if(s.role === 'admin' || s.role === 'superadmin') return;
+    try{
+      const sup = supabase ? await supabase.auth.getSession() : null;
+      const meta = sup && sup.data && sup.data.session ? (sup.data.session.user.user_metadata || {}) : {};
+      if(meta.role === 'admin' || meta.role === 'superadmin') return;
+    }catch(metaErr){}
+    const prevOrders = (_cache.myOrders || []).length;
+    const prevQuotes = (_cache.myQuotes || []).length;
     const [o, q] = await Promise.all([
       supabase.rpc('my_orders'),
       supabase.rpc('my_quotes')
     ]);
     if(!o.error) _cache.myOrders = o.data || [];
     if(!q.error) _cache.myQuotes = q.data || [];
-    if(location.hash === '#/account' || location.hash === '#/account/') viewAccount();
+    /* Only re-render when the data actually changed. Without this guard,
+       viewAccount -> sbRefreshMyData -> viewAccount loops forever and the
+       account page jumps/rebuilds itself continuously while scrolling. */
+    const changed = ((o.data || []).length !== prevOrders) || ((q.data || []).length !== prevQuotes);
+    if(changed && (location.hash === '#/account' || location.hash === '#/account/')){
+      viewAccount();
+    }
   }catch(e){}
 }
 function accountSignIn(){
@@ -5355,7 +5371,7 @@ function loadAdminScript(callback){
   }
   _adminLoading = true;
   const script = document.createElement("script");
-  script.src = "admin.js?v=20261011c";
+  script.src = "admin.js?v=20261011d";
   script.onload = () => { _adminLoaded = true; _adminLoading = false; if(callback) callback(); };
   script.onerror = () => {
     _adminLoading = false;
