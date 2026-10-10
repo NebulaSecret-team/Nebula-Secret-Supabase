@@ -1075,8 +1075,8 @@ details.ct-block > .form-grid{padding:14px 16px}
       <span class="sep hide-m">|</span>
       <a href="#/blog">Blog</a>
       <span class="sep hide-m">|</span>
-      <a href="#/admin" class="hide-m">Sign In</a>
-      <span class="sep hide-m">|</span>
+      <a href="#/admin" class="hide-m" id="navSignin">Sign In</a>
+      <span class="sep hide-m" id="navSepSignin">|</span>
       <a href="#/info/track">Track Order</a>
       <span class="sep">|</span>
       <a href="#/info/faq">Help &amp; Support</a>
@@ -1199,13 +1199,13 @@ details.ct-block > .form-grid{padding:14px 16px}
       <h4>Contact</h4>
       <a href="mailto:sales@nebulasecret.com">sales@nebulasecret.com</a>
       <a href="#/info/faq">Help &amp; Support</a>
-      <a href="#/admin">Sign In</a>
+      <a href="#/admin" id="navSigninF1">Sign In</a>
       <a href="#/info/track">Track Order</a>
     </div>
   </div>
   <div class="footer-bottom">
     <span id="ftCopy">© 2026 Nebula Secret. All rights reserved.</span>
-    <span><a class="admin-link" href="#/admin">Sign In</a></span>
+    <span><a class="admin-link" href="#/admin" id="navSigninF2">Sign In</a></span>
   </div>
 </footer>
 
@@ -2043,6 +2043,7 @@ async function syncAuthSession(){
   try {
     await getSessionAsync();
     if(typeof updateAcctLabel === 'function') updateAcctLabel();
+    if(typeof updateNavAuth === 'function') updateNavAuth();
     
     /* Listen for auth state changes (including password recovery) */
     if(supabase && !window._authListenerSetup){
@@ -2069,11 +2070,13 @@ async function syncAuthSession(){
           const name = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User';
           setSession({ name, email: session.user.email, supabaseAuth: true, userId: session.user.id });
           if(typeof updateAcctLabel === 'function') updateAcctLabel();
+          if(typeof updateNavAuth === 'function') updateNavAuth();
         }
         if(event === 'SIGNED_OUT'){
           /* Clear local session */
           try{ localStorage.removeItem(LS.session); }catch(e){}
           if(typeof updateAcctLabel === 'function') updateAcctLabel();
+          if(typeof updateNavAuth === 'function') updateNavAuth();
         }
       });
     }
@@ -2157,6 +2160,29 @@ async function verifyPass(pw, storedHash){
 }
 function acctLabel(){ const s = getSession(); return s ? (s.name || s.email).split(" ")[0] : "Account"; }
 function updateAcctLabel(){ const el = $("#acctLabel"); if(el) el.textContent = acctLabel(); }
+/* Auth-aware header nav: hide the top-bar Sign In when logged out; show
+   "Admin Center" for admins / "My Account" for customers once signed in.
+   Footer links stay visible but follow the same label/href. */
+async function updateNavAuth(){
+  try{ await getSessionAsync().catch(()=>{}); }catch(e){}
+  const s = getSession();
+  const isAdmin = s && (s.role === 'admin' || s.role === 'superadmin');
+  const logged = !!(s && s.email);
+  const top = document.getElementById('navSignin');
+  const sep = document.getElementById('navSepSignin');
+  if(top){
+    top.style.display = logged ? '' : 'none';
+    top.textContent = isAdmin ? 'Admin Center' : 'My Account';
+    top.setAttribute('href', isAdmin ? '#/admin' : '#/account');
+  }
+  if(sep) sep.style.display = logged ? '' : 'none';
+  ['navSigninF1','navSigninF2'].forEach(id => {
+    const l = document.getElementById(id);
+    if(!l) return;
+    l.textContent = isAdmin ? 'Admin Center' : (logged ? 'My Account' : 'Sign In');
+    l.setAttribute('href', isAdmin ? '#/admin' : '#/account');
+  });
+}
 function myOrders(email){ return getOrders().filter(o => String(custEmail(o)).toLowerCase() === String(email).toLowerCase()); }
 
 /* ============ Admin user accounts (multiple admins, change password) ============ */
@@ -4775,6 +4801,7 @@ async function acctRegister(){
     setSession({ name, email, tier: 'new' });
   }
   updateAcctLabel();
+  updateNavAuth();
   showToast("Welcome, " + name.split(" ")[0] + "!");
   route();
   console.log("acctRegister: registration complete for", email);
@@ -4806,6 +4833,7 @@ async function acctLogin(){
         }catch(e){}
         setSession({ name, email, supabaseAuth: true, userId: data.user.id, tier: tier || 'new' });
         updateAcctLabel();
+        updateNavAuth();
         showToast("Signed in as " + name.split(" ")[0]);
         route();
         return;
@@ -4831,6 +4859,7 @@ async function acctLogin(){
     clearLoginFails("acct:" + email);
     setSession({ name: data.name || email.split('@')[0], email: email, tier: data.tier || 'new', ts: Date.now() });
     updateAcctLabel();
+    updateNavAuth();
     showToast("Signed in as " + (data.name || email.split('@')[0]).split(" ")[0]);
     route();
   }catch(e){
@@ -5317,6 +5346,7 @@ async function acctLogout(){
   }
   setSession(null);
   updateAcctLabel();
+  updateNavAuth();
   showToast("Signed out");
   route();
 }
@@ -5371,7 +5401,7 @@ function loadAdminScript(callback){
   }
   _adminLoading = true;
   const script = document.createElement("script");
-  script.src = "admin.js?v=20261011d";
+  script.src = "admin.js?v=20261011e";
   script.onload = () => { _adminLoaded = true; _adminLoading = false; if(callback) callback(); };
   script.onerror = () => {
     _adminLoading = false;
@@ -5700,6 +5730,7 @@ sbLoadAll().then(() => {
   /* Sync Supabase Auth session to localStorage */
   if(typeof syncAuthSession === 'function') syncAuthSession();
   updateAcctLabel();
+  updateNavAuth();
   if(typeof route === "function") route();
   /* Complete preloader and fade out */
   if(window._preloaderTimer) clearInterval(window._preloaderTimer);
@@ -5719,6 +5750,7 @@ applyFooterContent();
 renderCatNav();
 buildCurSel();
 updateAcctLabel();
+updateNavAuth();
 loadRates();
 updateCartUI();
 syncSticky();
