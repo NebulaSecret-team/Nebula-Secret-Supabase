@@ -3777,8 +3777,9 @@ function trackOrderLookup(){
 function viewHome(){
   const products = getProducts(); const th = getTheme();
   const featured = products.slice(0, 8);
-  /* Hero slideshow: theme banner first (if custom), then the default slide set */
-  const slides = th.banner && HERO_SLIDES.indexOf(th.banner) === -1 ? [th.banner].concat(HERO_SLIDES) : HERO_SLIDES;
+  /* Hero slideshow: custom hero slides first (if set in admin), then legacy banner, then defaults */
+  let slides = (th.heroSlides && th.heroSlides.length) ? th.heroSlides.filter(Boolean) : null;
+  if(!slides || !slides.length) slides = th.banner && HERO_SLIDES.indexOf(th.banner) === -1 ? [th.banner].concat(HERO_SLIDES) : HERO_SLIDES;
   $("#app").innerHTML =
   '<section class="hero">' +
     slides.map((src, i) =>
@@ -5355,7 +5356,7 @@ function loadAdminScript(callback){
   }
   _adminLoading = true;
   const script = document.createElement("script");
-  script.src = "admin.js?v=20261010b";
+  script.src = "admin.js?v=20261011a";
   script.onload = () => { _adminLoaded = true; _adminLoading = false; if(callback) callback(); };
   script.onerror = () => {
     _adminLoading = false;

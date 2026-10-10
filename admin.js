@@ -1725,7 +1725,10 @@ function adminTheme(){
         '<div class="field"><label>Hero kicker</label><input id="thKicker" value="' + esc(th.heroKicker) + '"></div>' +
         '<div class="field full"><label>Hero title</label><div style="display:flex;gap:8px"><input id="thTitle" value="' + esc(th.heroTitle) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'thTitle\', this)" title="Generate with AI">AI</button></div></div>' +
         '<div class="field full"><label>Hero subtitle</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="thSub" rows="2" style="flex:1">' + esc(th.heroSub) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'thSub\', this)" title="Generate with AI">AI</button></div></div>' +
-        '<div class="field full"><label>Hero banner image (URL or upload)</label><div style="display:flex;gap:8px;align-items:center"><input id="thBanner" value="' + esc(th.banner) + '" style="flex:1" placeholder="Paste image URL or click Upload"><button type="button" class="btn sm" style="flex-shrink:0" onclick="document.getElementById(\'thBannerFile\').click()">Upload Image</button></div><input type="file" id="thBannerFile" accept="image/*" style="display:none" onchange="handleBannerUpload(this)"><div id="thBannerPreview" style="margin-top:8px"></div></div>' +
+        '<div class="field full"><label>Hero slides (up to 3 images, auto-rotated on the homepage)</label>' +
+          '<div style="display:grid;gap:10px" id="heroSlidesEdit">' +
+            [1,2,3].map(n => '<div style="display:flex;gap:8px;align-items:flex-start"><div style="flex:1;min-width:0"><input id="thSlide' + n + '" value="' + esc(((th.heroSlides||[])[n-1]) || "") + '" placeholder="Hero slide ' + n + ': image URL or upload" style="width:100%"><div id="thSlidePrev' + n + '" style="margin-top:6px"></div></div><button type="button" class="btn sm" style="flex-shrink:0" onclick="document.getElementById(\'thSlideFile' + n + '\').click()">Upload</button><input type="file" id="thSlideFile' + n + '" accept="image/*" style="display:none" onchange="handleHeroUpload(this, ' + n + ')"></div>').join('') +
+          '</div><div class="form-hint">Leave a field empty to keep the default slide. Uploaded images are compressed and stored with your theme.</div></div>' +
       '</div>' +
     '</div></div>' +
     '<div class="admin-panel"><div class="panel-head"><div><h3>Homepage Popup</h3><div class="ph-sub">A promotional popup shown once per session on the homepage</div></div></div>' +
@@ -1864,6 +1867,32 @@ function cleanContentObj(obj){
   });
 }
 
+/* Compress an image file to a data URL and write it into a hero slide field */
+function handleHeroUpload(input, idx){
+  const file = input.files[0];
+  if(!file) return;
+  if(!file.type.startsWith("image/")){ showToast("Please select an image file"); return; }
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      const canvas = document.createElement("canvas");
+      const maxW = 1600;
+      let w = img.width, h = img.height;
+      if(w > maxW){ h = Math.round(h * maxW / w); w = maxW; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const inp = document.getElementById("thSlide" + idx);
+      if(inp){ inp.value = dataUrl; }
+      const prev = document.getElementById("thSlidePrev" + idx);
+      if(prev) prev.innerHTML = '<img src="' + dataUrl + '" style="max-width:100%;max-height:140px;border-radius:8px;border:1px solid var(--line)">';
+      showToast("Slide " + idx + " image ready: click Save to apply");
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
 
 function handleBannerUpload(input){
   const file = input.files[0];
@@ -1949,7 +1978,8 @@ function saveThemeForm(){
   th.heroKicker = $("#thKicker").value.trim();
   th.heroTitle = $("#thTitle").value.trim();
   th.heroSub = $("#thSub").value.trim();
-  th.banner = $("#thBanner").value.trim() || BANNER;
+  th.heroSlides = [1,2,3].map(n => ($("#thSlide" + n) ? $("#thSlide" + n).value.trim() : "")).filter(Boolean);
+  th.banner = th.heroSlides[0] || BANNER;
   th.popupEnabled = $("#thPopupEnabled").value === "1";
   th.popupTitle = $("#thPopupTitle").value.trim();
   th.popupBody = $("#thPopupBody").value.trim();
