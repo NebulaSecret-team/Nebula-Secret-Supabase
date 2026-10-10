@@ -1163,7 +1163,7 @@ function openBulkEditModal(){
         '<div id="bulkTiersContainer"></div>' +
         '<button class="btn sm ghost" style="margin-top:8px" onclick="addBulkTier()">+ Add Volume Discount Tier</button>' +
       '</div>' +
-      '<div class="field full" style="background:#fff8e6;padding:12px;border-radius:8px;border:1px solid #ffe08a">' +
+      '<div class="field full" style="background:var(--warning-soft);padding:12px;border-radius:8px;border:1px solid var(--warning)">' +
         '<label style="font-weight:600;color:#8a6d00">⚠️ Important</label>' +
         '<div style="font-size:13px;color:#8a6d00;margin-top:6px">This will overwrite the existing price tiers for all selected products. Make sure the first tier\'s MOQ matches the MOQ you set above.</div>' +
       '</div>' +
@@ -1748,8 +1748,8 @@ function adminEmails(){
     '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Auto-send every new order to your inbox: Resend via Vercel Edge Function</div></div></div>' +
     '<div class="panel-body">' +
       '<div class="form-grid">' +
-        '<div class="field full" id="emailStatus"><label>Server Status (Vercel Edge Function)</label><div style="padding:10px;border-radius:8px;background:#f0f0f0;color:#666" id="emailStatusText">Checking...</div></div>' +
-        '<div class="field full" id="emailParams"><label>Vercel Environment Variables</label><div style="padding:10px;border-radius:8px;background:#f8f9fa;font-family:monospace;font-size:12px" id="emailParamsList">Loading...</div></div>' +
+        '<div class="field full" id="emailStatus"><label>Server Status (Vercel Edge Function)</label><div style="padding:10px;border-radius:8px;background:var(--bg-soft);color:var(--ink-soft)" id="emailStatusText">Checking...</div></div>' +
+        '<div class="field full" id="emailParams"><label>Vercel Environment Variables</label><div style="padding:10px;border-radius:8px;background:var(--bg-soft);font-family:monospace;font-size:12px" id="emailParamsList">Loading...</div></div>' +
       '</div>' +
       '<div class="form-hint" style="margin-top:12px">Emails are sent server-side through <code>/api/send-email</code> (Resend). Keys live only in Vercel env vars: nothing to configure here.</div>' +
       '<button class="btn ghost" style="margin-top:12px" onclick="sendTestOrderEmail()">Send Test Email</button>' +
