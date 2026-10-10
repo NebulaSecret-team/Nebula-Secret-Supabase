@@ -522,6 +522,18 @@ section.block{padding:40px 0}
 .drawer-backdrop.open{opacity:1;pointer-events:auto}
 .cart-drawer{position:fixed;top:0;right:0;bottom:0;width:430px;max-width:94vw;background:var(--card);z-index:160;transform:translateX(105%);transition:transform .35s cubic-bezier(.32,.72,.36,1);display:flex;flex-direction:column;box-shadow:-18px 0 50px rgba(31,30,35,.2)}
 .cart-drawer.open{transform:translateX(0)}
+/* ================= Mobile nav drawer ================= */
+.mnav-backdrop{position:fixed;inset:0;background:rgba(31,30,35,.5);z-index:150;opacity:0;pointer-events:none;transition:opacity .3s}
+.mnav-backdrop.open{opacity:1;pointer-events:auto}
+.mnav{position:fixed;top:0;right:0;bottom:0;width:min(320px,88vw);background:var(--card);z-index:160;transform:translateX(105%);transition:transform .35s cubic-bezier(.32,.72,.36,1);display:flex;flex-direction:column;box-shadow:-18px 0 50px rgba(31,30,35,.2)}
+.mnav.open{transform:translateX(0)}
+.mnav-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}
+.mnav-title{font-weight:700;font-size:15px;color:var(--ink)}
+.mnav-close{width:38px;height:38px;display:grid;place-items:center;border-radius:8px;background:var(--bg);color:var(--ink);border:0;cursor:pointer}
+.mnav-close svg{width:20px;height:20px}
+.mnav-links{display:flex;flex-direction:column;padding:8px 0;overflow-y:auto;flex:1}
+.mnav-links a{display:flex;align-items:center;padding:13px 18px;font-size:15px;color:var(--ink);font-weight:500;border-bottom:1px solid var(--line);text-decoration:none;min-height:44px}
+.mnav-links a:hover,.mnav-links a:active{background:var(--bg-soft);color:var(--brand-dark)}
 .cart-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
 .cart-head h3{font-size:18px;font-weight:700}
 .cart-head .close{width:36px;height:36px;border-radius:50%;display:grid;place-items:center}
@@ -1111,6 +1123,9 @@ details.ct-block > .form-grid{padding:14px 16px}
         <span class="cart-count" id="cartCount">0</span>
         <span class="hact-label">Cart</span>
       </button>
+      <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg>
+      </button>
     </div>
   </div>
 </header>
@@ -1208,6 +1223,26 @@ details.ct-block > .form-grid{padding:14px 16px}
     <span><a class="admin-link" href="#/admin" id="navSigninF2">Sign In</a></span>
   </div>
 </footer>
+
+<!-- ================= MOBILE NAV DRAWER ================= -->
+<div class="mnav-backdrop" id="mnavBackdrop"></div>
+<aside class="mnav" id="mnav" aria-label="Mobile navigation">
+  <div class="mnav-head">
+    <span class="mnav-title">Menu</span>
+    <button class="mnav-close" id="mnavClose" aria-label="Close menu"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>
+  </div>
+  <nav class="mnav-links">
+    <a href="#/" onclick="closeMnav()">Home</a>
+    <a href="#/shop" onclick="closeMnav()">Shop</a>
+    <a href="#/about" onclick="closeMnav()">About Us</a>
+    <a href="#/why-us" onclick="closeMnav()">Why Us</a>
+    <a href="#/blog" onclick="closeMnav()">Blog</a>
+    <a href="#/" onclick="setTimeout(function(){var el=document.getElementById('contact-section');if(el)el.scrollIntoView({behavior:'smooth'});closeMnav();},150);">Contact Us</a>
+    <a href="#/info/track" onclick="closeMnav()">Track Order</a>
+    <a href="#/info/faq" onclick="closeMnav()">Help &amp; Support</a>
+    <a href="#/admin" id="mnavSignin" onclick="closeMnav()">Sign In</a>
+  </nav>
+</aside>
 
 <!-- ================= DRAWER / MODAL / TOAST ================= -->
 <div class="drawer-backdrop" id="drawerBackdrop"></div>
@@ -2176,7 +2211,7 @@ async function updateNavAuth(){
     top.setAttribute('href', isAdmin ? '#/admin' : '#/account');
   }
   if(sep) sep.style.display = logged ? '' : 'none';
-  ['navSigninF1','navSigninF2'].forEach(id => {
+  ['navSigninF1','navSigninF2','mnavSignin'].forEach(id => {
     const l = document.getElementById(id);
     if(!l) return;
     l.textContent = isAdmin ? 'Admin Center' : (logged ? 'My Account' : 'Sign In');
@@ -2829,6 +2864,34 @@ function showToast(msg){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => $("#toast").classList.remove("show"), 2400);
 }
+
+/* ============ Mobile nav drawer ============ */
+function openMnav(){
+  const m = document.getElementById('mnav'), b = document.getElementById('mnavBackdrop'), t = document.getElementById('menuToggle');
+  if(m) m.classList.add('open');
+  if(b) b.classList.add('open');
+  if(t){ t.setAttribute('aria-expanded','true'); t.setAttribute('aria-label','Close menu'); }
+  document.body.style.overflow = 'hidden';
+}
+function closeMnav(){
+  const m = document.getElementById('mnav'), b = document.getElementById('mnavBackdrop'), t = document.getElementById('menuToggle');
+  if(m) m.classList.remove('open');
+  if(b) b.classList.remove('open');
+  if(t){ t.setAttribute('aria-expanded','false'); t.setAttribute('aria-label','Open menu'); }
+  document.body.style.overflow = '';
+}
+(function(){
+  const t = document.getElementById('menuToggle');
+  if(t) t.addEventListener('click', () => {
+    const m = document.getElementById('mnav');
+    if(m && m.classList.contains('open')) closeMnav(); else openMnav();
+  });
+  const b = document.getElementById('mnavBackdrop');
+  if(b) b.addEventListener('click', closeMnav);
+  const c = document.getElementById('mnavClose');
+  if(c) c.addEventListener('click', closeMnav);
+  document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeMnav(); });
+})();
 
 /* ============ Cart drawer ============ */
 function openCart(){ $("#cartDrawer").classList.add("open"); $("#drawerBackdrop").classList.add("open"); $("#chatbotFab").style.display = "none"; renderCart(); }
