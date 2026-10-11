@@ -1977,8 +1977,8 @@ function isAdminFromToken() {
     const payload = parseJwt(accessToken);
     if (!payload) return { isAdmin: false, email: null };
     
-    // Check role in app_metadata or user_metadata
-    const role = payload.app_metadata?.role || payload.user_metadata?.role || payload.role;
+    // Check role in app_metadata only (user_metadata is client-writable)
+    const role = payload.app_metadata?.role;
     const email = payload.email || payload.user_metadata?.email;
     
     if (role === 'admin' || role === 'superadmin') {

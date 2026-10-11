@@ -202,13 +202,14 @@ function adminDashboard(){
   
   // 0. Manual activity log (deletes, etc.)
   const activityLog = getActivityLog();
+  const validIcons = Object.values(IC);
   activityLog.forEach(a => {
     activities.push({ 
-      type: a.type || 'activity', 
-      icon: a.icon || IC.info, 
-      text: a.text, 
+      type: (/^[a-z0-9_-]+$/i.test(a.type||'')) ? a.type : 'activity', 
+      icon: validIcons.indexOf(a.icon) !== -1 ? a.icon : IC.info, 
+      text: typeof sanitizeHTML === 'function' ? sanitizeHTML(a.text) : esc(a.text||''), 
       time: a.time, 
-      color: a.color || '#6b7280' 
+      color: (/^#[0-9a-f]{3,8}$/i.test(a.color||'')) ? a.color : '#6b7280' 
     });
   });
   
@@ -1554,9 +1555,9 @@ function adminResetCustomerPass(email){
   const accs = getAccounts();
   const acc = accs.find(a => a.email === email);
   if(!acc){ showToast("Account not found"); return; }
-  const np = prompt("Enter a new password for " + acc.email + " (min 6 characters):");
+  const np = prompt("Enter a new password for " + acc.email + " (min 8 characters):");
   if(np === null) return;
-  if(np.trim().length < 6){ showToast("Password must be at least 6 characters"); return; }
+  if(np.trim().length < 8){ showToast("Password must be at least 8 characters"); return; }
   hashPass(np.trim()).then(hash => {
     acc.pass = hash;
     saveAccounts(accs);
@@ -1725,7 +1726,7 @@ async function adminAddAdmin(){
   const p = $("#auPass").value || "";
   const n = ($("#auName").value || "").trim();
   if(!u){ showToast("Enter a login name"); return; }
-  if(p.length < 6){ showToast("Password must be at least 6 characters"); return; }
+  if(p.length < 8){ showToast("Password must be at least 8 characters"); return; }
   const admins = getAdmins();
   if(admins.some(a => a.user.toLowerCase() === u.toLowerCase())){ showToast("This login name already exists"); return; }
   /* Hash password before storing */
@@ -1738,9 +1739,9 @@ async function adminChangeAdminPass(user){
   const admins = getAdmins();
   const a = admins.find(x => x.user === user);
   if(!a){ showToast("Admin not found"); return; }
-  const np = prompt("Enter a new password for \"" + a.user + "\" (min 6 characters):");
+  const np = prompt("Enter a new password for \"" + a.user + "\" (min 8 characters):");
   if(np === null) return;
-  if(np.trim().length < 6){ showToast("Password must be at least 6 characters"); return; }
+  if(np.trim().length < 8){ showToast("Password must be at least 8 characters"); return; }
   /* Hash password before storing */
   a.pass = await hashPass(np.trim());
   saveAdmins(admins).then(r => { if(r && r.ok) showToast("Password updated for " + user); });
@@ -2461,7 +2462,7 @@ function adminRoute(){
   checkSupabaseSession().then(({ data: { session } }) => {
     if(session){
       /* Check if user has admin role */
-      const role = session.user.app_metadata?.role || session.user.user_metadata?.role;
+      const role = session.user.app_metadata?.role;
       if(role === 'admin' || role === 'superadmin'){
         renderAdminPage();
         return;

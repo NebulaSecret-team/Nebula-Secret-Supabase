@@ -1856,7 +1856,7 @@ async function isAdmin(){
     /* First check Supabase Auth session */
     const { data: { session } } = await supabase.auth.getSession();
     if(session){
-      const role = session.user.app_metadata?.role || session.user.user_metadata?.role;
+      const role = session.user.app_metadata?.role;
       if(role === 'admin' || role === 'superadmin') return true;
     }
     /* Then check legacy session */
@@ -2101,7 +2101,7 @@ async function getSessionAsync(){
         email: user.email,
         supabaseAuth: true,
         userId: user.id,
-        role: user.app_metadata?.role || user.user_metadata?.role || 'customer'
+        role: user.app_metadata?.role || 'customer'
       };
       setSession(s);
       return s;
@@ -4620,7 +4620,7 @@ function accountResetSent(){
 function accountResetNewPassword(){
   return '<div class="acct-card">' +
     '<h2>Set New Password</h2>' +
-    '<p class="sub">Enter your new password below. Your password must be at least 6 characters.</p>' +
+    '<p class="sub">Enter your new password below. Your password must be at least 8 characters.</p>' +
     '<div id="newPasswordForm">' +
       '<div class="field"><label>New Password</label><input id="newPass" type="password" placeholder="Enter new password"></div>' +
       '<div class="field"><label>Confirm Password</label><input id="confirmPass" type="password" placeholder="Confirm new password"></div>' +
@@ -4793,7 +4793,7 @@ async function updatePassword(){
   const confirmPass = $("#confirmPass").value;
   const err = $("#newPassErr");
   
-  if(!newPass || newPass.length < 6){ err.textContent = "Password must be at least 6 characters"; return; }
+  if(!newPass || newPass.length < 8){ err.textContent = "Password must be at least 8 characters"; return; }
   if(newPass !== confirmPass){ err.textContent = "Passwords do not match"; return; }
   
   err.textContent = "";
@@ -4835,7 +4835,7 @@ async function acctRegister(){
   const err = $("#acctErr2");
   if(!name){ err.textContent = "Please enter your name"; return; }
   if(!email || !/.+@.+\..+/.test(email)){ err.textContent = "Please enter a valid email"; return; }
-  if(pass.length < 6){ err.textContent = "Password must be at least 6 characters"; return; }
+  if(pass.length < 8){ err.textContent = "Password must be at least 8 characters"; return; }
   
   console.log("acctRegister: starting registration for", email);
   
@@ -5395,7 +5395,7 @@ async function changePassSave(){
           err.textContent = "Current password is incorrect";
           return;
         }
-        if(newP.length < 6){ err.textContent = "New password must be at least 6 characters"; return; }
+        if(newP.length < 8){ err.textContent = "New password must be at least 8 characters"; return; }
         
         /* Update password */
         const { error: updateError } = await supabase.auth.updateUser({ password: newP });
@@ -5420,7 +5420,7 @@ async function changePassSave(){
   
   /* Method 2: Legacy account system (verified + updated via privileged RPC;
      the accounts list is not publicly readable) */
-  if(newP.length < 6){ err.textContent = "New password must be at least 6 characters"; return; }
+  if(newP.length < 8){ err.textContent = "New password must be at least 8 characters"; return; }
   try{
     const oldH = await hashPass(oldP);
     const newH = await hashPass(newP);
