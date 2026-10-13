@@ -2076,22 +2076,38 @@ async function detectCurrencyByGeo(){
     
     let country = null;
     
-    // 方法1: 使用 Cloudflare trace（最可靠，無 CORS 問題）
+    // 方法1: 使用我们自己的 Vercel Edge Function（最可靠）
     try {
-      const cfRes = await fetch("https://www.cloudflare.com/cdn-cgi/trace");
-      if (cfRes.ok) {
-        const text = await cfRes.text();
-        const match = text.match(/loc=([A-Z]{2})/);
-        if (match) {
-          country = match[1];
-          console.log("[GeoCurrency] Detected via Cloudflare:", country);
+      const geoRes = await fetch("/api/geo");
+      if (geoRes.ok) {
+        const data = await geoRes.json();
+        if (data.country_code || data.country) {
+          country = data.country_code || data.country;
+          console.log("[GeoCurrency] Detected via /api/geo:", country, "(" + (data.city || "unknown") + ")");
         }
       }
     } catch(e) {
-      console.log("[GeoCurrency] Cloudflare trace failed:", e.message);
+      console.log("[GeoCurrency] /api/geo failed:", e.message);
     }
     
-    // 方法2: 使用 ipwho.is（免費，支援 CORS）
+    // 方法2: 使用 Cloudflare trace
+    if (!country) {
+      try {
+        const cfRes = await fetch("https://www.cloudflare.com/cdn-cgi/trace");
+        if (cfRes.ok) {
+          const text = await cfRes.text();
+          const match = text.match(/loc=([A-Z]{2})/);
+          if (match) {
+            country = match[1];
+            console.log("[GeoCurrency] Detected via Cloudflare:", country);
+          }
+        }
+      } catch(e) {
+        console.log("[GeoCurrency] Cloudflare trace failed:", e.message);
+      }
+    }
+    
+    // 方法3: 使用 ipwho.is
     if (!country) {
       try {
         const ipRes = await fetch("https://ipwho.is/");
@@ -2107,24 +2123,22 @@ async function detectCurrencyByGeo(){
       }
     }
     
-    // 方法3: 使用 geolocation-db
+    // 方法4: 基于浏览器语言回退
     if (!country) {
       try {
-        const dbRes = await fetch("https://geolocation-db.com/json/");
-        if (dbRes.ok) {
-          const data = await dbRes.json();
-          if (data.country_code) {
-            country = data.country_code;
-            console.log("[GeoCurrency] Detected via geolocation-db:", country);
-          }
+        const lang = navigator.language || navigator.userLanguage || "";
+        const langCountry = lang.split("-")[1] || lang.split("_")[1];
+        if (langCountry && langCountry.length === 2) {
+          country = langCountry.toUpperCase();
+          console.log("[GeoCurrency] Detected via browser language:", country, "(" + lang + ")");
         }
       } catch(e) {
-        console.log("[GeoCurrency] geolocation-db failed:", e.message);
+        console.log("[GeoCurrency] Browser language detection failed:", e.message);
       }
     }
     
     if (!country) {
-      console.log("[GeoCurrency] No country detected from any service, using default USD");
+      console.log("[GeoCurrency] No country detected, using default USD");
       curCode = "USD";
       lsSet(LS.currency, curCode);
       setCurLabels();
