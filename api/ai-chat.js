@@ -121,12 +121,14 @@ export default async function handler(req) {
       if (!response.ok) {
         lastError = data.error?.message || data.error || 'AI service error';
         lastStatus = response.status;
-        console.error(`Agnes API error (${model}):`, data);
+        console.error(`Agnes API error (${model}):`, JSON.stringify(data));
         // 僅在模型不可用 / 流量過高等可降級錯誤時嘗試下一個模型
-        const canFallback = /high demand|no longer available|not found|unavailable|quota|rate limit|RESOURCE_EXHAUSTED|model_not_found/i.test(lastError) || [404, 429, 500, 502, 503].includes(response.status);
+        const canFallback = /high demand|no longer available|not found|unavailable|quota|rate limit|RESOURCE_EXHAUSTED|model_not_found|internal error/i.test(lastError) || [404, 429, 500, 502, 503].includes(response.status);
         if (canFallback) continue;
         return new Response(JSON.stringify({ 
           error: lastError,
+          status: response.status,
+          debug: JSON.stringify(data),
           fallback: true 
         }), {
           status: response.status,
