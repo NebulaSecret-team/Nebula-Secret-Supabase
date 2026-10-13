@@ -2073,23 +2073,58 @@ async function detectCurrencyByGeo(){
       console.log("[GeoCurrency] User already selected:", userSelected);
       return;
     }
-    const res = await fetch("https://ipapi.co/json/", {
-      method: "GET",
-      headers: { "Accept": "application/json" }
-    });
-    if (!res.ok) {
-      console.log("[GeoCurrency] GeoIP service unavailable, using default USD");
-      curCode = "USD";
-      lsSet(LS.currency, curCode);
-      setCurLabels();
-      buildCurSel();
-      route();
-      return;
+    
+    let country = null;
+    
+    // 方法1: 使用 Cloudflare trace（最可靠，無 CORS 問題）
+    try {
+      const cfRes = await fetch("https://www.cloudflare.com/cdn-cgi/trace");
+      if (cfRes.ok) {
+        const text = await cfRes.text();
+        const match = text.match(/loc=([A-Z]{2})/);
+        if (match) {
+          country = match[1];
+          console.log("[GeoCurrency] Detected via Cloudflare:", country);
+        }
+      }
+    } catch(e) {
+      console.log("[GeoCurrency] Cloudflare trace failed:", e.message);
     }
-    const data = await res.json();
-    const country = data.country_code || data.country;
+    
+    // 方法2: 使用 ipwho.is（免費，支援 CORS）
     if (!country) {
-      console.log("[GeoCurrency] No country detected, using default USD");
+      try {
+        const ipRes = await fetch("https://ipwho.is/");
+        if (ipRes.ok) {
+          const data = await ipRes.json();
+          if (data.success && data.country_code) {
+            country = data.country_code;
+            console.log("[GeoCurrency] Detected via ipwho.is:", country);
+          }
+        }
+      } catch(e) {
+        console.log("[GeoCurrency] ipwho.is failed:", e.message);
+      }
+    }
+    
+    // 方法3: 使用 geolocation-db
+    if (!country) {
+      try {
+        const dbRes = await fetch("https://geolocation-db.com/json/");
+        if (dbRes.ok) {
+          const data = await dbRes.json();
+          if (data.country_code) {
+            country = data.country_code;
+            console.log("[GeoCurrency] Detected via geolocation-db:", country);
+          }
+        }
+      } catch(e) {
+        console.log("[GeoCurrency] geolocation-db failed:", e.message);
+      }
+    }
+    
+    if (!country) {
+      console.log("[GeoCurrency] No country detected from any service, using default USD");
       curCode = "USD";
       lsSet(LS.currency, curCode);
       setCurLabels();
@@ -2097,14 +2132,16 @@ async function detectCurrencyByGeo(){
       route();
       return;
     }
+    
     const targetCurrency = COUNTRY_TO_CURRENCY[country];
     if (targetCurrency && CURRENCIES.find(c => c.code === targetCurrency)) {
       curCode = targetCurrency;
-      console.log("[GeoCurrency] Detected country:", country, "-> currency:", curCode);
+      console.log("[GeoCurrency] Country:", country, "-> currency:", curCode);
     } else {
       curCode = "USD";
       console.log("[GeoCurrency] Country:", country, "not supported, using default USD");
     }
+    
     lsSet(LS.currency, curCode);
     setCurLabels();
     buildCurSel();
