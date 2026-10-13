@@ -1,34 +1,35 @@
-// Google Gemini AI Chat Proxy - Vercel Edge Function
+// Agnes AI Chat Proxy - Vercel Edge Function
 // 保護 API 密鑰，不暴露在前端
+// Agnes AI 是 OpenAI 兼容格式的 API，完全免費
 
 export const config = {
   runtime: 'edge',
 };
 
-const SYSTEM_PROMPT = `你是 Nebula Secret 的 AI 客戶服務助手。Nebula Secret 是一家專業的護膚品批發和 OEM/ODM 製造商。
+const SYSTEM_PROMPT = `You are Nebula Secret's AI customer service assistant. Nebula Secret is a professional skincare wholesale and OEM/ODM manufacturer.
 
-關於 Nebula Secret：
-- 專營護膚品批發、OEM/ODM 定制生產
-- 產品類別：身體磨砂、沐浴鹽、香水、護手霜、精油、面膜、線香等
-- 支持私人標籤（Private Label）和定制配方
-- 服務全球批發客戶
+About Nebula Secret:
+- Specializes in skincare wholesale, OEM/ODM custom manufacturing
+- Product categories: body scrubs, bath salts, perfumes, hand creams, essential oils, face masks, incense, etc.
+- Supports private label and custom formulation
+- Serves wholesale customers worldwide
 
-回答規則：
-1. 用英文回答（因為客戶主要是國際批發客戶）
-2. 回答要專業、簡潔、有禮貌
-3. 如果不知道答案，請建議客戶留下聯繫方式，我們會有專人回覆
-4. 不要編造具體數字（如價格、MOQ、交貨時間等），如果客戶問到，請建議他們提交報價請求
-5. 對於 MOQ、價格、發貨時間等問題，解釋我們提供定制方案，需要根據具體需求報價
-6. 鼓勵客戶使用 "Request Quote" 功能獲取正式報價
-7. 如果客戶想了解產品，建議他們瀏覽產品頁面或使用搜索功能
+Answer rules:
+1. Answer in English (customers are mainly international wholesale clients)
+2. Be professional, concise, and polite
+3. If you don't know the answer, suggest the customer leave their contact info and we'll have someone reply
+4. Never invent specific numbers (prices, MOQ, lead times, etc.) - if asked, suggest they submit a quote request
+5. For MOQ, pricing, shipping time questions, explain we offer customized solutions and need to quote based on specific requirements
+6. Encourage customers to use the "Request Quote" feature for formal quotes
+7. If customers want to learn about products, suggest they browse the product pages or use the search function
 
-常見問題回答方向：
-- MOQ：我們提供靈活的 MOQ，不同產品有不同的最低訂購量，建議提交報價請求獲取具體信息
-- 價格：批發價格根據訂購數量、產品類型和定制要求而定，批量訂購有價格優惠
-- 發貨時間：取決於產品和訂購量，現貨產品通常發貨較快，定制產品需要生產時間
-- OEM/ODM：我們提供完整的 OEM/ODM 服務，包括配方開發、包裝設計、私人標籤等
-- 樣品：我們提供樣品服務，具體請聯繫我們
-- 付款方式：我們支持多種國際付款方式，具體可商議`;
+Common question answer directions:
+- MOQ: We offer flexible MOQ, different products have different minimum order quantities, suggest submitting a quote request for specific info
+- Pricing: Wholesale prices depend on order quantity, product type, and customization requirements; bulk orders have volume discounts
+- Shipping time: Depends on product and order quantity; in-stock products usually ship faster, custom products require production time
+- OEM/ODM: We provide complete OEM/ODM services including formulation development, packaging design, private label, etc.
+- Samples: We offer sample services, please contact us for details
+- Payment methods: We support multiple international payment methods, negotiable`;
 
 export default async function handler(req) {
   // 只允許 POST 請求
@@ -49,10 +50,10 @@ export default async function handler(req) {
       });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.AGNES_API_KEY || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return new Response(JSON.stringify({ 
-        error: 'AI service not configured. Please set GEMINI_API_KEY environment variable.',
+        error: 'AI service not configured. Please set AGNES_API_KEY environment variable.',
         fallback: true 
       }), {
         status: 500,
@@ -60,27 +61,29 @@ export default async function handler(req) {
       });
     }
 
-    // 構建 Gemini API 請求
-    const contents = [];
+    // 構建 OpenAI 兼容格式的 messages
+    const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
     
-    // 添加歷史對話
+    // 添加歷史對話（最近10條）
     for (const msg of history.slice(-10)) {
       if (msg.role === 'user') {
-        contents.push({ role: 'user', parts: [{ text: msg.content }] });
+        messages.push({ role: 'user', content: msg.content });
       } else if (msg.role === 'assistant') {
-        contents.push({ role: 'model', parts: [{ text: msg.content }] });
+        messages.push({ role: 'assistant', content: msg.content });
       }
     }
     
     // 添加當前消息
-    contents.push({ role: 'user', parts: [{ text: message }] });
+    messages.push({ role: 'user', content: message });
 
-    // 模型降級鏈：新模型流量過高或停用時，自動切換到穩定備選模型
+    // 模型降級鏈：Agnes AI 模型
     const models = [
-      process.env.GEMINI_MODEL || 'gemini-3.8-flash',
-      'gemini-3.7-flash',
-      'gemini-3.5-flash-lite',
+      process.env.AGNES_MODEL || 'agnes-2.5-flash',
+      'agnes-2.0-flash',
     ];
+
+    // Agnes API 端點（國際站）
+    const apiBase = process.env.AGNES_API_BASE || 'https://api.agnes.ai/v1';
 
     let lastError = 'AI service error';
     let lastStatus = 503;
@@ -89,31 +92,21 @@ export default async function handler(req) {
       let response, data;
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
         response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          `${apiBase}/chat/completions`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
             },
             body: JSON.stringify({
-              contents: contents,
-              systemInstruction: {
-                parts: [{ text: SYSTEM_PROMPT }],
-              },
-              generationConfig: {
-                temperature: 0.7,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 1024,
-              },
-              safetySettings: [
-                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-              ],
+              model: model,
+              messages: messages,
+              temperature: 0.7,
+              max_tokens: 1024,
+              top_p: 0.95,
             }),
             signal: controller.signal,
           }
@@ -126,11 +119,11 @@ export default async function handler(req) {
       }
 
       if (!response.ok) {
-        lastError = data.error?.message || 'AI service error';
+        lastError = data.error?.message || data.error || 'AI service error';
         lastStatus = response.status;
-        console.error(`Gemini API error (${model}):`, data);
+        console.error(`Agnes API error (${model}):`, data);
         // 僅在模型不可用 / 流量過高等可降級錯誤時嘗試下一個模型
-        const canFallback = /high demand|no longer available|not found|unavailable|quota|RESOURCE_EXHAUSTED/i.test(lastError) || [404, 429, 500, 502, 503].includes(response.status);
+        const canFallback = /high demand|no longer available|not found|unavailable|quota|rate limit|RESOURCE_EXHAUSTED|model_not_found/i.test(lastError) || [404, 429, 500, 502, 503].includes(response.status);
         if (canFallback) continue;
         return new Response(JSON.stringify({ 
           error: lastError,
@@ -141,12 +134,14 @@ export default async function handler(req) {
         });
       }
 
-      const aiReply = data.candidates?.[0]?.content?.parts?.[0]?.text || 
+      // Agnes AI (OpenAI 兼容格式) 的響應結構
+      const aiReply = data.choices?.[0]?.message?.content || 
                       'I apologize, but I could not generate a response. Please try again or contact us directly.';
 
       return new Response(JSON.stringify({ 
         reply: aiReply,
-        usage: data.usageMetadata
+        usage: data.usage,
+        model: model
       }), {
         status: 200,
         headers: { 
