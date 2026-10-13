@@ -82,8 +82,8 @@ export default async function handler(req) {
       'agnes-2.0-flash',
     ];
 
-    // Agnes API 端點（國際站）
-    const apiBase = process.env.AGNES_API_BASE || 'https://api.agnes.ai/v1';
+    // Agnes API 端點（正確的國際站端點）
+    const apiBase = process.env.AGNES_API_BASE || 'https://apihub.agnes-ai.com/v1';
 
     let lastError = 'AI service error';
     let lastStatus = 503;
