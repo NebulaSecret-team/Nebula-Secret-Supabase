@@ -2040,6 +2040,85 @@ async function loadRates(){
   }catch(e){ applyRateNote(false); }
 }
 
+
+/* ============ Auto currency by GeoIP ============ */
+const COUNTRY_TO_CURRENCY = {
+  "US": "USD", "PR": "USD", "GU": "USD", "VI": "USD",
+  "HK": "HKD",
+  "CN": "CNY",
+  "GB": "GBP", "GG": "GBP", "JE": "GBP", "IM": "GBP",
+  "JP": "JPY",
+  "SG": "SGD",
+  "AU": "AUD", "CC": "AUD", "KI": "AUD", "NR": "AUD", "TV": "AUD",
+  "CA": "CAD",
+  "CH": "CHF", "LI": "CHF",
+  "KR": "KRW",
+  "AE": "AED",
+  "SA": "SAR",
+  "TW": "TWD",
+  "TH": "THB",
+  "MY": "MYR",
+  "NZ": "NZD", "CK": "NZD", "NU": "NZD", "PN": "NZD", "TK": "NZD",
+  "DE": "EUR", "FR": "EUR", "IT": "EUR", "ES": "EUR", "NL": "EUR",
+  "BE": "EUR", "AT": "EUR", "PT": "EUR", "IE": "EUR", "FI": "EUR",
+  "GR": "EUR", "SK": "EUR", "SI": "EUR", "EE": "EUR", "LV": "EUR",
+  "LT": "EUR", "CY": "EUR", "MT": "EUR", "LU": "EUR", "AD": "EUR",
+  "MC": "EUR", "SM": "EUR", "VA": "EUR", "ME": "EUR", "XK": "EUR"
+};
+
+async function detectCurrencyByGeo(){
+  try {
+    const userSelected = lsGet(LS.currency, null);
+    if (userSelected) {
+      console.log("[GeoCurrency] User already selected:", userSelected);
+      return;
+    }
+    const res = await fetch("https://ipapi.co/json/", {
+      method: "GET",
+      headers: { "Accept": "application/json" }
+    });
+    if (!res.ok) {
+      console.log("[GeoCurrency] GeoIP service unavailable, using default USD");
+      curCode = "USD";
+      lsSet(LS.currency, curCode);
+      setCurLabels();
+      buildCurSel();
+      route();
+      return;
+    }
+    const data = await res.json();
+    const country = data.country_code || data.country;
+    if (!country) {
+      console.log("[GeoCurrency] No country detected, using default USD");
+      curCode = "USD";
+      lsSet(LS.currency, curCode);
+      setCurLabels();
+      buildCurSel();
+      route();
+      return;
+    }
+    const targetCurrency = COUNTRY_TO_CURRENCY[country];
+    if (targetCurrency && CURRENCIES.find(c => c.code === targetCurrency)) {
+      curCode = targetCurrency;
+      console.log("[GeoCurrency] Detected country:", country, "-> currency:", curCode);
+    } else {
+      curCode = "USD";
+      console.log("[GeoCurrency] Country:", country, "not supported, using default USD");
+    }
+    lsSet(LS.currency, curCode);
+    setCurLabels();
+    buildCurSel();
+    route();
+  } catch(e) {
+    console.warn("[GeoCurrency] Error detecting location:", e.message);
+    curCode = "USD";
+    lsSet(LS.currency, curCode);
+    setCurLabels();
+    buildCurSel();
+    route();
+  }
+}
+
 /* ============ Customer accounts ============ */
 function getAccounts(){ return _cache.accounts || []; }
 async function saveAccounts(a){
@@ -5598,7 +5677,7 @@ function loadAdminScript(callback){
   }
   _adminLoading = true;
   const script = document.createElement("script");
-  script.src = "admin.js?v=20261011h";
+  script.src = "admin.js?v=20261014geo";
   script.onload = () => { _adminLoaded = true; _adminLoading = false; if(callback) callback(); };
   script.onerror = () => {
     _adminLoading = false;
@@ -5949,6 +6028,7 @@ buildCurSel();
 updateAcctLabel();
 updateNavAuth();
 loadRates();
+detectCurrencyByGeo();
 updateCartUI();
 syncSticky();
 window.addEventListener("hashchange", route);
