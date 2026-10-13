@@ -226,7 +226,18 @@ h1,h2,h3,.display{font-family:var(--font-display)}
 .cur-switch:hover{border-color:var(--brand);box-shadow:0 0 0 3px rgba(255,92,138,.12)}
 .cur-switch .cur-globe{width:17px;height:17px;stroke:var(--brand-dark)}
 .cur-switch svg:last-of-type{width:13px;height:13px;stroke:var(--ink-soft)}
-.cur-switch select{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:0;background:transparent}
+.cur-switch .cur-btn{position:absolute;inset:0;border:0;background:transparent;cursor:pointer;width:100%;height:100%;z-index:2}
+/* Custom currency dropdown (flag + code + country + check) */
+.cur-menu{position:absolute;top:calc(100% + 10px);right:0;z-index:420;min-width:250px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 50px rgba(15,10,30,.18);padding:6px;display:none;max-height:340px;overflow-y:auto}
+.cur-menu.open{display:block}
+.cur-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border:0;background:transparent;border-radius:8px;cursor:pointer;text-align:left;font-family:inherit;transition:background .12s}
+.cur-item:hover{background:var(--bg)}
+.cur-item.selected{background:var(--brand-soft)}
+.cur-item .cur-flag{width:22px;height:15px;object-fit:cover;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.08);flex-shrink:0;background:#f0eef2}
+.cur-item .cur-code{font-weight:700;font-size:13.5px;color:var(--ink);min-width:46px}
+.cur-item .cur-country{flex:1;font-size:13px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cur-item .cur-check{width:16px;height:16px;color:var(--brand-dark);flex-shrink:0}
+.cur-switch:focus-within,.cur-switch-m:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px rgba(255,92,138,.12)}
 .hact{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 12px;border-radius:8px;font-size:11px;color:var(--ink-soft);transition:background .15s,color .15s;position:relative}
 .hact:hover{background:var(--bg);color:var(--ink)}
 .hact svg{width:22px;height:22px;stroke:var(--ink)}
@@ -534,7 +545,10 @@ section.block{padding:40px 0}
 .mnav-links{display:flex;flex-direction:column;padding:8px 0;overflow-y:auto;flex:1}
 .mnav-cur{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line)}
 .mnav-cur-label{font-size:13.5px;font-weight:600;color:var(--ink)}
-.mnav-cur select{flex:1;max-width:200px;min-height:38px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font-size:13.5px;color:var(--ink);background:var(--card)}
+.mnav-cur .cur-switch-m{position:relative;display:inline-flex;align-items:center;gap:8px;min-width:112px;justify-content:center;border:1px solid var(--line);border-radius:8px;padding:9px 12px;background:var(--card);cursor:pointer;font-weight:700;font-size:13.5px;color:var(--ink);transition:border-color .15s}
+.mnav-cur .cur-switch-m svg{width:13px;height:13px;stroke:var(--ink-soft)}
+.mnav-cur .cur-switch-m .cur-btn{position:absolute;inset:0;border:0;background:transparent;cursor:pointer;z-index:2}
+.mnav-cur .cur-switch-m .cur-menu{right:0;left:auto;top:calc(100% + 8px);min-width:240px;max-width:280px}
 .mnav-links a{display:flex;align-items:center;padding:13px 18px;font-size:15px;color:var(--ink);font-weight:500;border-bottom:1px solid var(--line);text-decoration:none;min-height:44px}
 .mnav-links a:hover,.mnav-links a:active{background:var(--bg-soft);color:var(--brand-dark)}
 .cart-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
@@ -1138,11 +1152,12 @@ details.ct-block > .form-grid{padding:14px 16px}
       <button id="searchBtn"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>Search</button>
     </div>
     <div class="header-actions">
-      <div class="cur-switch" title="Select currency">
+      <div class="cur-switch" id="curSwitch" title="Select currency">
         <svg class="cur-globe" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
         <span class="cur-label" id="curLabel">EUR</span>
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        <select id="curSel" aria-label="Currency"></select>
+        <button type="button" class="cur-btn" id="curBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Select currency"></button>
+        <div class="cur-menu" id="curMenu" role="listbox" aria-label="Currency"></div>
       </div>
       <a class="hact" href="#/account" title="Account">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>
@@ -1260,7 +1275,12 @@ details.ct-block > .form-grid{padding:14px 16px}
   </div>
   <div class="mnav-cur">
     <span class="mnav-cur-label">Currency</span>
-    <select id="curSelM" aria-label="Currency"></select>
+    <div class="cur-switch-m" id="curSwitchM">
+      <span class="cur-label" id="curLabelM">EUR</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      <button type="button" class="cur-btn" id="curBtnM" aria-haspopup="listbox" aria-expanded="false" aria-label="Select currency"></button>
+      <div class="cur-menu" id="curMenuM" role="listbox" aria-label="Currency"></div>
+    </div>
   </div>
   <nav class="mnav-links">
     <a href="#/" onclick="closeMnav()">Home</a>
@@ -1894,23 +1914,23 @@ function catName(cs){ const c = getCats().find(c => c.cs === cs); return c ? c.c
 
 /* ============ Multi-currency ============ */
 const CURRENCIES = [
-  {code:"EUR", symbol:"€", dec:2, rate:1, country:"Eurozone"},
-  {code:"USD", symbol:"$", dec:2, rate:1.09, country:"United States"},
-  {code:"HKD", symbol:"HK$", dec:2, rate:8.5, country:"Hong Kong"},
-  {code:"CNY", symbol:"¥", dec:2, rate:7.8, country:"China"},
-  {code:"GBP", symbol:"£", dec:2, rate:0.85, country:"United Kingdom"},
-  {code:"JPY", symbol:"¥", dec:0, rate:162, country:"Japan"},
-  {code:"SGD", symbol:"S$", dec:2, rate:1.45, country:"Singapore"},
-  {code:"AUD", symbol:"A$", dec:2, rate:1.63, country:"Australia"},
-  {code:"CAD", symbol:"C$", dec:2, rate:1.48, country:"Canada"},
-  {code:"CHF", symbol:"CHF ", dec:2, rate:0.94, country:"Switzerland"},
-  {code:"KRW", symbol:"₩", dec:0, rate:1460, country:"South Korea"},
-  {code:"AED", symbol:"AED ", dec:2, rate:3.97, country:"United Arab Emirates"},
-  {code:"SAR", symbol:"SAR ", dec:2, rate:4.05, country:"Saudi Arabia"},
-  {code:"TWD", symbol:"NT$", dec:0, rate:34.8, country:"Taiwan"},
-  {code:"THB", symbol:"฿", dec:2, rate:39.5, country:"Thailand"},
-  {code:"MYR", symbol:"RM", dec:2, rate:5.1, country:"Malaysia"},
-  {code:"NZD", symbol:"NZ$", dec:2, rate:1.76, country:"New Zealand"}
+  {code:"EUR", symbol:"€", dec:2, rate:1, country:"Eurozone", flag:"eu"},
+  {code:"USD", symbol:"$", dec:2, rate:1.09, country:"United States", flag:"us"},
+  {code:"HKD", symbol:"HK$", dec:2, rate:8.5, country:"Hong Kong", flag:"hk"},
+  {code:"CNY", symbol:"¥", dec:2, rate:7.8, country:"China", flag:"cn"},
+  {code:"GBP", symbol:"£", dec:2, rate:0.85, country:"United Kingdom", flag:"gb"},
+  {code:"JPY", symbol:"¥", dec:0, rate:162, country:"Japan", flag:"jp"},
+  {code:"SGD", symbol:"S$", dec:2, rate:1.45, country:"Singapore", flag:"sg"},
+  {code:"AUD", symbol:"A$", dec:2, rate:1.63, country:"Australia", flag:"au"},
+  {code:"CAD", symbol:"C$", dec:2, rate:1.48, country:"Canada", flag:"ca"},
+  {code:"CHF", symbol:"CHF ", dec:2, rate:0.94, country:"Switzerland", flag:"ch"},
+  {code:"KRW", symbol:"₩", dec:0, rate:1460, country:"South Korea", flag:"kr"},
+  {code:"AED", symbol:"AED ", dec:2, rate:3.97, country:"United Arab Emirates", flag:"ae"},
+  {code:"SAR", symbol:"SAR ", dec:2, rate:4.05, country:"Saudi Arabia", flag:"sa"},
+  {code:"TWD", symbol:"NT$", dec:0, rate:34.8, country:"Taiwan", flag:"tw"},
+  {code:"THB", symbol:"฿", dec:2, rate:39.5, country:"Thailand", flag:"th"},
+  {code:"MYR", symbol:"RM", dec:2, rate:5.1, country:"Malaysia", flag:"my"},
+  {code:"NZD", symbol:"NZ$", dec:2, rate:1.76, country:"New Zealand", flag:"nz"}
 ];
 const COUNTRIES = ["Hong Kong SAR","China","Taiwan","Japan","South Korea","Singapore","Malaysia","Thailand","Australia","New Zealand","United Kingdom","United States","Canada","France","Germany","Italy","Spain","Netherlands","Switzerland","United Arab Emirates","Saudi Arabia","India","Indonesia","Philippines","Vietnam","Other"];
 let curRates = {}; // live overrides (per 1 EUR), falls back to static table
@@ -1938,20 +1958,60 @@ function fmtD(ts){
   const pad = n => String(n).padStart(2, "0");
   return pad(d.getDate()) + " " + DT_MO[d.getMonth()] + " " + d.getFullYear();
 }
-function buildCurSel(){
-  const opts = CURRENCIES.map(c => '<option value="' + c.code + '"' + (c.code === curCode ? " selected" : "") + '>' + c.code + ': ' + c.country + '</option>').join("");
-  const sel = $("#curSel"); if(sel){ sel.innerHTML = opts; sel.onchange = onCurChange; }
-  const selM = $("#curSelM"); if(selM){ selM.innerHTML = opts; selM.onchange = onCurChange; }
-  const lbl = $("#curLabel"); if(lbl) lbl.textContent = curCode;
-  const lblM = $("#curLabelM"); if(lblM) lblM.textContent = curCode;
-}
-function onCurChange(){
-  curCode = this.value;
-  lsSet(LS.currency, curCode);
+/* Custom currency dropdown — flag + code + country + check (reference: flag list with flags) */
+function curFlagUrl(c){ return "https://flagcdn.com/w40/" + (c.flag || "eu") + ".png"; }
+function setCurLabels(){
   const l = $("#curLabel"); if(l) l.textContent = curCode;
   const lm = $("#curLabelM"); if(lm) lm.textContent = curCode;
-  route();
 }
+function buildCurMenu(menuId, btnId){
+  const menu = $("#" + menuId), btn = $("#" + btnId);
+  if(!menu || !btn) return;
+  menu.innerHTML = CURRENCIES.map(c =>
+    '<button type="button" class="cur-item' + (c.code === curCode ? ' selected' : '') + '" role="option" data-code="' + c.code + '" aria-selected="' + (c.code === curCode ? 'true' : 'false') + '">' +
+      '<img class="cur-flag" src="' + curFlagUrl(c) + '" alt="' + (c.flag || '').toUpperCase() + '" loading="lazy" onerror="this.style.display=\'none\'">' +
+      '<span class="cur-code">' + c.code + '</span>' +
+      '<span class="cur-country">' + c.country + '</span>' +
+      (c.code === curCode ? '<svg class="cur-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>' : '') +
+    '</button>'
+  ).join("");
+  menu.querySelectorAll(".cur-item").forEach(item => {
+    item.addEventListener("click", () => {
+      curCode = item.dataset.code;
+      lsSet(LS.currency, curCode);
+      setCurLabels();
+      closeCurMenus();
+      route();
+    });
+  });
+  if(!btn.dataset.curBound){
+    btn.dataset.curBound = "1";
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const willOpen = menu.classList.toggle("open");
+      btn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+      if(willOpen) closeCurMenus(menuId);
+    });
+  }
+}
+function closeCurMenus(exceptId){
+  [["curMenu","curBtn"],["curMenuM","curBtnM"]].forEach(([mid,bid]) => {
+    if(mid === exceptId) return;
+    const m = $("#" + mid); if(m) m.classList.remove("open");
+    const b = $("#" + bid); if(b) b.setAttribute("aria-expanded", "false");
+  });
+}
+function buildCurSel(){
+  buildCurMenu("curMenu", "curBtn");
+  buildCurMenu("curMenuM", "curBtnM");
+  setCurLabels();
+}
+document.addEventListener("click", (e) => {
+  if(!e.target.closest("#curSwitch") && !e.target.closest("#curSwitchM")) closeCurMenus();
+});
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape") closeCurMenus();
+});
 function applyRateNote(live){
   const el = $("#rateNoteWrap"), tx = $("#rateNote");
   if(!el || !tx) return;
