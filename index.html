@@ -227,6 +227,8 @@ h1,h2,h3,.display{font-family:var(--font-display)}
 .cur-switch .cur-globe{width:17px;height:17px;stroke:var(--brand-dark)}
 .cur-switch svg:last-of-type{width:13px;height:13px;stroke:var(--ink-soft)}
 .cur-switch .cur-btn{position:absolute;inset:0;border:0;background:transparent;cursor:pointer;width:100%;height:100%;z-index:2}
+.cur-label{display:inline-flex;align-items:center;gap:5px;line-height:1}
+.cur-label .cur-flag-mini{width:17px;height:12px;object-fit:cover;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.08);flex-shrink:0;background:#f0eef2}
 /* Custom currency dropdown (flag + code + country + check) */
 .cur-menu{position:absolute;top:calc(100% + 10px);right:0;z-index:420;min-width:250px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 50px rgba(15,10,30,.18);padding:6px;display:none;max-height:340px;overflow-y:auto}
 .cur-menu.open{display:block}
@@ -1961,8 +1963,12 @@ function fmtD(ts){
 /* Custom currency dropdown — flag + code + country + check (reference: flag list with flags) */
 function curFlagUrl(c){ return "https://flagcdn.com/w40/" + (c.flag || "eu") + ".png"; }
 function setCurLabels(){
-  const l = $("#curLabel"); if(l) l.textContent = curCode;
-  const lm = $("#curLabelM"); if(lm) lm.textContent = curCode;
+  const cur = getCur();
+  const mk = id => {
+    const l = $(id); if(!l) return;
+    l.innerHTML = '<img class="cur-flag-mini" src="' + curFlagUrl(cur) + '" alt="' + (cur.flag || "").toUpperCase() + '"><span>' + curCode + '</span>';
+  };
+  mk("#curLabel"); mk("#curLabelM");
 }
 function buildCurMenu(menuId, btnId){
   const menu = $("#" + menuId), btn = $("#" + btnId);
