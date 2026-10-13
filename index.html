@@ -5088,9 +5088,10 @@ function accountSignedIn(s){
     '<div class="acct-row"><span class="k">Orders</span><span class="v">' + orders.length + '</span></div>' +
     '<div class="acct-row"><span class="k">Quotes</span><span class="v">' + quotes.length + '</span></div>' +
     (customerDiscount > 0 ? '<div style="background:rgba(37,186,181,0.08);border:1px solid rgba(37,186,181,0.2);border-radius:8px;padding:12px;margin-top:12px;font-size:13px;color:var(--ink)"><b style="color:#25bab5">✓ Tier discount active:</b> Your ' + customerDiscount + '% discount is automatically applied to all product prices and your cart total.</div>' : '') +
-    '<div style="display:flex;gap:10px;margin-top:18px">' +
+    '<div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">' +
       '<button class="btn" onclick="changePassOpen()">Change password</button>' +
       '<button class="btn ghost" onclick="acctLogout()">Sign out</button>' +
+      '<button class="btn ghost" style="color:#c0392b;border-color:#e0b4b0" onclick="deleteMyAccount()">Delete account</button>' +
     '</div>' +
   '</div>' +
   '<div class="acct-card" id="passBox" style="display:none">' +
@@ -5515,6 +5516,45 @@ async function acctLogout(){
   updateNavAuth();
   showToast("Signed out");
   route();
+}
+
+/* Delete the customer's own account: remove the legacy accounts record
+   (RPC) and delete the Supabase Auth user (GoTrue DELETE /auth/v1/user
+   with the user's own access token — no service key needed). */
+async function deleteMyAccount(){
+  const s = getSession();
+  if(!s || !s.email){ showToast("Please sign in first"); return; }
+  if(!confirm("Delete your account?\n\nThis will permanently remove your login account. Your past orders and quotes stay in the system, but you will no longer be able to sign in.\n\nThis action cannot be undone.")) return;
+  /* 1) Remove the legacy accounts record (best effort) */
+  try{
+    if(supabase){
+      const { error } = await supabase.rpc('delete_my_account', { e: s.email });
+      if(error) console.warn("delete_my_account RPC:", error.message || error);
+    }
+  }catch(e){ console.warn("delete_my_account RPC exception:", e.message); }
+  /* 2) Delete the Supabase Auth user (self-delete via GoTrue) */
+  let authToken = null;
+  try{
+    const { data } = await supabase.auth.getSession();
+    authToken = data && data.session ? data.session.access_token : null;
+  }catch(e){}
+  if(authToken){
+    try{
+      const r = await fetch(SB_URL + '/auth/v1/user', { method: 'DELETE', headers: { apikey: SB_KEY, Authorization: 'Bearer ' + authToken } });
+      if(!r.ok && r.status !== 404) throw new Error("HTTP " + r.status);
+    }catch(e){
+      showToast("Account deletion failed: please try again later");
+      console.warn("deleteMyAccount auth delete error:", e.message);
+      return;
+    }
+  }
+  /* 3) Sign out locally and go home */
+  try{ if(supabase) await supabase.auth.signOut(); }catch(e){}
+  setSession(null);
+  updateAcctLabel();
+  updateNavAuth();
+  showToast("Your account has been deleted");
+  setTimeout(() => { location.hash = "#/"; route(); }, 900);
 }
 
 /* ============ Storefront route ============ */
