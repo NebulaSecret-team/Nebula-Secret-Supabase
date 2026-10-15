@@ -1612,17 +1612,6 @@ function injectProductJsonLd(){
   }catch(e){ console.warn("JSON-LD product injection failed:", e); }
 }
 
-/* Wait for cache to be loaded (used by async init) */
-function _waitCache(){
-  return new Promise(resolve => {
-    if(_cache.loaded) return resolve();
-    const start = Date.now();
-    const iv = setInterval(() => {
-      if(_cache.loaded || Date.now() - start > 8000){ clearInterval(iv); resolve(); }
-    }, 50);
-  });
-}
-
 /* ============ Base data (injected from original store) ============ */
 
 
@@ -1815,58 +1804,15 @@ function applyFooterContent(){
   if(tb.welcome){ const el = document.getElementById("tbWelcome"); if(el) el.textContent = tb.welcome; }
 }
 
-/* Cloud catalog: optional live catalog fetched from GitHub Pages data/*.json, so
-   visitors always see the latest products/categories without re-uploading index.html.
-   Priority: browser localStorage (this device's own changes) > cloud catalog > built-in defaults. */
-let cloudCatalog = null, cloudCats = null, cloudContent = null, cloudTheme = null, cloudOrders = null, cloudAccounts = null;
 function getProducts(){
   if(_cache.products && Array.isArray(_cache.products) && _cache.products.length) return _cache.products.slice();
   return [];
 }
 function saveProducts(p){ _cache.products = p; return sbSave("products", p); }
-function resetProducts(){ localStorage.removeItem(LS.products); }
 
 function getCats(){
   if(_cache.cats && Array.isArray(_cache.cats) && _cache.cats.length) return _cache.cats.slice();
   return [];
-}
-async function loadCloudCatalog(){
-  try{
-    const t = "?t=" + Date.now();
-    const r = await fetch("data/products.json" + t);
-    if(r.ok){
-      const j = await r.json();
-      if(Array.isArray(j) && j.length){ cloudCatalog = j; try{ localStorage.setItem(LS.products, JSON.stringify(j)); }catch(e){} }
-    }
-    const rc = await fetch("data/cats.json" + t);
-    if(rc.ok){
-      const jc = await rc.json();
-      if(Array.isArray(jc) && jc.length){ cloudCats = jc; try{ localStorage.setItem(LS.cats, JSON.stringify(jc)); }catch(e){} }
-    }
-    const rc2 = await fetch("data/content.json" + t);
-    if(rc2.ok){
-      const jc2 = await rc2.json();
-      if(jc2 && typeof jc2 === "object"){ cloudContent = jc2; try{ localStorage.setItem(LS.content, JSON.stringify(jc2)); }catch(e){} }
-    }
-    const rc3 = await fetch("data/theme.json" + t);
-    if(rc3.ok){
-      const jc3 = await rc3.json();
-      if(jc3 && typeof jc3 === "object"){ cloudTheme = jc3; try{ localStorage.setItem(LS.theme, JSON.stringify(jc3)); }catch(e){} }
-    }
-    const ro = await fetch("data/orders.json" + t);
-    if(ro.ok){
-      const jo = await ro.json();
-      if(Array.isArray(jo)){ cloudOrders = jo; try{ localStorage.setItem(LS.orders, JSON.stringify(jo)); }catch(e){} }
-    }
-    const ra = await fetch("data/accounts.json" + t);
-    if(ra.ok){
-      const ja = await ra.json();
-      if(Array.isArray(ja)){ cloudAccounts = ja; try{ localStorage.setItem(LS.accounts, JSON.stringify(ja)); }catch(e){} }
-    }
-    if(cloudCatalog || cloudCats || cloudContent || cloudTheme || cloudOrders || cloudAccounts){
-      try{ renderCatNav(); applyFooterContent(); applyTheme(); route(); }catch(e){}
-    }
-  }catch(e){}
 }
 function saveCats(c){ _cache.cats = c; return sbSave("cats", c); }
 
@@ -2070,7 +2016,7 @@ async function detectCurrencyByGeo(){
   try {
     const userSelected = lsGet(LS.currency, null);
     if (userSelected) {
-      console.log("[GeoCurrency] User already selected:", userSelected);
+      if(DEBUG) console.log("[GeoCurrency] User already selected:", userSelected);
       return;
     }
     
@@ -2083,62 +2029,29 @@ async function detectCurrencyByGeo(){
         const data = await geoRes.json();
         if (data.country_code || data.country) {
           country = data.country_code || data.country;
-          console.log("[GeoCurrency] Detected via /api/geo:", country, "(" + (data.city || "unknown") + ")");
+          if(DEBUG) console.log("[GeoCurrency] Detected via /api/geo:", country, "(" + (data.city || "unknown") + ")");
         }
       }
     } catch(e) {
-      console.log("[GeoCurrency] /api/geo failed:", e.message);
+      if(DEBUG) console.log("[GeoCurrency] /api/geo failed:", e.message);
     }
     
-    // 方法2: 使用 Cloudflare trace
-    if (!country) {
-      try {
-        const cfRes = await fetch("https://www.cloudflare.com/cdn-cgi/trace");
-        if (cfRes.ok) {
-          const text = await cfRes.text();
-          const match = text.match(/loc=([A-Z]{2})/);
-          if (match) {
-            country = match[1];
-            console.log("[GeoCurrency] Detected via Cloudflare:", country);
-          }
-        }
-      } catch(e) {
-        console.log("[GeoCurrency] Cloudflare trace failed:", e.message);
-      }
-    }
-    
-    // 方法3: 使用 ipwho.is
-    if (!country) {
-      try {
-        const ipRes = await fetch("https://ipwho.is/");
-        if (ipRes.ok) {
-          const data = await ipRes.json();
-          if (data.success && data.country_code) {
-            country = data.country_code;
-            console.log("[GeoCurrency] Detected via ipwho.is:", country);
-          }
-        }
-      } catch(e) {
-        console.log("[GeoCurrency] ipwho.is failed:", e.message);
-      }
-    }
-    
-    // 方法4: 基于浏览器语言回退
+    // 方法2: 基于浏览器语言回退（CSP 只信任自家 /api/geo，不呼叫第三方外域）
     if (!country) {
       try {
         const lang = navigator.language || navigator.userLanguage || "";
         const langCountry = lang.split("-")[1] || lang.split("_")[1];
         if (langCountry && langCountry.length === 2) {
           country = langCountry.toUpperCase();
-          console.log("[GeoCurrency] Detected via browser language:", country, "(" + lang + ")");
+          if(DEBUG) console.log("[GeoCurrency] Detected via browser language:", country, "(" + lang + ")");
         }
       } catch(e) {
-        console.log("[GeoCurrency] Browser language detection failed:", e.message);
+        if(DEBUG) console.log("[GeoCurrency] Browser language detection failed:", e.message);
       }
     }
     
     if (!country) {
-      console.log("[GeoCurrency] No country detected, using default USD");
+      if(DEBUG) console.log("[GeoCurrency] No country detected, using default USD");
       curCode = "USD";
       lsSet(LS.currency, curCode);
       setCurLabels();
@@ -2150,10 +2063,10 @@ async function detectCurrencyByGeo(){
     const targetCurrency = COUNTRY_TO_CURRENCY[country];
     if (targetCurrency && CURRENCIES.find(c => c.code === targetCurrency)) {
       curCode = targetCurrency;
-      console.log("[GeoCurrency] Country:", country, "-> currency:", curCode);
+      if(DEBUG) console.log("[GeoCurrency] Country:", country, "-> currency:", curCode);
     } else {
       curCode = "USD";
-      console.log("[GeoCurrency] Country:", country, "not supported, using default USD");
+      if(DEBUG) console.log("[GeoCurrency] Country:", country, "not supported, using default USD");
     }
     
     lsSet(LS.currency, curCode);
@@ -2251,12 +2164,6 @@ function fmtTier(price){
   return fmt(applyTierDiscount(price));
 }
 
-/* Format original price (strikethrough) for display */
-function fmtOriginal(price){
-  const discount = getCurrentCustomerDiscount();
-  if(discount <= 0) return '';
-  return fmt(price);
-}
 /* ============ Session validation (M-3) ============ */
 const _SESS_SALT = "ns_s7k9x2";
 function _sessHash(str){
@@ -2385,9 +2292,7 @@ function qCustName(q){ const c = q.customer || {}; return ((c.first || "") + " "
 function qCustEmail(q){ const c = q.customer || {}; return c.email || ""; }
 function qCustPhone(q){ const c = q.customer || {}; return c.phone || ""; }
 function qCustCompany(q){ const c = q.customer || {}; return c.company || ""; }
-function qCustContact(q){ const c = q.customer || {}; return c.contact || ""; }
 function qCustAddr(q){ const c = q.customer || {}; const addr = c.address || "Not provided"; const country = c.country ? ", " + c.country : ""; return addr + country; }
-function qCustCountry(q){ const c = q.customer || {}; return c.country || ""; }
 /* Secure password hashing using PBKDF2 with random salt */
 /* Format: pbkdf2::<iterations>::<salt_hex>::<hash_hex> */
 async function hashPass(pw){
@@ -2700,38 +2605,6 @@ function contactTemplateParams(formData){
   };
 }
 
-/* Send email via Vercel Edge Function (private key stored server-side) */
-async function sendViaEdgeFunction(o, cfg, type){
-  try{
-    const edgeUrl = "/api/send-email";
-    const params = type === "order" ? emailTemplateParams(o) : contactTemplateParams(o);
-    
-    const response = await fetch(edgeUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        type: type, // "order" or "contact"
-        params: params,
-      }),
-    });
-    
-    if(!response.ok){
-      const errorText = await response.text();
-      return {ok:false, reason:"edge-function-error", detail:"Edge Function returned " + response.status + ": " + errorText};
-    }
-    
-    const result = await response.json();
-    if(result.ok){
-      return {ok:true, resp: result};
-    }else{
-      return {ok:false, reason: result.reason || "edge-function-failed", detail: result.detail || result.error || "Unknown error"};
-    }
-  }catch(e){
-    return {ok:false, reason:"edge-function-unavailable", detail: String(e && e.message ? e.message : e)};
-  }
-}
 /* Local image upload -> compressed data URL for product/category forms */
 function uploadImageTo(inputId, targetId, maxW){
   const inp = document.getElementById(inputId);
@@ -4049,20 +3922,6 @@ function viewInfo(page){
   '<section class="info-section animate-on-scroll delay-1">' + back + finalBody + '</section>';
 }
 
-function toggleFaq(index){
-  const item = document.getElementById('faq-' + index);
-  const answer = document.getElementById('faq-a-' + index);
-  if(item && answer){
-    if(answer.style.display === 'none'){
-      answer.style.display = 'block';
-      item.classList.add('open');
-    } else {
-      answer.style.display = 'none';
-      item.classList.remove('open');
-    }
-  }
-}
-
 function trackOrderLookup(){
   const id = (document.getElementById("trOrder").value || "").trim().toUpperCase();
   const email = (document.getElementById("trEmail").value || "").trim().toLowerCase();
@@ -4244,23 +4103,6 @@ function showPopupIfNeeded(){
 }
 function closePopup(){ const el = document.getElementById("popupBackdrop"); if(el) el.classList.remove("open"); }
 document.addEventListener("click", e => { if(e.target && e.target.id === "popupBackdrop") closePopup(); });
-
-function subscribeNewsletter(ev){
-  ev.preventDefault();
-  const email = (document.getElementById("nlEmail").value || "").trim();
-  const msg = document.getElementById("nlMsg");
-  if(!email || !/.+@.+\..+/.test(email)){ msg.style.color = "#c0392b"; msg.textContent = "Please enter a valid email address."; msg.style.display = "block"; return; }
-  const list = lsGet(LS.subscribers, []);
-  if(list.some(s => s.email === email)){
-    msg.style.color = "#2e7d32"; msg.textContent = "You are already subscribed: thank you for your support!"; msg.style.display = "block";
-  }else{
-    list.push({ email, date: new Date().toISOString() });
-    lsSet(LS.subscribers, list);
-    document.getElementById("nlEmail").value = "";
-    msg.style.color = "#2e7d32"; msg.textContent = "Thank you for subscribing! Our team will keep you updated on new products and wholesale offers.";
-    msg.style.display = "block";
-  }
-}
 
 /* ============ Contact Form ============ */
 async function submitContactForm(ev){
@@ -4648,13 +4490,6 @@ function viewAccount(){
       if(window._passwordRecovery && _resetState !== "newpassword") showNewPasswordForm();
     }, 1500);
   }
-}
-/* Refresh a single key from Supabase and update cache */
-async function sbRefreshKey(key){
-  try{
-    const { data, error } = await supabase.from('site_settings').select('data').eq('id', key).single();
-    if(!error && data){ _cache[key] = data.data; }
-  }catch(e){}
 }
 /* Fetch the signed-in customer's own orders & quotes (RLS-safe) and re-render
    the account section if still on it. Admins skip this: they hold the full

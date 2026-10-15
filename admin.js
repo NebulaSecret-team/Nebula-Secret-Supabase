@@ -717,13 +717,6 @@ async function adminAnalytics(){
   }
 }
 
-/* ---- Reset all store data (products/categories/theme/orders) ---- */
-function resetStoreData(){
-  if(!confirm("Reset all store data to defaults?\n\nThis removes every product, category, theme and order change saved in this browser and restores the original 77-product catalog.")) return;
-  [LS.products, LS.cats, LS.theme, LS.cart, LS.orders].forEach(k => localStorage.removeItem(k));
-  showToast("Store data reset to defaults");
-  adminRoute();
-}
 
 /* ---- Orders admin ---- */
 function adminOrders(){
@@ -1170,21 +1163,6 @@ function getSelectedProductIds(){
   return Array.from(document.querySelectorAll('.product-checkbox:checked')).map(cb => cb.value);
 }
 
-function setAllMoqTo100(){
-  if(!confirm('Set MOQ (Minimum Order Quantity) to 100 for ALL ' + getProducts().length + ' products? This will update the first price tier of every product.')) return;
-  const products = getProducts();
-  let updated = 0;
-  products.forEach(p => {
-    if(!p.priceTiers || p.priceTiers.length === 0){
-      p.priceTiers = [{ minQty: 100, price: p.p || 0 }];
-    } else {
-      p.priceTiers[0].minQty = 100;
-    }
-    updated++;
-  });
-  saveProducts(products).then(r => { if(r && r.ok) showToast('Set MOQ to 100 for ' + updated + ' products'); });
-  adminProducts();
-}
 
 function openBulkEditModal(){
   const selectedIds = getSelectedProductIds();
@@ -1939,31 +1917,6 @@ function handleHeroUpload(input, idx){
   reader.readAsDataURL(file);
 }
 
-function handleBannerUpload(input){
-  const file = input.files[0];
-  if(!file) return;
-  if(!file.type.startsWith("image/")){ showToast("Please select an image file"); return; }
-  const reader = new FileReader();
-  reader.onload = function(e){
-    const img = new Image();
-    img.onload = function(){
-      const canvas = document.createElement("canvas");
-      const maxW = 1600;
-      let w = img.width, h = img.height;
-      if(w > maxW){ h = Math.round(h * maxW / w); w = maxW; }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-      const inp = document.getElementById("thBanner");
-      if(inp) inp.value = dataUrl;
-      const prev = document.getElementById("thBannerPreview");
-      if(prev) prev.innerHTML = '<img src="' + dataUrl + '" style="max-width:100%;max-height:140px;border-radius:8px;border:1px solid var(--line)">';
-      showToast("Banner image uploaded: click Save to apply");
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
 function handlePopupImgUpload(input){
   const file = input.files[0];
   if(!file) return;
