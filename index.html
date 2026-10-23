@@ -3022,7 +3022,7 @@ function renderCart(){
       (hasCustomerDiscount ? ' <span class="old" style="margin-left:4px">' + fmt(unitPrice) + '</span>' : '') +
       (hasTierDiscount ? ' <span style="color:var(--brand);font-size:11px;font-weight:600">Bulk discount!</span>' : '') + '</div>' +
       '<div class="ci-qty"><button onclick="setQty(\'' + escJs(p.id) + '\',' + (i.q - 1) + ')">−</button><input type="number" min="1" value="' + i.q + '" onchange="setCartQty(\'' + escJs(p.id) + '\',this.value)"><button onclick="setQty(\'' + escJs(p.id) + '\',' + (i.q + 1) + ')">+</button></div>' +
-      '<button class="ci-remove" onclick="removeItem(\'' + p.id + '\')">Remove</button></div>' +
+      '<button class="ci-remove" onclick="removeItem(\'' + escJs(p.id) + '\')">Remove</button></div>' +
       '<div class="ci-total">' + fmt(i.q * discountedUnitPrice) + '</div></div>';
   }).join("");
   const total = cartTotal();

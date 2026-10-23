@@ -6,6 +6,29 @@ export const config = {
   runtime: 'edge',
 };
 
+/* Simple in-memory IP rate limit (per-instance, 60 req / hour / IP) */
+const RL_WINDOW_MS = 60 * 60 * 1000;
+const RL_MAX = 60;
+const _rl = new Map();
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const windowStart = now - RL_WINDOW_MS;
+  for (const [key, value] of _rl.entries()) {
+    if (value.timestamp < windowStart) _rl.delete(key);
+  }
+  const key = ip || 'unknown';
+  const entry = _rl.get(key);
+  if (!entry) {
+    _rl.set(key, { count: 1, timestamp: now });
+    return { allowed: true, remaining: RL_MAX - 1 };
+  }
+  if (entry.count >= RL_MAX) {
+    return { allowed: false, remaining: 0, retryAfter: Math.ceil((entry.timestamp + RL_WINDOW_MS - now) / 1000) };
+  }
+  entry.count++;
+  return { allowed: true, remaining: RL_MAX - entry.count };
+}
+
 const SYSTEM_PROMPT = `You are Nebula Secret's AI customer service assistant. Nebula Secret is a professional skincare wholesale and OEM/ODM manufacturer.
 
 About Nebula Secret:
@@ -37,6 +60,21 @@ export default async function handler(req) {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // IP rate limit（防 Agnes 額度被濫用）
+  const xff = req.headers.get('x-forwarded-for');
+  const ip = (xff ? xff.split(',')[xff.split(',').length - 1].trim() : null) ||
+             req.headers.get('x-real-ip') || 'unknown';
+  const rateLimit = checkRateLimit(ip);
+  if (!rateLimit.allowed) {
+    return new Response(JSON.stringify({
+      error: 'Rate limit exceeded. Please try again later.',
+      retryAfter: rateLimit.retryAfter
+    }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': String(rateLimit.retryAfter) },
     });
   }
 
