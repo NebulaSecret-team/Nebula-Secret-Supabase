@@ -2033,7 +2033,7 @@ async function viewAdminLogin(msg){
         hasAdmins = true;
       }
     }catch(e){
-      console.log("Failed to check admin count:", e.message);
+      console.warn("Failed to check admin count:", e.message);
     }
   }
   
@@ -2134,7 +2134,7 @@ async function doInitAdmin(){
         }
       });
     }catch(e){
-      console.log("Supabase Auth signup failed, using legacy admin only:", e.message);
+      console.warn("Supabase Auth signup failed, using legacy admin only:", e.message);
     }
     
     viewAdminLogin("Account created. Please sign in.");
@@ -2297,7 +2297,7 @@ async function adminArchitecture(){
     const res = await fetch("architecture-admin.html", { cache: "no-store" });
     const frag = await res.text();
     renderAdminShell(
-      '<div class="admin-panel"><div class="panel-head"><div><h3>System Architecture</h3><div class="ph-sub">完整系統架構圖: 系統層級、用戶角色、頁面與外部服務的關係</div></div></div>' +
+      '<div class="admin-panel"><div class="panel-head"><div><h3>System Architecture</h3><div class="ph-sub">完整系統架構圖：系統層級、用戶角色、頁面與外部服務的關係</div></div></div>' +
       '<div class="panel-body" style="padding:6px 14px 20px"><div class="arch-adm">' + frag + '</div></div></div>'
     );
   }catch(e){
@@ -2539,7 +2539,7 @@ function copyText(txt){
   }
 }
 
-/* ---- 1. Dashboard：AI 每日營運摘要（繁體中文） ---- */
+/* ---- 1. Dashboard：AI 每日營運摘要（英文） ---- */
 async function aiDashboardSummary(btn){
   _aiBtnRun(btn, async () => {
     const orders = getOrders();
@@ -2602,7 +2602,7 @@ async function aiOrderReplyDraft(id){
   const btn = event && event.target;
   _aiBtnRun(btn, async () => {
     const cur = o.cur || "EUR";
-    const itemsTxt = (o.items || []).map(it => it.name + " x" + it.qty + " (" + Number(it.price).toFixed(2) + " " + cur + "/件）").join("；");
+    const itemsTxt = (o.items || []).map(it => it.name + " x" + it.qty + " （" + Number(it.price).toFixed(2) + " " + cur + "/件）").join("；");
     const context = {
       orderId: o.id,
       date: o.date,
@@ -2643,7 +2643,7 @@ async function aiQuoteReplyDraft(id){
   const q = findQuoteById(id); if(!q) return;
   const btn = event && event.target;
   _aiBtnRun(btn, async () => {
-    const itemsTxt = (q.items || []).map(it => it.name + " x" + it.qty + " (" + Number(it.price).toFixed(2) + " EUR/件）").join("；");
+    const itemsTxt = (q.items || []).map(it => it.name + " x" + it.qty + " （" + Number(it.price).toFixed(2) + " EUR/件）").join("；");
     const context = {
       quoteId: q.id,
       date: q.date,

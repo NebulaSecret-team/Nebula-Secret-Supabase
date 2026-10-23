@@ -34,7 +34,7 @@
             <div class="role-subtitle">Guest / New Customer</div>
           </div>
         </div>
-        <div class="role-desc">瀏覽網站的普通用戶，可查看產品、下單、註冊賬戶。默認級別：New Customer（0% 折扣）。</div>
+        <div class="role-desc">瀏覽網站的普通用戶，可查看產品、下單、註冊賬戶。預設級別：New Customer（0% 折扣）。</div>
         <ul class="role-perms">
           <li>瀏覽所有產品和分類（標準批發價）</li>
           <li>使用購物車和結賬功能</li>
@@ -253,7 +253,7 @@
             <div class="card-subtitle">新客戶 · 0% 折扣</div>
           </div>
         </div>
-        <div class="card-desc">新註冊客戶的默認級別，享受標準批發價格。</div>
+        <div class="card-desc">新註冊客戶的預設級別，享受標準批發價格。</div>
         <div class="tier-list">
           <div class="tier-item">
             <div class="tier-dot" style="background:#6b7280"></div>
@@ -624,7 +624,7 @@
             <div class="card-subtitle">郵件設置</div>
           </div>
         </div>
-        <div class="card-desc">查看 Resend 發送狀態、Vercel 環境變量、收件人配置。</div>
+        <div class="card-desc">查看 Resend 發送狀態、Vercel 環境變數、收件人配置。</div>
         <div class="card-link">配置郵件 →</div>
       </a>
 
@@ -1063,7 +1063,7 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">收件人</div>
-          <div class="detail-value" style="font-size:11px">由 <code>MAIL_RECIPIENTS</code> 環境變量配置</div>
+          <div class="detail-value" style="font-size:11px">由 <code>MAIL_RECIPIENTS</code> 環境變數配置</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">發送方式</div>
@@ -1074,7 +1074,7 @@
           <div class="detail-value"><a href="https://resend.com" target="_blank">resend.com</a></div>
         </div>
         <div class="info-box">
-          <strong>🔒 安全：</strong>Resend API Key（<code>RESEND_API_KEY</code>）存儲在 Vercel 環境變量中，前端永遠看不到密鑰。
+          <strong>🔒 安全：</strong>Resend API Key（<code>RESEND_API_KEY</code>）存儲在 Vercel 環境變數中，前端永遠看不到密鑰。
         </div>
       </div>
 
@@ -1104,7 +1104,7 @@
           <div class="detail-value">保護 Resend API Key 與 Gemini API Key（前端不可見）</div>
         </div>
         <div class="detail-row">
-          <div class="detail-label">環境變量</div>
+          <div class="detail-label">環境變數</div>
           <div class="detail-value" style="font-size:10px;text-align:left">RESEND_API_KEY, MAIL_FROM, MAIL_RECIPIENTS, MAIL_ENABLED, ALLOWED_ORIGINS, GEMINI_API_KEY</div>
         </div>
         <div class="detail-row">
@@ -1116,7 +1116,7 @@
           <div class="detail-value"><span class="detail-code">api/send-email.js, api/ai-chat.js</span></div>
         </div>
         <div class="info-box">
-          <strong>💡 工作原理：</strong>前端把請求送到 Edge Function，函式使用服務端環境變量中的 API Key 呼叫 Resend / Gemini API，避免密鑰暴露在前端。
+          <strong>💡 工作原理：</strong>前端把請求送到 Edge Function，函式使用服務端環境變數中的 API Key 呼叫 Resend / Gemini API，避免密鑰暴露在前端。
         </div>
       </div>
 
@@ -1143,7 +1143,7 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">密鑰儲存</div>
-          <div class="detail-value">Vercel 環境變量 <span class="detail-code">GEMINI_API_KEY</span>（前端不可見）</div>
+          <div class="detail-value">Vercel 環境變數 <span class="detail-code">GEMINI_API_KEY</span>（前端不可見）</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">使用入口</div>
@@ -1228,7 +1228,7 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">管理員清單儲存</div>
-          <div class="detail-value" style="font-size:11px">Supabase site_settings.admins（雲端主儲存）+ localStorage 備援（離線仍可登入）</div>
+          <div class="detail-value" style="font-size:11px">Supabase site_settings.admins（雲端主儲存）+ localStorage 備援（離線仍可登錄）</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">修改密碼位置</div>
@@ -1239,7 +1239,7 @@
           <div class="detail-value">是 (Admin Users → Add Admin)</div>
         </div>
         <div class="warning-box">
-          <strong>⚠️ 安全提醒：</strong>請妥善保管管理員密碼，不要將密碼分享給無關人員。首次登錄後請立即修改默認密碼。
+          <strong>⚠️ 安全提醒：</strong>請妥善保管管理員密碼，不要將密碼分享給無關人員。首次登錄後請立即修改預設密碼。
         </div>
       </div>
 
@@ -1257,7 +1257,7 @@
           <div class="detail-value">18 種</div>
         </div>
         <div class="detail-row">
-          <div class="detail-label">默認貨幣</div>
+          <div class="detail-label">預設貨幣</div>
           <div class="detail-value">EUR (€)</div>
         </div>
         <div class="detail-row" style="flex-direction:column;align-items:flex-start">

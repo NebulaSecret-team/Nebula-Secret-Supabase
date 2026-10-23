@@ -1,7 +1,7 @@
 // Vercel Edge Function: 获取用户地理位置
-// 通过 Vercel 请求头 x-vercel-ip-country 获取用户国家代码
+// 透過 Vercel 請求頭 x-vercel-ip-country 取得使用者國家代碼
 export default function handler(request) {
-  // Vercel 自动添加的地理位置请求头
+  // Vercel 自動添加的地理位置請求頭
   const country = request.headers.get('x-vercel-ip-country') || '';
   const countryRegion = request.headers.get('x-vercel-ip-country-region') || '';
   const city = request.headers.get('x-vercel-ip-city') || '';

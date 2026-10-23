@@ -2021,7 +2021,7 @@ async function detectCurrencyByGeo(){
     
     let country = null;
     
-    // 方法1: 使用我们自己的 Vercel Edge Function（最可靠）
+    // 方法1: 使用我們自己的 Vercel Edge Function（最可靠）
     try {
       const geoRes = await fetch("/api/geo");
       if (geoRes.ok) {
@@ -2035,7 +2035,7 @@ async function detectCurrencyByGeo(){
       if(DEBUG) console.log("[GeoCurrency] /api/geo failed:", e.message);
     }
     
-    // 方法2: 基于浏览器语言回退（CSP 只信任自家 /api/geo，不呼叫第三方外域）
+    // 方法2: 基於瀏覽器語言回退（CSP 只信任自家 /api/geo，不呼叫第三方外域）
     if (!country) {
       try {
         const lang = navigator.language || navigator.userLanguage || "";
@@ -2093,7 +2093,7 @@ async function saveAccounts(a){
       showToast("Warning: account may not have saved to cloud");
       return false;
     }
-    console.log("Accounts saved to Supabase successfully, count:", a.length);
+    dbg("Accounts saved to Supabase successfully, count:", a.length);
     return true;
   } catch(e) {
     console.warn("Error saving accounts:", e);
@@ -2223,10 +2223,10 @@ async function syncAuthSession(){
     if(supabase && !window._authListenerSetup){
       window._authListenerSetup = true;
       supabase.auth.onAuthStateChange((event, session) => {
-        console.log("Auth state change:", event, session?.user?.email);
+        dbg("Auth state change:", event, session?.user?.email);
         if(event === 'PASSWORD_RECOVERY'){
           /* User clicked password reset link - show new password form */
-          console.log("Password recovery detected - showing new password form");
+          dbg("Password recovery detected - showing new password form");
           window._passwordRecovery = true;
           /* Force navigation to account page to prevent redirect to home */
           if(!location.hash.startsWith('#/account')){
@@ -2589,21 +2589,6 @@ async function sendViaApi(o){
   }
 }
 
-/* Build contact form email template params */
-function contactTemplateParams(formData){
-  return {
-    from_name: formData.name,
-    from_email: formData.email,
-    company: formData.company || "Not provided",
-    inquiry_type: formData.type,
-    subject: "New " + formData.type + " Inquiry from " + formData.name + ": Nebula Secret",
-    message: formData.message,
-    reply_to: formData.email,
-    store_name: (getTheme() || {}).storeName || "Nebula Secret",
-    date: new Date().toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" })
-  };
-}
-
 /* Local image upload -> compressed data URL for product/category forms */
 function uploadImageTo(inputId, targetId, maxW){
   const inp = document.getElementById(inputId);
@@ -2645,7 +2630,7 @@ async function saveOrders(o){
       console.warn("Failed to save orders to Supabase:", res.error);
       return false;
     }
-    console.log("Orders saved to Supabase successfully, count:", o.length);
+    dbg("Orders saved to Supabase successfully, count:", o.length);
     return true;
   } catch(e) {
     console.warn("Error saving orders:", e);
@@ -3217,7 +3202,7 @@ async function placeOrder(){
   if(!email || !/.+@.+\..+/.test(email)){ showToast("Please enter a valid email address"); return; }
   if(!cart.length){ showToast("Your cart is empty"); return; }
   
-  console.log("placeOrder: starting order placement for", email, "items:", cart.length);
+  dbg("placeOrder: starting order placement for", email, "items:", cart.length);
   
   const th = getTheme();
   const o = {
@@ -3237,7 +3222,7 @@ async function placeOrder(){
     statusHistory: [{ status: "New", date: new Date().toISOString(), note: "Order placed" }]
   };
   
-  console.log("placeOrder: order object created, id:", o.id, "total:", o.total);
+  dbg("placeOrder: order object created, id:", o.id, "total:", o.total);
   
   /* Persist order through the privileged place_order RPC (appends server-side;
      anon has no direct write access to the orders row). */
@@ -3259,7 +3244,7 @@ async function placeOrder(){
   }catch(e){
     console.error("placeOrder: RPC exception:", e);
   }
-  console.log("placeOrder: save result:", saved, "order id:", o.id);
+  dbg("placeOrder: save result:", saved, "order id:", o.id);
   
   if(!saved){
     console.error("placeOrder: Failed to save order to Supabase!");
@@ -3276,7 +3261,7 @@ async function placeOrder(){
   }
   
   lastOrder = o;
-  console.log("placeOrder: order placement complete, id:", o.id);
+  dbg("placeOrder: order placement complete, id:", o.id);
   // clear cart
   cart = []; saveCart(); updateCartUI();
   // show confirmation
@@ -3921,13 +3906,23 @@ function viewInfo(page){
   '<section class="info-section animate-on-scroll delay-1">' + back + finalBody + '</section>';
 }
 
-function trackOrderLookup(){
+async function trackOrderLookup(){
   const id = (document.getElementById("trOrder").value || "").trim().toUpperCase();
   const email = (document.getElementById("trEmail").value || "").trim().toLowerCase();
   const result = document.getElementById("trResult");
   if(!id || !email){ result.style.display = "block"; result.innerHTML = '<div class="track-result" style="color:var(--danger);font-weight:600">Please enter both your order number and email address.</div>'; return; }
-  const orders = getOrders();
-  const o = orders.find(x => x.id.toUpperCase() === id && x.customer.email.toLowerCase() === email);
+  let o = null;
+  /* 1) Public SECURITY DEFINER RPC — works for anonymous/new sessions. */
+  try {
+    if(supabase && supabaseAvailable){
+      const { data, error } = await supabase.rpc('track_order', { p: { id: id, email: email } });
+      if(!error && data){ o = data; }
+    }
+  } catch(e){ dbg('track_order RPC unavailable, falling back to local cache', e); }
+  /* 2) Fallback: in-memory cache (orders placed in this session only). */
+  if(!o){
+    o = getOrders().find(x => x.id.toUpperCase() === id && x.customer.email.toLowerCase() === email);
+  }
   if(!o){ result.style.display = "block"; result.innerHTML = '<div class="track-result" style="color:var(--danger);font-weight:600">No order found with these details. Please check your order number and email, or contact us at sales@nebulasecret.com.</div>'; return; }
   const cur = o.cur || "EUR"; const r = o.rate ?? rateOf(cur);
   result.style.display = "block";
@@ -4550,7 +4545,7 @@ function accountSignIn(){
     '<div id="acctReg" style="display:none">' +
       '<div class="field"><label>Full name</label><input id="regName" type="text" placeholder="Jane Doe"></div>' +
       '<div class="field"><label>Email</label><input id="regEmail" type="email" placeholder="you@example.com"></div>' +
-      '<div class="field"><label>Password (min 6 characters)</label><input id="regPass" type="password" placeholder="Create a secure password"></div>' +
+      '<div class="field"><label>Password (min 8 characters)</label><input id="regPass" type="password" placeholder="Create a secure password"></div>' +
       '<div style="background:var(--bg-soft);padding:12px;border-radius:8px;margin-bottom:16px;font-size:12px;color:var(--ink-soft)">' +
         '✅ Create an account to:<br>' +
         '• Track your orders and shipping status<br>' +
@@ -4721,7 +4716,7 @@ async function sendResetEmail(){
          session is established and the password form can never submit.
          Post-login routing to the account page happens via the auth listener. */
       const redirectUrl = window.location.origin + window.location.pathname;
-      console.log("Sending reset email to:", email, "with redirectTo:", redirectUrl);
+      dbg("Sending reset email to:", email, "with redirectTo:", redirectUrl);
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl
       });
@@ -4745,7 +4740,7 @@ async function sendResetEmail(){
         if(btn){ btn.disabled = false; btn.textContent = "📧 Send Reset Link"; }
         return;
       }
-      console.log("Reset email sent successfully");
+      dbg("Reset email sent successfully");
       window._resetEmail = email;
       _resetState = "sent";
       viewAccount();
@@ -4865,14 +4860,14 @@ async function acctRegister(){
   if(!email || !/.+@.+\..+/.test(email)){ err.textContent = "Please enter a valid email"; return; }
   if(pass.length < 8){ err.textContent = "Password must be at least 8 characters"; return; }
   
-  console.log("acctRegister: starting registration for", email);
+  dbg("acctRegister: starting registration for", email);
   
   /* Method 1: Try Supabase Auth first */
   let supabaseAuthSuccess = false;
   let supabaseUserId = null;
   try {
     if(supabase){
-      console.log("acctRegister: trying Supabase Auth signup");
+      dbg("acctRegister: trying Supabase Auth signup");
       const { data, error } = await supabase.auth.signUp({
         email,
         password: pass,
@@ -4881,33 +4876,33 @@ async function acctRegister(){
         }
       });
       if(!error && data && data.user){
-        console.log("acctRegister: Supabase Auth signup success, user id:", data.user.id);
+        dbg("acctRegister: Supabase Auth signup success, user id:", data.user.id);
         supabaseAuthSuccess = true;
         supabaseUserId = data.user.id;
       } else if(error) {
-        console.log("acctRegister: Supabase Auth signup error:", error.message, error.code);
+        dbg("acctRegister: Supabase Auth signup error:", error.message, error.code);
         if(error.message === "User already registered"){
-          console.log("acctRegister: User already registered, will try to sign in");
+          dbg("acctRegister: User already registered, will try to sign in");
           // Try to sign in instead
           const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password: pass });
           if(!signInError && signInData && signInData.user){
-            console.log("acctRegister: Sign in success for existing user");
+            dbg("acctRegister: Sign in success for existing user");
             supabaseAuthSuccess = true;
             supabaseUserId = signInData.user.id;
           } else {
-            console.log("acctRegister: Sign in failed for existing user:", signInError?.message);
+            dbg("acctRegister: Sign in failed for existing user:", signInError?.message);
           }
         }
       }
     }
   } catch(e) {
-    console.log("acctRegister: Supabase Auth signup exception:", e.message);
+    dbg("acctRegister: Supabase Auth signup exception:", e.message);
   }
   
   /* Always save to legacy accounts for backward compatibility */
   /* Register in the admin-visible account list via RPC (best effort — Supabase
      Auth is the source of truth; anon has no direct write access to accounts) */
-  console.log("acctRegister: saving to legacy accounts");
+  dbg("acctRegister: saving to legacy accounts");
   try{
     const hash = await hashPass(pass);
     if(supabase){
@@ -4934,7 +4929,7 @@ async function acctRegister(){
   updateNavAuth();
   showToast("Welcome, " + name.split(" ")[0] + "!");
   route();
-  console.log("acctRegister: registration complete for", email);
+  dbg("acctRegister: registration complete for", email);
 }
 async function acctLogin(){
   const email = $("#acEmail").value.trim().toLowerCase();
@@ -5061,7 +5056,7 @@ function accountSignedIn(s){
   '<div class="acct-card" id="passBox" style="display:none">' +
     '<h2>Change password</h2>' +
     '<div class="field"><label>Current password</label><input id="cpOld" type="password"></div>' +
-    '<div class="field"><label>New password (min 6 characters)</label><input id="cpNew" type="password"></div>' +
+    '<div class="field"><label>New password (min 8 characters)</label><input id="cpNew" type="password"></div>' +
     '<p id="cpErr" style="color:var(--danger);font-size:13px;min-height:18px;margin-bottom:6px"></p>' +
     '<button class="btn" onclick="changePassSave()">Update password</button>' +
   '</div>' +
@@ -5443,7 +5438,7 @@ async function changePassSave(){
         }
       }
     } catch(e) {
-      console.log("Supabase Auth password update failed, trying legacy method:", e.message);
+      dbg("Supabase Auth password update failed, trying legacy method:", e.message);
     }
   }
   
@@ -5574,7 +5569,7 @@ function loadAdminScript(callback){
 
 function route(){
   currentProduct = null; /* clear last-viewed product context on navigation */
-  closeCart(); closeCheckout(); closeAdminModal(); closeMegaMenu();
+  closeCart(); closeCheckout(); closeAdminModal(); closeMegaMenu(); closeOrderModal();
   window.scrollTo(0, 0);
   const h = location.hash || "#/";
   if(h === "#/admin" || h.startsWith("#/admin/")){
@@ -5729,14 +5724,14 @@ function initScrollAnimations(){
     return;
   }
   
-  // 先检查已经在视口内的元素，立即显示
+  // 先檢查已經在視口內的元素，立即顯示
   checkScrollAnimations();
   
-  // 对还没显示的元素使用 IntersectionObserver
+  // 對還沒顯示的元素使用 IntersectionObserver
   const remaining = document.querySelectorAll('.animate-on-scroll:not(.visible)');
   if(!remaining.length) return;
   
-  // 断开旧的 observer
+  // 斷開舊的 observer
   if(_scrollAnimObserver){
     _scrollAnimObserver.disconnect();
   }
@@ -5745,7 +5740,7 @@ function initScrollAnimations(){
     entries.forEach(entry => {
       if(entry.isIntersecting){
         entry.target.classList.add('visible');
-        // 强制触发重排，确保浏览器正确更新合成层
+        // 強制觸發重排，確保瀏覽器正確更新合成層
         void entry.target.offsetHeight;
         _scrollAnimObserver.unobserve(entry.target);
       }
@@ -5765,16 +5760,16 @@ function checkScrollAnimations(){
   const vh = window.innerHeight || document.documentElement.clientHeight;
   elements.forEach(el => {
     const rect = el.getBoundingClientRect();
-    // 元素顶部进入视口底部 100px 内时显示
+    // 元素頂部進入視口底部 100px 內時顯示
     if(rect.top < vh - 50 && rect.bottom > 50){
       el.classList.add('visible');
-      // 强制触发重排，确保浏览器正确更新合成层
+      // 強制觸發重排，確保瀏覽器正確更新合成層
       void el.offsetHeight;
     }
   });
 }
 
-// 滚动时使用 requestAnimationFrame 节流检查
+// 滾動時使用 requestAnimationFrame 節流檢查
 window.addEventListener('scroll', () => {
   if(_scrollAnimTick) return;
   _scrollAnimTick = true;
@@ -5832,7 +5827,7 @@ if(typeof syncAuthSession === 'function') syncAuthSession();
   
   /* Check for auth errors (expired link, invalid token, etc.) */
   if(fullUrl.includes("error=") || fullUrl.includes("error_code=")){
-    console.log("Auth error detected in URL - showing error message");
+    dbg("Auth error detected in URL - showing error message");
     window._authError = true;
     /* Extract error description */
     const errorMatch = fullUrl.match(/error_description=([^&]+)/);
@@ -5853,7 +5848,7 @@ if(typeof syncAuthSession === 'function') syncAuthSession();
   /* Detect password recovery token */
   if(hash.includes("type=recovery") || search.includes("type=recovery") || 
      hash.includes("access_token") || search.includes("access_token")){
-    console.log("Recovery token detected in URL on page load");
+    dbg("Recovery token detected in URL on page load");
     window._passwordRecovery = true;
     /* Do NOT navigate away yet — supabase-js parses the token from the URL
        in a later microtask and wiping the hash first would destroy the
@@ -5947,7 +5942,7 @@ function supabaseHeartbeat(){
     if(!supabase) return;
     /* Lightweight query — just check if we can reach the database */
     supabase.from('site_settings').select('id').limit(1).then(() => {
-      console.log('[Heartbeat] Supabase keep-alive ping at', new Date().toISOString());
+      dbg('[Heartbeat] Supabase keep-alive ping at', new Date().toISOString());
     }).catch(e => {
       console.warn('[Heartbeat] Supabase ping failed:', e.message);
     });
@@ -6345,16 +6340,19 @@ function submitChatbotLead(){
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
-      type: 'chatbot_lead',
-      name: name,
-      phone: phone,
-      email: email,
-      question: question,
-      page: location.hash || location.pathname,
-      timestamp: new Date().toISOString()
+      type: 'contact',
+      params: {
+        from_name: name, from_email: email, company: 'Chatbot lead',
+        inquiry_type: 'Callback Request',
+        subject: 'Callback request from chatbot — ' + name,
+        message: 'Phone: ' + phone + '\nQuestion: ' + question + '\nPage: ' + (location.hash || location.pathname),
+        reply_to: email,
+        store_name: (getTheme() || {}).storeName || 'Nebula Secret',
+        date: new Date().toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' })
+      }
     })
   }).then(r => r.json()).then(data => {
-    if(data.success){
+    if(data.ok){
       addChatbotMessage('system', '✅ Thank you! We have received your request. Our team will call you back within 15 minutes.');
       document.getElementById('chatbotLeadForm').style.display = 'none';
       document.getElementById('chatbotInputArea').style.display = 'flex';
@@ -6382,7 +6380,3 @@ function submitChatbotLead(){
 </script>
 </body>
 </html>
-
-<!-- Deployment trigger: Thu Sep 10 06:42:07 HKT 2026 -->
-
-<!-- Force redeploy: 2026-09-10 07:00:26 -->
