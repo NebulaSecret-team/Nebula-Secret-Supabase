@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 Disallow: /*#/admin*
 
-Sitemap: https://nebula-secret-supabase.vercel.app/sitemap.xml
+Sitemap: https://nebulasecret.com/sitemap.xml
