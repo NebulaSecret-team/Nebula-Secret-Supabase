@@ -142,7 +142,7 @@ function renderAdminShell(content){
     '</nav>' +
     '<div class="admin-more-backdrop" id="adminMoreBackdrop"></div>' +
     '<div class="admin-more-sheet" id="adminMoreSheet" aria-label="More admin pages">' +
-      '<div class="ams-head"><span>More</span><button id="adminMoreClose" aria-label="Close more menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button></div>' +
+      '<div class="ams-head"><span>More</span><button id="adminMoreClose" aria-label="Close more menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button></div>' +
       '<nav class="ams-links">' +
         '<a href="#/admin/quotes" data-av="quotes">' + IC.mail + ' Quotes &amp; Enquiries</a>' +
         '<a href="#/admin/categories" data-av="categories">' + IC.tag + ' Categories</a>' +
@@ -385,7 +385,7 @@ async function adminAnalytics(){
   $("#adminTitle").textContent = "Site Analytics";
   
   /* Show loading state */
-  renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><path d="M3 3v18h18"/><path d="M7 15v-4M12 15V9M17 15v-7"/></svg></div><h3>Loading analytics...</h3><p style="color:var(--ink-soft)">Fetching visitor data from database</p></div></div>');
+  renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><path d="M3 3v18h18"/><path d="M7 15v-4M12 15V9M17 15v-7"/></svg></div><h3>Loading analytics...</h3><p style="color:var(--ink-soft)">Fetching visitor data from database</p></div></div>');
   
   try {
     /* Get analytics data from Supabase */
@@ -617,7 +617,7 @@ async function adminAnalytics(){
                   '</div>' +
                 '</div>';
               }).join('') +
-            '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;margin:0 auto 10px"><path d="M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0V4z"/><path d="M7 5H3v2a3 3 0 0 0 4 2.7M17 5h4v2a3 3 0 0 1-4 2.7"/></svg>No page data yet. Visit some pages to see rankings here.</div>') +
+            '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;margin:0 auto 10px"><path d="M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0V4z"/><path d="M7 5H3v2a3 3 0 0 0 4 2.7M17 5h4v2a3 3 0 0 1-4 2.7"/></svg>No page data yet. Visit some pages to see rankings here.</div>') +
           '</div>' +
           
           /* Device Breakdown */
@@ -653,7 +653,7 @@ async function adminAnalytics(){
                   '</div>' +
                 '</div>';
               }).join('') +
-            '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;margin:0 auto 10px"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>No device data yet. Visit some pages to see device distribution here.</div>') +
+            '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;margin:0 auto 10px"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>No device data yet. Visit some pages to see device distribution here.</div>') +
           '</div>' +
         '</div>' +
         
@@ -687,13 +687,13 @@ async function adminAnalytics(){
                 '<div style="font-size:11px;color:var(--ink-soft);opacity:0.7;margin-top:2px">' + percent + '%</div>' +
               '</div>';
             }).join('') +
-          '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;margin:0 auto 10px"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>No referrer data yet. Most traffic will show as "Direct" initially.</div>') +
+          '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;margin:0 auto 10px"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>No referrer data yet. Most traffic will show as "Direct" initially.</div>') +
         '</div>' +
         
         /* Info Box */
         '<div style="background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.2);border-radius:10px;padding:16px;margin-top:20px">' +
           '<div style="display:flex;align-items:flex-start;gap:12px">' +
-            '<div style="font-size:24px;color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px;margin:0 auto"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 4 10.5c-.7.6-1 1.5-1 2.5h-6c0-1-.3-1.9-1-2.5A6 6 0 0 1 12 3z"/></svg></div>' +
+            '<div style="font-size:24px;color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px;margin:0 auto"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 4 10.5c-.7.6-1 1.5-1 2.5h-6c0-1-.3-1.9-1-2.5A6 6 0 0 1 12 3z"/></svg></div>' +
             '<div>' +
               '<h5 style="margin:0 0 6px;font-size:14px;color:var(--ink)">About Analytics</h5>' +
               '<p style="margin:0;font-size:13px;color:var(--ink-soft);line-height:1.6">' +
@@ -713,7 +713,7 @@ async function adminAnalytics(){
     
   } catch(e) {
     console.error("Analytics error:", e);
-    renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--danger)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg></div><h3>Error Loading Analytics</h3><p style="color:var(--ink-soft)">' + esc(e.message) + '</p><button class="btn" onclick="adminAnalytics()" style="margin-top:16px">Try Again</button></div></div>');
+    renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--danger)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg></div><h3>Error Loading Analytics</h3><p style="color:var(--ink-soft)">' + esc(e.message) + '</p><button class="btn" onclick="adminAnalytics()" style="margin-top:16px">Try Again</button></div></div>');
   }
 }
 
@@ -1187,7 +1187,7 @@ function openBulkEditModal(){
         '<button class="btn sm ghost" style="margin-top:8px" onclick="addBulkTier()">+ Add Volume Discount Tier</button>' +
       '</div>' +
       '<div class="field full" style="background:var(--warning-soft);padding:12px;border-radius:8px;border:1px solid var(--warning)">' +
-        '<label style="font-weight:600;color:var(--warning)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Important</label>' +
+        '<label style="font-weight:600;color:var(--warning)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Important</label>' +
         '<div style="font-size:13px;color:#8a6d00;margin-top:6px">This will overwrite the existing price tiers for all selected products. Make sure the first tier\'s MOQ matches the MOQ you set above.</div>' +
       '</div>' +
     '</div>' +
@@ -2287,7 +2287,7 @@ async function logout(){
 /* System Architecture — embedded into Admin Panel (no more separate page) */
 async function adminArchitecture(){
   $("#adminTitle").textContent = "System Architecture";
-  renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><path d="M2 20h20"/><path d="M4 20V8l6-4v16M10 20V4l6 4v12M16 20v-8h4v8"/></svg></div><h3>Loading architecture...</h3></div></div>');
+  renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><path d="M2 20h20"/><path d="M4 20V8l6-4v16M10 20V4l6 4v12M16 20v-8h4v8"/></svg></div><h3>Loading architecture...</h3></div></div>');
   try{
     if(!document.getElementById("archAdmCss")){
       const link = document.createElement("link");
@@ -2301,7 +2301,7 @@ async function adminArchitecture(){
       '<div class="panel-body" style="padding:6px 14px 20px"><div class="arch-adm">' + frag + '</div></div></div>'
     );
   }catch(e){
-    renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--danger)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg></div><h3>Failed to load architecture</h3><p style="color:var(--ink-soft)">' + esc(e.message) + '</p><button class="btn" onclick="adminArchitecture()" style="margin-top:16px">Try Again</button></div></div>');
+    renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--danger)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg></div><h3>Failed to load architecture</h3><p style="color:var(--ink-soft)">' + esc(e.message) + '</p><button class="btn" onclick="adminArchitecture()" style="margin-top:16px">Try Again</button></div></div>');
   }
 }
 
@@ -2352,7 +2352,7 @@ function adminRoute(){
     else {
       /* Unknown page - show friendly 404 with quick links and auto-redirect */
       const content = '<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px">' +
-        '<div style="font-size:72px;margin-bottom:20px;color:var(--brand)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:64px;height:64px;margin:0 auto"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>' +
+        '<div style="font-size:72px;margin-bottom:20px;color:var(--brand)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:64px;height:64px;margin:0 auto"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>' +
         '<h2 style="margin-bottom:12px;font-size:28px">Page Not Found</h2>' +
         '<p style="color:var(--ink-soft);margin-bottom:8px;font-size:15px">The page <strong style="color:var(--accent)">"' + esc(page) + '"</strong> does not exist.</p>' +
         '<p style="color:var(--ink-soft);margin-bottom:32px;font-size:13px">You will be automatically redirected to Dashboard in <span id="redirectCountdown" style="font-weight:600;color:var(--accent)">5</span> seconds.</p>' +
