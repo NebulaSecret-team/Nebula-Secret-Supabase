@@ -120,7 +120,8 @@ function renderAdminShell(content){
         '<a href="#/admin/content" data-av="content">' + IC.edit + ' Site Content</a>' +
         '<div class="sep"></div>' +
         '<a href="#/admin/users" data-av="users">' + IC.shield + ' Admin Users</a>' +
-        '<a href="architecture.html" target="_blank">' + IC.chart + ' System Architecture</a>' +
+        '<a href="#/admin/analytics" data-av="analytics">' + IC.chart + ' Analytics</a>' +
+        '<a href="#/admin/architecture" data-av="architecture">' + IC.chart + ' System Architecture</a>' +
         '<a href="#/" >' + IC.store + ' View Store</a>' +
         '<a href="javascript:logout()">' + IC.logout + ' Logout</a>' +
       '</nav>' +
@@ -129,10 +130,54 @@ function renderAdminShell(content){
       '<div class="admin-top"><h2 id="adminTitle"></h2><div class="at-actions"><span class="at-user" style="font-size:13px;color:var(--ink-soft);margin-right:12px">' + esc(getAdminDisplayName()) + '</span><a class="btn ghost sm" href="#/">View Store</a></div></div>' +
       '<div class="admin-body">' + inner + '</div>' +
     '</div>' +
+    '<nav class="admin-tabs" aria-label="Admin quick navigation">' +
+      '<a href="#/admin/dashboard" data-av="dashboard">' + IC.dashboard + '<span>Dashboard</span></a>' +
+      '<a href="#/admin/orders" data-av="orders">' + IC.orders + '<span>Orders</span></a>' +
+      '<a href="#/admin/products" data-av="products">' + IC.box + '<span>Products</span></a>' +
+      '<a href="#/admin/customers" data-av="customers">' + IC.users + '<span>Customers</span></a>' +
+      '<a href="#/admin/analytics" data-av="analytics">' + IC.chart + '<span>Analytics</span></a>' +
+      '<button class="at-more" id="adminMoreBtn" aria-haspopup="true" aria-expanded="false" aria-label="More admin pages">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg><span>More</span>' +
+      '</button>' +
+    '</nav>' +
+    '<div class="admin-more-backdrop" id="adminMoreBackdrop"></div>' +
+    '<div class="admin-more-sheet" id="adminMoreSheet" aria-label="More admin pages">' +
+      '<div class="ams-head"><span>More</span><button id="adminMoreClose" aria-label="Close more menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button></div>' +
+      '<nav class="ams-links">' +
+        '<a href="#/admin/quotes" data-av="quotes">' + IC.mail + ' Quotes &amp; Enquiries</a>' +
+        '<a href="#/admin/categories" data-av="categories">' + IC.tag + ' Categories</a>' +
+        '<a href="#/admin/tiers" data-av="tiers">' + IC.tag + ' Customer Tiers</a>' +
+        '<a href="#/admin/theme" data-av="theme">' + IC.palette + ' Theme</a>' +
+        '<a href="#/admin/emails" data-av="emails">' + IC.mail + ' Order Emails</a>' +
+        '<a href="#/admin/content" data-av="content">' + IC.edit + ' Site Content</a>' +
+        '<a href="#/admin/users" data-av="users">' + IC.shield + ' Admin Users</a>' +
+        '<a href="#/admin/architecture" data-av="architecture">' + IC.chart + ' System Architecture</a>' +
+        '<div class="sep"></div>' +
+        '<a href="#/">' + IC.store + ' View Store</a>' +
+        '<a href="javascript:logout()">' + IC.logout + ' Logout</a>' +
+      '</nav>' +
+    '</div>' +
   '</div>';
   // mark active nav
   const av = location.hash.split("/")[2] || "dashboard";
   $$("[data-av]").forEach(a => a.classList.toggle("active", a.dataset.av === av));
+  // More sheet wiring (mobile bottom bar)
+  const moreBtn = document.getElementById('adminMoreBtn');
+  const sheet = document.getElementById('adminMoreSheet');
+  const bd = document.getElementById('adminMoreBackdrop');
+  const closeBtn = document.getElementById('adminMoreClose');
+  const setMore = (open) => {
+    if(!sheet) return;
+    sheet.classList.toggle('open', open);
+    if(bd) bd.classList.toggle('open', open);
+    if(moreBtn){ moreBtn.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+  };
+  if(moreBtn) moreBtn.addEventListener('click', () => setMore(!sheet.classList.contains('open')));
+  if(closeBtn) closeBtn.addEventListener('click', () => setMore(false));
+  if(bd) bd.addEventListener('click', () => setMore(false));
+  const sheetLinks = document.querySelectorAll('.admin-more-sheet a');
+  sheetLinks.forEach(a => a.addEventListener('click', () => setMore(false)));
+  document.addEventListener('keydown', (e) => { if(e.key === 'Escape') setMore(false); });
 }
 
 function adminDashboard(){
@@ -157,13 +202,14 @@ function adminDashboard(){
   
   // 0. Manual activity log (deletes, etc.)
   const activityLog = getActivityLog();
+  const validIcons = Object.values(IC);
   activityLog.forEach(a => {
     activities.push({ 
-      type: a.type || 'activity', 
-      icon: a.icon || IC.info, 
-      text: a.text, 
+      type: (/^[a-z0-9_-]+$/i.test(a.type||'')) ? a.type : 'activity', 
+      icon: validIcons.indexOf(a.icon) !== -1 ? a.icon : IC.info, 
+      text: typeof sanitizeHTML === 'function' ? sanitizeHTML(a.text) : esc(a.text||''), 
       time: a.time, 
-      color: a.color || '#6b7280' 
+      color: (/^#[0-9a-f]{3,8}$/i.test(a.color||'')) ? a.color : '#6b7280' 
     });
   });
   
@@ -270,6 +316,13 @@ function adminDashboard(){
       '<div class="stat-card"><span class="s-icon">' + IC.user + '</span><div class="s-label">Customers</div><div class="s-value">' + (accounts.length || 0) + '</div><div class="s-sub"><a href="#/admin/customers" style="color:var(--accent)">Manage customers</a></div></div>' +
       '<div class="stat-card"><span class="s-icon">' + IC.doc + '</span><div class="s-label">Quotes</div><div class="s-value">' + (quotes.length || 0) + '</div><div class="s-sub"><a href="#/admin/quotes" style="color:var(--accent)">View quotes &amp; enquiries</a></div></div>' +
     '</div>' +
+    // AI Operational Summary
+    '<div class="admin-panel"><div class="panel-head"><div><h3>AI Operations Summary</h3><div class="ph-sub">Gemini analyzes orders, revenue and pending tasks for today, then offers suggestions (for reference only: no data is modified)</div></div>' +
+      '<div style="display:flex;gap:8px;align-items:center">' +
+        '<button class="btn sm" onclick="aiDashboardSummary(this)">Generate Summary</button>' +
+        '<button class="btn sm ghost" onclick="copyAiSummary()" style="display:none" id="aiCopyBtn">Copy</button>' +
+      '</div></div>' +
+    '<div class="panel-body" id="aiSummaryBox" style="display:none;font-size:13.5px;line-height:1.7;color:var(--ink);white-space:pre-wrap"></div></div>' +
     // Recent Activity
     '<div class="admin-panel"><div class="panel-head"><div><h3>Recent Activity</h3><div class="ph-sub">Latest additions and changes across your store</div></div>' +
     '<select id="activityFilter" onchange="filterDashboardActivity(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--ink);cursor:pointer">' +
@@ -327,13 +380,343 @@ function formatTimeAgo(timestamp){
   }
 }
 
-/* ---- Reset all store data (products/categories/theme/orders) ---- */
-function resetStoreData(){
-  if(!confirm("Reset all store data to defaults?\n\nThis removes every product, category, theme and order change saved in this browser and restores the original 77-product catalog.")) return;
-  [LS.products, LS.cats, LS.theme, LS.cart, LS.orders].forEach(k => localStorage.removeItem(k));
-  showToast("Store data reset to defaults");
-  adminRoute();
+/* ---- Analytics admin ---- */
+async function adminAnalytics(){
+  $("#adminTitle").textContent = "Site Analytics";
+  
+  /* Show loading state */
+  renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><path d="M3 3v18h18"/><path d="M7 15v-4M12 15V9M17 15v-7"/></svg></div><h3>Loading analytics...</h3><p style="color:var(--ink-soft)">Fetching visitor data from database</p></div></div>');
+  
+  try {
+    /* Get analytics data from Supabase */
+    let allRecords = [];
+    if(supabase){
+      /* Get all records (limit to last 10000 for performance) */
+      const { data, error } = await supabase
+        .from('site_analytics')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10000);
+      
+      if(error){
+        console.warn("Analytics fetch error:", error);
+      } else {
+        allRecords = data || [];
+      }
+    }
+    
+    /* Calculate statistics */
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - 7);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    /* Filter records by time period */
+    const todayRecords = allRecords.filter(r => new Date(r.created_at) >= todayStart);
+    const weekRecords = allRecords.filter(r => new Date(r.created_at) >= weekStart);
+    const monthRecords = allRecords.filter(r => new Date(r.created_at) >= monthStart);
+    
+    /* Calculate unique visitors (by session_id) */
+    const uniqueSessions = new Set(allRecords.map(r => r.session_id));
+    const todaySessions = new Set(todayRecords.map(r => r.session_id));
+    const weekSessions = new Set(weekRecords.map(r => r.session_id));
+    const monthSessions = new Set(monthRecords.map(r => r.session_id));
+    
+    /* Calculate page views */
+    const totalPageViews = allRecords.length;
+    const todayPageViews = todayRecords.length;
+    const weekPageViews = weekRecords.length;
+    const monthPageViews = monthRecords.length;
+    
+    /* Calculate top pages */
+    const pageCounts = {};
+    allRecords.forEach(r => {
+      const page = r.page || 'unknown';
+      pageCounts[page] = (pageCounts[page] || 0) + 1;
+    });
+    const topPages = Object.entries(pageCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+    
+    /* Calculate device breakdown */
+    const deviceCounts = { desktop: 0, mobile: 0, tablet: 0, unknown: 0 };
+    allRecords.forEach(r => {
+      const device = r.device_type || 'unknown';
+      if(deviceCounts[device] !== undefined) deviceCounts[device]++;
+      else deviceCounts.unknown++;
+    });
+    
+    /* Calculate last 7 days trend */
+    const dailyData = [];
+    for(let i = 6; i >= 0; i--){
+      const dayStart = new Date(todayStart);
+      dayStart.setDate(dayStart.getDate() - i);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+      const dayRecords = allRecords.filter(r => {
+        const d = new Date(r.created_at);
+        return d >= dayStart && d < dayEnd;
+      });
+      const daySessions = new Set(dayRecords.map(r => r.session_id));
+      dailyData.push({
+        date: dayStart.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+        pageViews: dayRecords.length,
+        visitors: daySessions.size
+      });
+    }
+    
+    /* Calculate referrer sources */
+    const referrerCounts = {};
+    allRecords.forEach(r => {
+      let source = 'Direct';
+      if(r.referrer){
+        try {
+          const url = new URL(r.referrer);
+          source = url.hostname.replace('www.', '');
+        } catch(e) {
+          source = 'Other';
+        }
+      }
+      referrerCounts[source] = (referrerCounts[source] || 0) + 1;
+    });
+    const topReferrers = Object.entries(referrerCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
+    
+    /* Build page name mapping for display */
+    const pageDisplayNames = {
+      'home': 'Home Page',
+      'shop': 'Shop',
+      'account': 'My Account',
+      'about': 'About Us',
+      'why-us': '⭐ Why Us',
+      'blog': 'Blog',
+      'cart': 'Shopping Cart',
+      'checkout': 'Checkout',
+      'info': 'Info / FAQ'
+    };
+    
+    const getPageDisplayName = (page) => {
+      if(pageDisplayNames[page]) return pageDisplayNames[page];
+      if(page.startsWith('shop-')) return 'Category: ' + page.replace('shop-', '');
+      if(page.startsWith('product-')) return 'Product #' + page.replace('product-', '');
+      if(page.startsWith('quote-')) return 'Quote ' + page.replace('quote-', '');
+      if(page.startsWith('order-')) return 'Order ' + page.replace('order-', '');
+      return page.charAt(0).toUpperCase() + page.slice(1);
+    };
+    
+    /* Build the analytics dashboard HTML */
+    const maxDailyViews = Math.max(...dailyData.map(d => d.pageViews), 1);
+    const maxPageViews = topPages.length > 0 ? topPages[0][1] : 1;
+    const hasData = allRecords.length > 0;
+    
+    /* SVG Icons */
+    const icons = {
+      users: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+      eye: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+      calendar: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+      trending: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+      barChart: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>',
+      award: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>',
+      smartphone: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+      monitor: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+      tablet: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+      globe: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+      info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+      refresh: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>'
+    };
+    
+    const content = 
+    '<div class="admin-panel">' +
+      '<div class="panel-head">' +
+        '<div><h3>Site Analytics</h3><div class="ph-sub">Track visitor traffic and page views in real-time</div></div>' +
+        '<div style="display:flex;gap:8px">' +
+          '<button class="btn sm ghost" onclick="adminAnalytics()" style="display:flex;align-items:center;gap:6px">' + icons.refresh + ' Refresh</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="panel-body">' +
+        
+        /* Stat Cards - Premium dark/neutral colors */
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">' +
+          '<div class="stat-card" style="background:linear-gradient(135deg,#2d3748,#1a202c);position:relative;overflow:hidden;border:none">' +
+            '<div style="position:absolute;top:-10px;right:-10px;opacity:0.08;color:white;transform:scale(2.5)">' + icons.users + '</div>' +
+            
+            '<div class="s-label" style="color:rgba(255,255,255,0.6);position:relative;z-index:1">Total Visitors</div>' +
+            '<div class="s-value" style="color:white;position:relative;z-index:1">' + uniqueSessions.size + '</div>' +
+            '<div class="s-sub" style="color:rgba(255,255,255,0.45);position:relative;z-index:1">Unique sessions</div>' +
+          '</div>' +
+          '<div class="stat-card" style="background:linear-gradient(135deg,#2c5282,#1a365d);position:relative;overflow:hidden;border:none">' +
+            '<div style="position:absolute;top:-10px;right:-10px;opacity:0.08;color:white;transform:scale(2.5)">' + icons.eye + '</div>' +
+            
+            '<div class="s-label" style="color:rgba(255,255,255,0.6);position:relative;z-index:1">Total Page Views</div>' +
+            '<div class="s-value" style="color:white;position:relative;z-index:1">' + totalPageViews + '</div>' +
+            '<div class="s-sub" style="color:rgba(255,255,255,0.45);position:relative;z-index:1">All time</div>' +
+          '</div>' +
+          '<div class="stat-card" style="background:linear-gradient(135deg,#285e61,#1a4749);position:relative;overflow:hidden;border:none">' +
+            '<div style="position:absolute;top:-10px;right:-10px;opacity:0.08;color:white;transform:scale(2.5)">' + icons.calendar + '</div>' +
+            
+            '<div class="s-label" style="color:rgba(255,255,255,0.6);position:relative;z-index:1">Today</div>' +
+            '<div class="s-value" style="color:white;position:relative;z-index:1">' + todaySessions.size + '</div>' +
+            '<div class="s-sub" style="color:rgba(255,255,255,0.45);position:relative;z-index:1">Visitors · ' + todayPageViews + ' views</div>' +
+          '</div>' +
+          '<div class="stat-card" style="background:linear-gradient(135deg,#553c9a,#322659);position:relative;overflow:hidden;border:none">' +
+            '<div style="position:absolute;top:-10px;right:-10px;opacity:0.08;color:white;transform:scale(2.5)">' + icons.trending + '</div>' +
+            
+            '<div class="s-label" style="color:rgba(255,255,255,0.6);position:relative;z-index:1">This Week</div>' +
+            '<div class="s-value" style="color:white;position:relative;z-index:1">' + weekSessions.size + '</div>' +
+            '<div class="s-sub" style="color:rgba(255,255,255,0.45);position:relative;z-index:1">Visitors · ' + weekPageViews + ' views</div>' +
+          '</div>' +
+        '</div>' +
+        
+        /* Last 7 Days Trend */
+        '<div style="background:var(--card);border:1px solid var(--border);border-left:4px solid #553c9a;border-radius:12px;padding:20px;margin-bottom:24px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">' +
+          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+            '<div style="width:44px;height:44px;background:linear-gradient(135deg,#553c9a,#322659);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#b794f4">' + icons.barChart + '</div>' +
+            '<div>' +
+              '<h4 style="margin:0;font-size:16px;color:var(--ink)">Last 7 Days Traffic</h4>' +
+              '<div style="font-size:12px;color:var(--ink-soft);margin-top:2px">Daily visitor and page view trend</div>' +
+            '</div>' +
+          '</div>' +
+          (hasData ? 
+            '<div style="display:flex;align-items:flex-end;gap:8px;height:180px;padding:10px 0">' +
+              dailyData.map(d => {
+                const heightPercent = (d.pageViews / maxDailyViews) * 100;
+                return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">' +
+                  '<div style="font-size:11px;font-weight:600;color:var(--ink)">' + d.pageViews + '</div>' +
+                  '<div style="width:100%;background:linear-gradient(180deg,#553c9a,rgba(85,60,154,0.2));border-radius:6px 6px 0 0;height:' + Math.max(heightPercent, 2) + '%;min-height:4px;transition:height 0.3s ease"></div>' +
+                  '<div style="font-size:10px;color:var(--ink-soft);text-align:center;white-space:nowrap">' + d.date.split(',')[0] + '</div>' +
+                '</div>';
+              }).join('') +
+            '</div>'
+          : '<div style="text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:14px">No traffic data yet. Visit some pages to see the trend here.</div>') +
+        '</div>' +
+        
+        /* Two Column Layout */
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:24px">' +
+          /* Top Pages */
+          '<div style="background:var(--card);border:1px solid var(--border);border-left:4px solid #9b2c2c;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">' +
+            '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+              '<div style="width:44px;height:44px;background:linear-gradient(135deg,#9b2c2c,#742a2a);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#feb2b2">' + icons.award + '</div>' +
+              '<div>' +
+                '<h4 style="margin:0;font-size:16px;color:var(--ink)">Top Pages</h4>' +
+                '<div style="font-size:12px;color:var(--ink-soft);margin-top:2px">Most visited pages on your site</div>' +
+              '</div>' +
+            '</div>' +
+            (topPages.length ? '<div style="display:flex;flex-direction:column;gap:10px">' +
+              topPages.map(([page, count], idx) => {
+                const percent = (count / maxPageViews) * 100;
+                const barColors = ['#f5576c', '#f093fb', '#f6a26b', '#f7b733', '#4facfe', '#43e97b', '#667eea', '#764ba2', '#00f2fe', '#38f9d7'];
+                return '<div>' +
+                  '<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px">' +
+                    '<span style="color:var(--ink);font-weight:' + (idx < 3 ? '600' : '400') + '">' + (idx < 3 ? ['#1 ','#2 ','#3 '][idx] : '') + getPageDisplayName(page) + '</span>' +
+                    '<span style="color:var(--ink-soft);font-weight:600">' + count + ' views</span>' +
+                  '</div>' +
+                  '<div style="height:6px;background:var(--bg-soft);border-radius:3px;overflow:hidden">' +
+                    '<div style="height:100%;background:linear-gradient(90deg,' + barColors[idx % barColors.length] + ',' + barColors[idx % barColors.length] + '88);border-radius:3px;width:' + percent + '%;transition:width 0.3s ease"></div>' +
+                  '</div>' +
+                '</div>';
+              }).join('') +
+            '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;margin:0 auto 10px"><path d="M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0V4z"/><path d="M7 5H3v2a3 3 0 0 0 4 2.7M17 5h4v2a3 3 0 0 1-4 2.7"/></svg>No page data yet. Visit some pages to see rankings here.</div>') +
+          '</div>' +
+          
+          /* Device Breakdown */
+          '<div style="background:var(--card);border:1px solid var(--border);border-left:4px solid #2c5282;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">' +
+            '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+              '<div style="width:44px;height:44px;background:linear-gradient(135deg,#2c5282,#1a365d);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#90cdf4">' + icons.smartphone + '</div>' +
+              '<div>' +
+                '<h4 style="margin:0;font-size:16px;color:var(--ink)">Device Breakdown</h4>' +
+                '<div style="font-size:12px;color:var(--ink-soft);margin-top:2px">Visitor device distribution</div>' +
+              '</div>' +
+            '</div>' +
+            (Object.values(deviceCounts).some(v => v > 0) ? '<div style="display:flex;flex-direction:column;gap:12px">' +
+              Object.entries(deviceCounts).filter(([k,v]) => v > 0).map(([device, count]) => {
+                const total = Object.values(deviceCounts).reduce((a,b) => a + b, 0);
+                const percent = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+                const deviceIcons = { desktop: icons.monitor, mobile: icons.smartphone, tablet: icons.tablet, unknown: icons.info };
+                const gradients = { 
+                  desktop: 'linear-gradient(90deg,#667eea,#764ba2)', 
+                  mobile: 'linear-gradient(90deg,#f093fb,#f5576c)', 
+                  tablet: 'linear-gradient(90deg,#4facfe,#00f2fe)', 
+                  unknown: 'linear-gradient(90deg,#999,#bbb)' 
+                };
+                return '<div>' +
+                  '<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px">' +
+                    '<span style="color:var(--ink);font-weight:500;display:flex;align-items:center;gap:6px">' + 
+                      '<span style="display:inline-flex;width:16px;height:16px;color:var(--ink-soft)">' + (deviceIcons[device] || icons.info) + '</span>' +
+                      device.charAt(0).toUpperCase() + device.slice(1) + 
+                    '</span>' +
+                    '<span style="color:var(--ink-soft);font-weight:600">' + count + ' (' + percent + '%)</span>' +
+                  '</div>' +
+                  '<div style="height:8px;background:var(--bg-soft);border-radius:4px;overflow:hidden">' +
+                    '<div style="height:100%;background:' + (gradients[device] || '#999') + ';border-radius:4px;width:' + percent + '%;transition:width 0.3s ease"></div>' +
+                  '</div>' +
+                '</div>';
+              }).join('') +
+            '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;margin:0 auto 10px"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>No device data yet. Visit some pages to see device distribution here.</div>') +
+          '</div>' +
+        '</div>' +
+        
+        /* Traffic Sources */
+        '<div style="background:var(--card);border:1px solid var(--border);border-left:4px solid #285e61;border-radius:12px;padding:20px;margin-bottom:24px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">' +
+          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+            '<div style="width:44px;height:44px;background:linear-gradient(135deg,#285e61,#1a4749);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#81e6d9">' + icons.globe + '</div>' +
+            '<div>' +
+              '<h4 style="margin:0;font-size:16px;color:var(--ink)">Traffic Sources</h4>' +
+              '<div style="font-size:12px;color:var(--ink-soft);margin-top:2px">Where your visitors come from</div>' +
+            '</div>' +
+          '</div>' +
+          (topReferrers.length ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">' +
+            topReferrers.map(([source, count], idx) => {
+              const total = allRecords.length;
+              const percent = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+              const cardColors = [
+                'linear-gradient(135deg,rgba(67,233,123,0.1),rgba(56,249,215,0.1))',
+                'linear-gradient(135deg,rgba(79,172,254,0.1),rgba(0,242,254,0.1))',
+                'linear-gradient(135deg,rgba(102,126,234,0.1),rgba(118,75,162,0.1))',
+                'linear-gradient(135deg,rgba(240,147,251,0.1),rgba(245,87,108,0.1))',
+                'linear-gradient(135deg,rgba(247,183,51,0.1),rgba(252,107,107,0.1))',
+                'linear-gradient(135deg,rgba(246,162,107,0.1),rgba(255,205,130,0.1))',
+                'linear-gradient(135deg,rgba(118,75,162,0.1),rgba(102,126,234,0.1))',
+                'linear-gradient(135deg,rgba(56,249,215,0.1),rgba(67,233,123,0.1))'
+              ];
+              const textColors = ['#43e97b', '#4facfe', '#667eea', '#f5576c', '#f7b733', '#f6a26b', '#764ba2', '#38f9d7'];
+              return '<div style="background:' + cardColors[idx % cardColors.length] + ';border:1px solid ' + textColors[idx % textColors.length] + '33;padding:12px;border-radius:10px;text-align:center;transition:transform 0.2s ease">' +
+                '<div style="font-size:24px;font-weight:700;color:' + textColors[idx % textColors.length] + '">' + count + '</div>' +
+                '<div style="font-size:12px;color:var(--ink-soft);margin-top:4px;word-break:break-all;font-weight:500">' + source + '</div>' +
+                '<div style="font-size:11px;color:var(--ink-soft);opacity:0.7;margin-top:2px">' + percent + '%</div>' +
+              '</div>';
+            }).join('') +
+          '</div>' : '<div style="text-align:center;padding:30px 20px;color:var(--ink-soft);font-size:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;margin:0 auto 10px"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>No referrer data yet. Most traffic will show as "Direct" initially.</div>') +
+        '</div>' +
+        
+        /* Info Box */
+        '<div style="background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.2);border-radius:10px;padding:16px;margin-top:20px">' +
+          '<div style="display:flex;align-items:flex-start;gap:12px">' +
+            '<div style="font-size:24px;color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px;margin:0 auto"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 4 10.5c-.7.6-1 1.5-1 2.5h-6c0-1-.3-1.9-1-2.5A6 6 0 0 1 12 3z"/></svg></div>' +
+            '<div>' +
+              '<h5 style="margin:0 0 6px;font-size:14px;color:var(--ink)">About Analytics</h5>' +
+              '<p style="margin:0;font-size:13px;color:var(--ink-soft);line-height:1.6">' +
+                '• Visitor tracking is anonymous and privacy-friendly (no personal data collected)<br>' +
+                '• Sessions are tracked per browser tab (expires when tab is closed)<br>' +
+                '• Data is stored in your Supabase database and only visible to admins<br>' +
+                '• Page views are throttled (same page within 2 seconds counts as one view)<br>' +
+                '• Admin pages are not tracked' +
+              '</p>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+    
+    renderAdminShell(content);
+    
+  } catch(e) {
+    console.error("Analytics error:", e);
+    renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--danger)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg></div><h3>Error Loading Analytics</h3><p style="color:var(--ink-soft)">' + esc(e.message) + '</p><button class="btn" onclick="adminAnalytics()" style="margin-top:16px">Try Again</button></div></div>');
+  }
 }
+
 
 /* ---- Orders admin ---- */
 function adminOrders(){
@@ -353,7 +736,7 @@ function adminOrders(){
           '<td style="font-weight:600">' + esc(o.id) + '</td>' +
           '<td style="white-space:nowrap">' + fmtDT(o.date) + '</td>' +
           '<td>' + esc(custName(o)) + '</td>' +
-          '<td><a href="mailto:' + esc(custEmail(o)) + '" style="color:var(--accent)">' + esc(custEmail(o)) + '</a></td>' +
+          '<td class="td-email"><a href="mailto:' + esc(custEmail(o)) + '" style="color:var(--accent)">' + esc(custEmail(o)) + '</a></td>' +
           '<td>' + o.items.reduce((s,i) => s + i.qty, 0) + '</td>' +
           '<td style="font-weight:700">' + fmtIn(o.total, cur, orate(o)) + ' <span style="font-weight:400;color:var(--ink-soft);font-size:11px">' + cur + '</span></td>' +
           '<td><select class="order-status ' + orderStatusColor(o.status) + '" onchange="setOrderStatus(\'' + esc(o.id) + '\', this.value)">' +
@@ -427,8 +810,8 @@ function viewOrder(id){
     '<div class="ov-grid">' +
       '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(custName(o)) + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v"><a href="mailto:' + esc(custEmail(o)) + '" style="color:var(--accent)">' + esc(custEmail(o)) + '</a></div></div>' +
-      '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(custPhone(o) || "—") + '</div></div>' +
-      '<div class="ov-box"><div class="ov-k">Preferred Contact</div><div class="ov-v">' + esc(custContact(o) || "—") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(custPhone(o) || "-") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Preferred Contact</div><div class="ov-v">' + esc(custContact(o) || "-") + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc(custAddr(o)) + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Status</div><div class="ov-v"><select class="order-status ' + orderStatusColor(o.status) + '" onchange="setOrderStatus(\'' + esc(o.id) + '\', this.value)">' + ORDER_STATUSES.map(s => '<option ' + (o.status === s ? "selected" : "") + '>' + s + '</option>').join("") + '</select></div></div>' +
       '<div class="ov-box"><div class="ov-k">Total (' + cur + ')</div><div class="ov-v" style="font-weight:800">' + fmtIn(o.total, cur, orate(o)) + '</div></div>' +
@@ -466,8 +849,16 @@ function viewOrder(id){
     '</div>' +
     '<div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">' +
       '<button class="btn sm" onclick="mailOrder(lastOrder)">' + IC.mail + ' Email Order</button>' +
+      '<button class="btn sm ghost" onclick="aiOrderReplyDraft(\'' + escJs(o.id) + '\')" title="AI draft reply for customer in English">AI Reply Draft</button>' +
       '<button class="btn sm ghost" onclick="copyOrderSummary(lastOrder)">Copy Summary</button>' +
       '<button class="btn sm ghost" onclick="downloadOrderPDF(\'' + escJs(o.id) + '\')">' + IC.down + ' Download PDF</button>' +
+    '</div>' +
+    '<div id="aiDraftBox" style="display:none;margin-top:14px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:10px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+        '<span style="font-weight:600;font-size:13px">AI Reply Draft (review before sending)</span>' +
+        '<button class="btn sm ghost" onclick="copyAiDraft()">Copy</button>' +
+      '</div>' +
+      '<textarea id="aiDraftText" rows="8" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);background:var(--bg-soft);resize:vertical"></textarea>' +
     '</div>';
   $("#adminModal").classList.add("open");
 }
@@ -498,7 +889,7 @@ function adminQuotes(){
           '<td style="text-align:center">' + q.items.reduce((s,i) => s + i.qty, 0) + '</td>' +
           '<td style="font-weight:700;white-space:nowrap">' + (q.quotedPrice ? fmt(q.quotedPrice) : '<span style="color:var(--ink-soft);font-weight:400">Pending</span>') + '</td>' +
           '<td><span class="pill ' + (q.status === "Pending" ? "yellow" : q.status === "Quoted" ? "blue" : q.status === "Accepted" ? "green" : "gray") + '">' + esc(statusDisplay) + '</span></td>' +
-          '<td style="white-space:nowrap">' + (q.validUntil ? fmtD(q.validUntil) : "—") + '</td>' +
+          '<td style="white-space:nowrap">' + (q.validUntil ? fmtD(q.validUntil) : "-") + '</td>' +
           '<td><div class="table-actions">' +
             '<button onclick="viewAdminQuote(\'' + escJs(q.id) + '\')" title="View">' + IC.search + '</button>' +
             '<button onclick="downloadQuotePDF(\'' + escJs(q.id) + '\')" title="Download PDF">' + IC.down + '</button>' +
@@ -519,13 +910,13 @@ function viewAdminQuote(id){
     '<div class="ov-grid">' +
       '<div class="ov-box"><div class="ov-k">Customer</div><div class="ov-v">' + esc(qCustName(q)) + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Email</div><div class="ov-v"><a href="mailto:' + esc(qCustEmail(q)) + '" style="color:var(--accent)">' + esc(qCustEmail(q)) + '</a></div></div>' +
-      '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(qCustPhone(q) || "—") + '</div></div>' +
-      '<div class="ov-box"><div class="ov-k">Company</div><div class="ov-v">' + esc(qCustCompany(q) || "—") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Phone</div><div class="ov-v">' + esc(qCustPhone(q) || "-") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Company</div><div class="ov-v">' + esc(qCustCompany(q) || "-") + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Delivery</div><div class="ov-v">' + esc(qCustAddr(q)) + '</div></div>' +
       '<div class="ov-box"><div class="ov-k">Status</div><div class="ov-v"><span class="pill ' + (q.status === "Pending" ? "yellow" : q.status === "Quoted" ? "blue" : q.status === "Accepted" ? "green" : "gray") + '">' + esc(isExpired && q.status === "Quoted" ? "Expired" : q.status) + '</span></div></div>' +
       '<div class="ov-box"><div class="ov-k">Est. Total</div><div class="ov-v">' + fmt(q.subtotal) + '</div></div>' +
       (q.customerTargetPrice ? '<div class="ov-box" style="background:rgba(250,173,20,0.08);border:1px solid rgba(250,173,20,0.3)"><div class="ov-k">Customer Target Price</div><div class="ov-v" style="font-weight:800;color:#b8860b">' + fmt(q.customerTargetPrice) + '</div></div>' : '') +
-      '<div class="ov-box"><div class="ov-k">Quoted Price</div><div class="ov-v" style="font-weight:800;color:var(--brand)">' + (q.quotedPrice ? fmt(q.quotedPrice) : "—") + '</div></div>' +
+      '<div class="ov-box"><div class="ov-k">Quoted Price</div><div class="ov-v" style="font-weight:800;color:var(--brand)">' + (q.quotedPrice ? fmt(q.quotedPrice) : "-") + '</div></div>' +
     '</div>' +
     '<table class="admin-table" style="margin-top:14px"><thead><tr><th>Product</th><th>Category</th><th>Qty</th><th>Unit (EUR)</th><th>Line (EUR)</th></tr></thead><tbody>' +
     q.items.map(it => '<tr><td style="font-weight:600">' + esc(it.name) + '</td><td><span class="pill">' + esc(catName(it.cat)) + '</span></td><td>' + it.qty + '</td><td>' + fmt(it.price) + '</td><td style="font-weight:700">' + fmt(it.price * it.qty) + '</td></tr>').join("") +
@@ -553,7 +944,15 @@ function viewAdminQuote(id){
     '</div>' +
     '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">' +
       '<button class="btn sm ghost" onclick="downloadQuotePDF(\'' + escJs(q.id) + '\')">' + IC.down + ' Download Quote PDF</button>' +
+      '<button class="btn sm ghost" onclick="aiQuoteReplyDraft(\'' + escJs(q.id) + '\')" title="AI draft reply for customer in English">AI Reply Draft</button>' +
       '<button class="btn sm ghost" onclick="mailQuote(\'' + escJs(q.id) + '\')">' + IC.mail + ' Email Customer</button>' +
+    '</div>' +
+    '<div id="aiDraftBox" style="display:none;margin-top:14px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:10px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+        '<span style="font-weight:600;font-size:13px">AI Reply Draft (review before sending)</span>' +
+        '<button class="btn sm ghost" onclick="copyAiDraft()">Copy</button>' +
+      '</div>' +
+      '<textarea id="aiDraftText" rows="8" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--ink);background:var(--bg-soft);resize:vertical"></textarea>' +
     '</div>';
   $("#adminModal").classList.add("open");
   /* Initialize flatpickr date picker */
@@ -593,8 +992,7 @@ function submitQuoteResponse(id){
   q.status = "Quoted";
   q.history = q.history || [];
   q.history.push({ status: "Quoted", date: new Date().toISOString(), note: "Quote sent by admin: " + fmt(price) + " EUR, valid until " + valid });
-  saveQuotes(quotes);
-  showToast("Quote " + id + " sent!");
+  saveQuotes(quotes).then(r => { if(r && r.ok) showToast("Quote " + id + " sent!"); });
   $("#adminModal").classList.remove("open");
   adminQuotes();
 }
@@ -605,8 +1003,7 @@ function setQuoteStatus(id, status){
   q.status = status;
   q.history = q.history || [];
   q.history.push({ status: status, date: new Date().toISOString(), note: "Status updated by admin" });
-  saveQuotes(quotes);
-  showToast("Quote status updated to " + status);
+  saveQuotes(quotes).then(r => { if(r && r.ok) showToast("Quote status updated to " + status); });
   adminQuotes();
 }
 function acceptCustomerTargetPrice(id){
@@ -620,8 +1017,7 @@ function acceptCustomerTargetPrice(id){
   q.status = "Quoted";
   q.history = q.history || [];
   q.history.push({ status: "Quoted", date: new Date().toISOString(), note: "Admin accepted customer target price: " + fmt(q.customerTargetPrice) + " EUR" });
-  saveQuotes(quotes);
-  showToast("Customer target price accepted! Quote sent.");
+  saveQuotes(quotes).then(r => { if(r && r.ok) showToast("Customer target price accepted! Quote sent."); });
   $("#adminModal").classList.remove("open");
   adminQuotes();
 }
@@ -632,15 +1028,13 @@ function rejectCustomerTargetPrice(id){
   q.status = "Rejected";
   q.history = q.history || [];
   q.history.push({ status: "Rejected", date: new Date().toISOString(), note: "Admin rejected customer target price of " + (q.customerTargetPrice ? fmt(q.customerTargetPrice) : "N/A") + " EUR" });
-  saveQuotes(quotes);
-  showToast("Customer target price rejected.");
+  saveQuotes(quotes).then(r => { if(r && r.ok) showToast("Customer target price rejected."); });
   $("#adminModal").classList.remove("open");
   adminQuotes();
 }
 function deleteQuote(id){
   if(!confirm("Delete quote " + id + "?")) return;
-  saveQuotes(getQuotes().filter(q => q.id !== id));
-  showToast("Quote deleted");
+  saveQuotes(getQuotes().filter(q => q.id !== id)).then(r => { if(r && r.ok) showToast("Quote deleted"); });
   adminQuotes();
 }
 function mailQuote(id){
@@ -664,7 +1058,7 @@ function exportOrdersCSV(){
   });
   if(orders.length === 0) rows.push(["No orders yet"]);
   downloadCSV("nebula-secret-orders.csv", rows);
-  showToast("Orders exported — open in Excel");
+  showToast("Orders exported: open in Excel");
 }
 function getCurDec(code){ return (CURRENCIES.find(c => c.code === code) || CURRENCIES[0]).dec; }
 function exportItemsCSV(){
@@ -677,7 +1071,7 @@ function exportItemsCSV(){
   });
   if(rows.length === 1) rows.push(["No orders yet"]);
   downloadCSV("nebula-secret-order-items.csv", rows);
-  showToast("Product order list exported — open in Excel");
+  showToast("Product order list exported: open in Excel");
 }
 
 /* ---- Products admin ---- */
@@ -769,22 +1163,6 @@ function getSelectedProductIds(){
   return Array.from(document.querySelectorAll('.product-checkbox:checked')).map(cb => cb.value);
 }
 
-function setAllMoqTo100(){
-  if(!confirm('Set MOQ (Minimum Order Quantity) to 100 for ALL ' + getProducts().length + ' products? This will update the first price tier of every product.')) return;
-  const products = getProducts();
-  let updated = 0;
-  products.forEach(p => {
-    if(!p.priceTiers || p.priceTiers.length === 0){
-      p.priceTiers = [{ minQty: 100, price: p.p || 0 }];
-    } else {
-      p.priceTiers[0].minQty = 100;
-    }
-    updated++;
-  });
-  saveProducts(products);
-  adminProducts();
-  showToast('Set MOQ to 100 for ' + updated + ' products');
-}
 
 function openBulkEditModal(){
   const selectedIds = getSelectedProductIds();
@@ -808,8 +1186,8 @@ function openBulkEditModal(){
         '<div id="bulkTiersContainer"></div>' +
         '<button class="btn sm ghost" style="margin-top:8px" onclick="addBulkTier()">+ Add Volume Discount Tier</button>' +
       '</div>' +
-      '<div class="field full" style="background:#fff8e6;padding:12px;border-radius:8px;border:1px solid #ffe08a">' +
-        '<label style="font-weight:600;color:#8a6d00">⚠️ Important</label>' +
+      '<div class="field full" style="background:var(--warning-soft);padding:12px;border-radius:8px;border:1px solid var(--warning)">' +
+        '<label style="font-weight:600;color:var(--warning)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Important</label>' +
         '<div style="font-size:13px;color:#8a6d00;margin-top:6px">This will overwrite the existing price tiers for all selected products. Make sure the first tier\'s MOQ matches the MOQ you set above.</div>' +
       '</div>' +
     '</div>' +
@@ -885,10 +1263,9 @@ function applyBulkEdit(){
     }
   });
   
-  saveProducts(products);
+  saveProducts(products).then(r => { if(r && r.ok) showToast('Updated ' + updated + ' products'); });
   closeAdminModal();
   adminProducts();
-  showToast('Updated ' + updated + ' products');
 }
 
 function openProductForm(id){
@@ -899,13 +1276,14 @@ function openProductForm(id){
   $("#amSub").textContent = p ? "Editing: " + p.n : "Fill in the details to add a new product";
   $("#amBody").innerHTML =
     '<div class="form-grid">' +
-      '<div class="field full"><label>Product name *</label><input id="pfName" value="' + (p ? esc(p.n) : "") + '" placeholder="e.g. Rose Body Scrub"></div>' +
+      '<div class="field full"><label>Product name *</label><div style="display:flex;gap:8px"><input id="pfName" value="' + (p ? esc(p.n) : "") + '" placeholder="e.g. Rose Body Scrub" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenProductName(this)" title="Generate with AI">AI</button></div></div>' +
       '<div class="field"><label>Category *</label><select id="pfCat">' + cats.map(c => '<option value="' + c.cs + '"' + (p && p.cs === c.cs ? " selected" : "") + '>' + esc(c.c) + '</option>').join("") + '</select></div>' +
       '<div class="field"><label>Base Price (EUR) *</label><input id="pfPrice" type="number" step="0.01" min="0" value="' + (p ? p.p : "1.00") + '"><div class="form-hint">Default price for 1 unit</div></div>' +
       '<div class="field full"><label>Image URL</label><input id="pfImg" value="' + (p ? esc(p.i) : "") + '" placeholder="https://… (leave empty for placeholder)" oninput="pfPreview(this.value)"></div>' +
       '<div class="field full"><label>Image preview</label><div class="pf-prev"><img id="pfImgPrev" src="' + (p ? imgUrl(p.i, 200) : PLACEHOLDER) + '" alt="" onerror="this.onerror=null;this.src=PLACEHOLDER"></div>' +
-      '<div class="field full"><label>Or upload from your computer</label><label class="upload-btn" for="pfUpload">' + IC.up + ' Choose image file</label><input type="file" id="pfUpload" accept="image/*" style="display:none" onchange="uploadImageTo(\'pfUpload\',\'pfImg\',800)"><div class="form-hint">The image is compressed and stored with this product — no hosting needed. Tip: you can also paste any image URL directly.</div></div>' +
-      '<div class="field full"><label>Description (one attribute per line)</label><textarea id="pfDesc" rows="5" placeholder="Country of Origin: China&#10;Scent: Rose&#10;Volume: 100ml">' + (p ? esc((p.d || []).join("\n")) : "") + '</textarea></div>' +
+      '<div class="field full"><label>Or upload from your computer</label><label class="upload-btn" for="pfUpload">' + IC.up + ' Choose image file</label><input type="file" id="pfUpload" accept="image/*" style="display:none" onchange="uploadImageTo(\'pfUpload\',\'pfImg\',800)"><div class="form-hint">The image is compressed and stored with this product: no hosting needed. Tip: you can also paste any image URL directly.</div></div>' +
+      '<div class="field full"><label>Description (one attribute per line)</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="pfDesc" rows="5" placeholder="Country of Origin: China&#10;Scent: Rose&#10;Volume: 100ml" style="flex:1">' + (p ? esc((p.d || []).join("\n")) : "") + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenProductDesc(this)" title="Generate with AI">AI</button></div></div>' +
+      '<div class="field full"><label>SEO meta description</label><div style="display:flex;gap:8px"><input id="pfMeta" value="' + (p ? esc(p.meta || "") : "") + '" placeholder="e.g. Wholesale rose body scrub supplier: OEM/ODM private label available" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenProductMeta(this)" title="Generate with AI">AI</button></div><div class="form-hint">Used for Google search results &amp; structured data. 40-150 characters recommended.</div></div>' +
       '<div class="field full">' +
         '<label>Bulk Pricing Tiers (MOQ & Volume Discounts)</label>' +
         '<div class="form-hint">Set different prices for different order quantities. The first tier should start at 1 (MOQ).</div>' +
@@ -973,6 +1351,7 @@ function saveProductForm(id){
   const price = parseFloat($("#pfPrice").value);
   const img = $("#pfImg").value.trim();
   const desc = $("#pfDesc").value.split("\n").map(s => s.trim()).filter(Boolean);
+  const meta = $("#pfMeta") ? $("#pfMeta").value.trim() : "";
   const priceTiers = collectPriceTiers();
   if(!name){ showToast("Please enter a product name"); return; }
   if(isNaN(price) || price < 0){ showToast("Please enter a valid price"); return; }
@@ -989,23 +1368,22 @@ function saveProductForm(id){
     priceTiers: priceTiers,
     i: img || PLACEHOLDER,
     d: desc,
+    meta: meta,
     l: ORIGIN,
     createdAt: existing ? (existing.createdAt || new Date().toISOString()) : new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
   if(existing){ Object.assign(existing, rec); }
   else { products.push(rec); }
-  saveProducts(products);
+  saveProducts(products).then(r => { if(r && r.ok) showToast(existing ? "Product updated" : "Product added"); });
   closeAdminModal();
   adminProducts();
-  showToast(existing ? "Product updated" : "Product added");
 }
 
 function deleteProduct(id){
   if(!confirm("Delete this product? This cannot be undone.")) return;
   const products = getProducts().filter(p => String(p.id) !== String(id));
-  saveProducts(products);
-  showToast("Product deleted");
+  saveProducts(products).then(r => { if(r && r.ok) showToast("Product deleted"); });
   adminProducts();
 }
 
@@ -1028,7 +1406,7 @@ function adminCategories(){
           '</div></div>';
       }).join("") +
     '</div></div>' +
-    '<div class="admin-panel"><div class="panel-body"><div style="font-size:13px;color:var(--ink-soft)">Deleting a category does not delete its products — products move to the category you choose (or stay listed under their current slug).</div></div></div>';
+    '<div class="admin-panel"><div class="panel-body"><div style="font-size:13px;color:var(--ink-soft)">Deleting a category does not delete its products: products move to the category you choose (or stay listed under their current slug).</div></div></div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Categories";
 }
@@ -1040,12 +1418,11 @@ function moveCategory(cs, dir){
   if(newIdx < 0 || newIdx >= cats.length) return;
   const [item] = cats.splice(idx, 1);
   cats.splice(newIdx, 0, item);
-  saveCats(cats);
+  saveCats(cats).then(r => { if(r && r.ok) showToast("Category reordered"); });
   /* Force re-render navigation bar with updated category order */
   setTimeout(() => {
     try{ renderCatNav(); }catch(e){ console.warn("renderCatNav error:", e); }
   }, 50);
-  showToast("Category reordered");
   adminCategories();
 }
 
@@ -1056,10 +1433,11 @@ function openCatForm(cs){
   $("#amSub").textContent = c ? "Editing: " + c.c : "Create a new product category";
   $("#amBody").innerHTML =
     '<div class="form-grid">' +
-      '<div class="field full"><label>Category name *</label><input id="cfName" value="' + (c ? esc(c.c) : "") + '" placeholder="e.g. Body Lotion"></div>' +
+      '<div class="field full"><label>Category name *</label><div style="display:flex;gap:8px"><input id="cfName" value="' + (c ? esc(c.c) : "") + '" placeholder="e.g. Body Lotion" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenCatDesc(this)" title="Generate description with AI">AI</button></div></div>' +
+      '<div class="field full"><label>Description</label><textarea id="cfDesc" rows="2" placeholder="e.g. Wholesale body lotions for brands, retailers & distributors: OEM/ODM available">' + (c ? esc(c.desc || "") : "") + '</textarea></div>' +
       '<div class="field full"><label>Cover image URL</label><input id="cfImg" value="' + (c ? esc(c.i) : "") + '" placeholder="https://… (leave empty for placeholder)" oninput="cfPreview(this.value)"></div>' +
       '<div class="field full"><label>Image preview</label><div class="pf-prev"><img id="cfImgPrev" src="' + (c ? imgUrl(c.i, 200) : PLACEHOLDER) + '" alt="" onerror="this.onerror=null;this.src=PLACEHOLDER"></div></div>' +
-      '<div class="field full"><label>Or upload from your computer</label><label class="upload-btn" for="cfUpload">' + IC.up + ' Choose image file</label><input type="file" id="cfUpload" accept="image/*" style="display:none" onchange="uploadImageTo(\'cfUpload\',\'cfImg\',800)"><div class="form-hint">The image is compressed and stored with this category — no hosting needed. Tip: you can also paste any image URL directly.</div></div>' +
+      '<div class="field full"><label>Or upload from your computer</label><label class="upload-btn" for="cfUpload">' + IC.up + ' Choose image file</label><input type="file" id="cfUpload" accept="image/*" style="display:none" onchange="uploadImageTo(\'cfUpload\',\'cfImg\',800)"><div class="form-hint">The image is compressed and stored with this category: no hosting needed. Tip: you can also paste any image URL directly.</div></div>' +
     '</div>' +
     '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">' +
       '<button class="btn ghost" onclick="closeAdminModal()">Cancel</button>' +
@@ -1076,33 +1454,35 @@ function cfPreview(v){
 
 function saveCatForm(cs){
   const name = $("#cfName").value.trim();
+  const desc = $("#cfDesc") ? $("#cfDesc").value.trim() : "";
   const img = $("#cfImg").value.trim();
   if(!name){ showToast("Please enter a category name"); return; }
   const cats = getCats();
   const existing = cs ? cats.find(x => x.cs === cs) : null;
   const newCs = cs || slugify(name);
+  const toSave = [];
   if(existing){
     existing.c = name;
+    if(desc) existing.desc = desc;
     if(img) existing.i = img;
     // update products that reference this category name/slug
     const products = getProducts();
     products.forEach(p => { if(p.cs === existing.cs) p.c = name; });
-    saveProducts(products);
+    toSave.push(saveProducts(products));
   } else {
     if(cats.some(x => x.cs === newCs)){ showToast("Category already exists"); return; }
-    cats.push({ c: name, cs: newCs, i: img || PLACEHOLDER });
+    cats.push({ c: name, cs: newCs, desc: desc || "", i: img || PLACEHOLDER });
   }
-  saveCats(cats);
+  toSave.push(saveCats(cats));
   closeAdminModal();
-  showToast(existing ? "Category updated" : "Category added");
+  Promise.all(toSave).then(rs => { if(rs.length && rs.every(r => r && r.ok)) showToast(existing ? "Category updated" : "Category added"); });
   adminCategories();
 }
 
 function deleteCategory(cs){
   if(!confirm("Delete this category? Its products stay in the catalog.")) return;
   const cats = getCats().filter(c => c.cs !== cs);
-  saveCats(cats);
-  showToast("Category deleted");
+  saveCats(cats).then(r => { if(r && r.ok) showToast("Category deleted"); });
   adminCategories();
 }
 
@@ -1141,7 +1521,7 @@ async function adminCustomers(){
         '<button class="btn sm ghost" style="color:#c0392b;border-color:#e0b4b0" onclick="deleteCustomerAccount(\'' + escJs(a.email) + '\')">Delete</button>' +
       '</td>' +
     '</tr>';
-  }).join("") : '<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:24px">No customer accounts yet — accounts appear here when customers create one on the Account page.</td></tr>';
+  }).join("") : '<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);padding:24px">No customer accounts yet: accounts appear here when customers create one on the Account page.</td></tr>';
   const content =
     '<div class="admin-panel"><div class="panel-head"><div><h3>Customer Accounts</h3><div class="ph-sub">Everyone who created an account on the storefront</div></div><div style="display:flex;gap:8px"><button class="btn sm ghost" onclick="adminCustomers()">Refresh</button><button class="btn sm ghost" onclick="location.hash=\'#/admin/tiers\'">Manage Tiers</button><button class="btn sm ghost" onclick="location.hash=\'#/account\'">Open Account page</button></div></div>' +
     '<div class="panel-body" style="padding:0;overflow-x:auto"><table class="admin-table"><thead><tr><th>Name</th><th>Email</th><th>Registered</th><th>Orders</th><th>Tier</th><th style="text-align:right">Actions</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>' +
@@ -1153,9 +1533,9 @@ function adminResetCustomerPass(email){
   const accs = getAccounts();
   const acc = accs.find(a => a.email === email);
   if(!acc){ showToast("Account not found"); return; }
-  const np = prompt("Enter a new password for " + acc.email + " (min 6 characters):");
+  const np = prompt("Enter a new password for " + acc.email + " (min 8 characters):");
   if(np === null) return;
-  if(np.trim().length < 6){ showToast("Password must be at least 6 characters"); return; }
+  if(np.trim().length < 8){ showToast("Password must be at least 8 characters"); return; }
   hashPass(np.trim()).then(hash => {
     acc.pass = hash;
     saveAccounts(accs);
@@ -1324,34 +1704,31 @@ async function adminAddAdmin(){
   const p = $("#auPass").value || "";
   const n = ($("#auName").value || "").trim();
   if(!u){ showToast("Enter a login name"); return; }
-  if(p.length < 6){ showToast("Password must be at least 6 characters"); return; }
+  if(p.length < 8){ showToast("Password must be at least 8 characters"); return; }
   const admins = getAdmins();
   if(admins.some(a => a.user.toLowerCase() === u.toLowerCase())){ showToast("This login name already exists"); return; }
   /* Hash password before storing */
   const hashedPass = await hashPass(p);
   admins.push({ user: u, pass: hashedPass, name: n || u, created: new Date().toISOString() });
-  saveAdmins(admins);
-  showToast("Admin " + u + " added");
+  saveAdmins(admins).then(r => { if(r && r.ok) showToast("Admin " + u + " added"); });
   adminAdminUsers();
 }
 async function adminChangeAdminPass(user){
   const admins = getAdmins();
   const a = admins.find(x => x.user === user);
   if(!a){ showToast("Admin not found"); return; }
-  const np = prompt("Enter a new password for \"" + a.user + "\" (min 6 characters):");
+  const np = prompt("Enter a new password for \"" + a.user + "\" (min 8 characters):");
   if(np === null) return;
-  if(np.trim().length < 6){ showToast("Password must be at least 6 characters"); return; }
+  if(np.trim().length < 8){ showToast("Password must be at least 8 characters"); return; }
   /* Hash password before storing */
   a.pass = await hashPass(np.trim());
-  saveAdmins(admins);
-  showToast("Password updated for " + user);
+  saveAdmins(admins).then(r => { if(r && r.ok) showToast("Password updated for " + user); });
 }
 function adminDeleteAdmin(user){
   const admins = getAdmins();
   if(admins.length <= 1){ showToast("Cannot remove the last admin account"); return; }
   if(!confirm("Remove admin \"" + user + "\"? They will no longer be able to sign in.")) return;
-  saveAdmins(admins.filter(a => a.user !== user));
-  showToast("Admin " + user + " removed");
+  saveAdmins(admins.filter(a => a.user !== user)).then(r => { if(r && r.ok) showToast("Admin " + user + " removed"); });
   adminAdminUsers();
 }
 
@@ -1369,15 +1746,18 @@ function adminTheme(){
           THEME_PRESETS.map((p,i) => '<button class="swatch" style="background:' + p.brand + '" title="' + p.name + '" onclick="applyPreset(' + i + ')"></button>').join("") +
         '</div></div>' +
         '<div class="field"><label>Hero kicker</label><input id="thKicker" value="' + esc(th.heroKicker) + '"></div>' +
-        '<div class="field full"><label>Hero title</label><input id="thTitle" value="' + esc(th.heroTitle) + '"></div>' +
-        '<div class="field full"><label>Hero subtitle</label><textarea id="thSub" rows="2">' + esc(th.heroSub) + '</textarea></div>' +
-        '<div class="field full"><label>Hero banner image (URL or upload)</label><div style="display:flex;gap:8px;align-items:center"><input id="thBanner" value="' + esc(th.banner) + '" style="flex:1" placeholder="Paste image URL or click Upload"><button type="button" class="btn sm" style="flex-shrink:0" onclick="document.getElementById(\'thBannerFile\').click()">Upload Image</button></div><input type="file" id="thBannerFile" accept="image/*" style="display:none" onchange="handleBannerUpload(this)"><div id="thBannerPreview" style="margin-top:8px"></div></div>' +
+        '<div class="field full"><label>Hero title</label><div style="display:flex;gap:8px"><input id="thTitle" value="' + esc(th.heroTitle) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'thTitle\', this)" title="Generate with AI">AI</button></div></div>' +
+        '<div class="field full"><label>Hero subtitle</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="thSub" rows="2" style="flex:1">' + esc(th.heroSub) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'thSub\', this)" title="Generate with AI">AI</button></div></div>' +
+        '<div class="field full"><label>Hero slides (up to 3 images, auto-rotated on the homepage)</label>' +
+          '<div style="display:grid;gap:10px" id="heroSlidesEdit">' +
+            [1,2,3].map(n => '<div style="display:flex;gap:8px;align-items:flex-start"><div style="flex:1;min-width:0"><input id="thSlide' + n + '" value="' + esc(((th.heroSlides||[])[n-1]) || "") + '" placeholder="Hero slide ' + n + ': image URL or upload" style="width:100%"><div id="thSlidePrev' + n + '" style="margin-top:6px"></div></div><button type="button" class="btn sm" style="flex-shrink:0" onclick="document.getElementById(\'thSlideFile' + n + '\').click()">Upload</button><input type="file" id="thSlideFile' + n + '" accept="image/*" style="display:none" onchange="handleHeroUpload(this, ' + n + ')"></div>').join('') +
+          '</div><div class="form-hint">Leave a field empty to keep the default slide. Uploaded images are compressed and stored with your theme.</div></div>' +
       '</div>' +
     '</div></div>' +
     '<div class="admin-panel"><div class="panel-head"><div><h3>Homepage Popup</h3><div class="ph-sub">A promotional popup shown once per session on the homepage</div></div></div>' +
     '<div class="panel-body">' +
       '<div class="form-grid">' +
-        '<div class="field"><label>Enable popup</label><select id="thPopupEnabled"><option value="1"' + (th.popupEnabled ? " selected" : "") + '>On — show on homepage</option><option value="0"' + (!th.popupEnabled ? " selected" : "") + '>Off — hidden</option></select></div>' +
+        '<div class="field"><label>Enable popup</label><select id="thPopupEnabled"><option value="1"' + (th.popupEnabled ? " selected" : "") + '>On: show on homepage</option><option value="0"' + (!th.popupEnabled ? " selected" : "") + '>Off: hidden</option></select></div>' +
         '<div class="field full"><label>Popup title</label><input id="thPopupTitle" value="' + esc(th.popupTitle) + '"></div>' +
         '<div class="field full"><label>Popup content (HTML)</label><textarea id="thPopupBody" rows="4">' + esc(th.popupBody) + '</textarea></div>' +
         '<div class="field full"><label>Popup image (URL or upload)</label><div style="display:flex;gap:8px;align-items:center"><input id="thPopupImg" value="' + esc(th.popupImage) + '" style="flex:1" placeholder="Paste image URL or click Upload"><button type="button" class="btn sm" style="flex-shrink:0" onclick="document.getElementById(\'thPopupImgFile\').click()">Upload Image</button></div><input type="file" id="thPopupImgFile" accept="image/*" style="display:none" onchange="handlePopupImgUpload(this)"><div id="thPopupImgPreview" style="margin-top:8px"></div></div>' +
@@ -1391,15 +1771,15 @@ function adminTheme(){
 }
 function adminEmails(){
   const content =
-    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Auto-send every new order to your inbox — Resend via Vercel Edge Function</div></div></div>' +
+    '<div class="admin-panel"><div class="panel-head"><div><h3>Order Emails</h3><div class="ph-sub">Auto-send every new order to your inbox: Resend via Vercel Edge Function</div></div></div>' +
     '<div class="panel-body">' +
       '<div class="form-grid">' +
-        '<div class="field full" id="emailStatus"><label>Server Status (Vercel Edge Function)</label><div style="padding:10px;border-radius:8px;background:#f0f0f0;color:#666" id="emailStatusText">Checking...</div></div>' +
-        '<div class="field full" id="emailParams"><label>Vercel Environment Variables</label><div style="padding:10px;border-radius:8px;background:#f8f9fa;font-family:monospace;font-size:12px" id="emailParamsList">Loading...</div></div>' +
+        '<div class="field full" id="emailStatus"><label>Server Status (Vercel Edge Function)</label><div style="padding:10px;border-radius:8px;background:var(--bg-soft);color:var(--ink-soft)" id="emailStatusText">Checking...</div></div>' +
+        '<div class="field full" id="emailParams"><label>Vercel Environment Variables</label><div style="padding:10px;border-radius:8px;background:var(--bg-soft);font-family:monospace;font-size:12px" id="emailParamsList">Loading...</div></div>' +
       '</div>' +
-      '<div class="form-hint" style="margin-top:12px">Emails are sent server-side through <code>/api/send-email</code> (Resend). Keys live only in Vercel env vars — nothing to configure here.</div>' +
+      '<div class="form-hint" style="margin-top:12px">Emails are sent server-side through <code>/api/send-email</code> (Resend). Keys live only in Vercel env vars: nothing to configure here.</div>' +
       '<button class="btn ghost" style="margin-top:12px" onclick="sendTestOrderEmail()">Send Test Email</button>' +
-      '<div class="form-hint" style="margin-top:10px"><b>Still not receiving order emails?</b> (1) click <b>Send Test Email</b>; (2) check spam folder; (3) verify env vars above are all ✅ in Vercel. Orders are always saved in Admin → Orders and downloadable as Excel/CSV regardless of email.</div>' +
+      '<div class="form-hint" style="margin-top:10px"><b>Still not receiving order emails?</b> (1) click <b>Send Test Email</b>; (2) check spam folder; (3) verify the env vars above all show a check mark in Vercel. Orders are always saved in Admin → Orders and downloadable as Excel/CSV regardless of email.</div>' +
     '</div></div>';
   renderAdminShell(content);
   $("#adminTitle").textContent = "Order Emails";
@@ -1421,7 +1801,7 @@ function adminEmails(){
     const pl = $("#emailParamsList");
     if(pl && cfg.params){
       const rows = Object.entries(cfg.params).map(([k,v]) => {
-        const icon = v ? "✅" : "❌";
+        const icon = v ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;color:var(--success)"><path d="M20 6 9 17l-5-5"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px;color:var(--danger)"><path d="M18 6 6 18M6 6l12 12"/></svg>';
         const val = v ? "set" : "not set";
         return '<div style="padding:3px 0;display:flex;align-items:center;gap:8px"><span>' + icon + '</span><code style="flex:1">' + k + '</code><span style="color:' + (v ? '#155724' : '#721c24') + '">' + val + '</span></div>';
       });
@@ -1440,13 +1820,13 @@ function adminContent(){
   // Default content (shown in editor when no custom override exists)
   const DEF = {
     topbarWelcome: "Welcome to Nebula Secret",
-    footerDesc: "We supply everyday products you find in department stores — skincare, body care, home wellness and much more — tailored to your requirements through wholesale and OEM/ODM.",
+    footerDesc: "We supply everyday products you find in department stores: skincare, body care, home wellness and much more: tailored to your requirements through wholesale and OEM/ODM.",
     footerCopy: "© 2026 Nebula Secret. All rights reserved.",
     storyT: "Our Story",
-    storyB: '<p>Founded in the United Kingdom, <strong>Nebula Secret</strong> is the wholesale and OEM/ODM home of <strong>Nebula Corporate Limited</strong>. With offices in London, Hong Kong and mainland China, and a trusted network of manufacturers across China and the Asia-Pacific region, we bring together global expertise, craftsmanship and a genuine passion for quality.</p><p>What began as a sourcing house with a passion for quality has grown into a brand dedicated to making everyday products a little more special. Every product in our collection is carefully curated to combine on-trend design, superior quality and honest pricing — so your customers can enjoy a little everyday luxury without compromise.</p><p>From body scrubs and facial masks to essential oils, incense and other everyday essentials found in department stores, each item is chosen with care, tested with attention, and delivered with the promise that it deserves a place in your home.</p>',
+    storyB: '<p>Founded in the United Kingdom, <strong>Nebula Secret</strong> is the wholesale and OEM/ODM home of <strong>Nebula Corporate Limited</strong>. With offices in London, Hong Kong and mainland China, and a trusted network of manufacturers across China and the Asia-Pacific region, we bring together global expertise, craftsmanship and a genuine passion for quality.</p><p>What began as a sourcing house with a passion for quality has grown into a brand dedicated to making everyday products a little more special. Every product in our collection is carefully curated to combine on-trend design, superior quality and honest pricing: so your customers can enjoy a little everyday luxury without compromise.</p><p>From body scrubs and facial masks to essential oils, incense and other everyday essentials found in department stores, each item is chosen with care, tested with attention, and delivered with the promise that it deserves a place in your home.</p>',
     missionT: "Our Mission",
     missionLead: "We believe self-care should be simple, joyful and accessible to everyone.",
-    missionB: '<p>From the first concept to the final product, we oversee every step — sourcing, formulation, packaging and quality control — to deliver products that feel good and do good. We bridge global markets so that the finest ingredients, trends and craftsmanship can reach your doorstep, wherever you are.</p><p>We build everything on <strong>trust, integrity and transparency</strong>. We work closely with our manufacturing partners to ensure every batch meets our strict standards, and we are always honest about what goes into our products — because you deserve to know exactly what you are bringing into your home.</p>',
+    missionB: '<p>From the first concept to the final product, we oversee every step: sourcing, formulation, packaging and quality control: to deliver products that feel good and do good. We bridge global markets so that the finest ingredients, trends and craftsmanship can reach your doorstep, wherever you are.</p><p>We build everything on <strong>trust, integrity and transparency</strong>. We work closely with our manufacturing partners to ensure every batch meets our strict standards, and we are always honest about what goes into our products: because you deserve to know exactly what you are bringing into your home.</p>',
     promiseT: "Our Promise to You",
     promiseLead: "Five principles that guide everything we make and do."
   };
@@ -1459,24 +1839,24 @@ function adminContent(){
         '</div></details>' +
       '<details class="ct-block" open><summary><b>Footer</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field full"><label>Brand description</label><textarea id="ctFooterDesc" rows="3">' + esc(fo.desc || DEF.footerDesc) + '</textarea></div>' +
+          '<div class="field full"><label>Brand description</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="ctFooterDesc" rows="3" style="flex:1">' + esc(fo.desc || DEF.footerDesc) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctFooterDesc\', this)" title="Generate with AI">AI</button></div></div>' +
           '<div class="field full"><label>Copyright line</label><input id="ctFooterCopy" value="' + esc(fo.copyright || DEF.footerCopy) + '"></div>' +
         '</div></details>' +
-      '<details class="ct-block" open><summary><b>About — Our Story</b></summary>' +
+      '<details class="ct-block" open><summary><b>About: Our Story</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field"><label>Section title</label><input id="ctStoryT" value="' + esc((ab.story||{}).t || DEF.storyT) + '"></div>' +
-          '<div class="field full"><label>Body (HTML)</label><textarea id="ctStoryB" rows="6">' + esc((ab.story||{}).b || DEF.storyB) + '</textarea></div>' +
+          '<div class="field"><label>Section title</label><div style="display:flex;gap:8px"><input id="ctStoryT" value="' + esc((ab.story||{}).t || DEF.storyT) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctStoryT\', this)" title="Generate with AI">AI</button></div></div>' +
+          '<div class="field full"><label>Body (HTML)</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="ctStoryB" rows="6" style="flex:1">' + esc((ab.story||{}).b || DEF.storyB) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctStoryB\', this)" title="Generate with AI">AI</button></div></div>' +
         '</div></details>' +
-      '<details class="ct-block"><summary><b>About — Our Mission</b></summary>' +
+      '<details class="ct-block"><summary><b>About: Our Mission</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field"><label>Section title</label><input id="ctMissionT" value="' + esc((ab.mission||{}).t || DEF.missionT) + '"></div>' +
-          '<div class="field"><label>Lead line</label><input id="ctMissionLead" value="' + esc((ab.mission||{}).lead || DEF.missionLead) + '"></div>' +
-          '<div class="field full"><label>Body (HTML)</label><textarea id="ctMissionB" rows="6">' + esc((ab.mission||{}).b || DEF.missionB) + '</textarea></div>' +
+          '<div class="field"><label>Section title</label><div style="display:flex;gap:8px"><input id="ctMissionT" value="' + esc((ab.mission||{}).t || DEF.missionT) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctMissionT\', this)" title="Generate with AI">AI</button></div></div>' +
+          '<div class="field"><label>Lead line</label><div style="display:flex;gap:8px"><input id="ctMissionLead" value="' + esc((ab.mission||{}).lead || DEF.missionLead) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctMissionLead\', this)" title="Generate with AI">AI</button></div></div>' +
+          '<div class="field full"><label>Body (HTML)</label><div style="display:flex;gap:8px;align-items:flex-start"><textarea id="ctMissionB" rows="6" style="flex:1">' + esc((ab.mission||{}).b || DEF.missionB) + '</textarea><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctMissionB\', this)" title="Generate with AI">AI</button></div></div>' +
         '</div></details>' +
-      '<details class="ct-block"><summary><b>About — Our Promise</b></summary>' +
+      '<details class="ct-block"><summary><b>About: Our Promise</b></summary>' +
         '<div class="form-grid">' +
-          '<div class="field"><label>Section title</label><input id="ctPromiseT" value="' + esc((ab.promise||{}).t || DEF.promiseT) + '"></div>' +
-          '<div class="field full"><label>Lead line</label><input id="ctPromiseLead" value="' + esc((ab.promise||{}).lead || DEF.promiseLead) + '"></div>' +
+          '<div class="field"><label>Section title</label><div style="display:flex;gap:8px"><input id="ctPromiseT" value="' + esc((ab.promise||{}).t || DEF.promiseT) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctPromiseT\', this)" title="Generate with AI">AI</button></div></div>' +
+          '<div class="field full"><label>Lead line</label><div style="display:flex;gap:8px"><input id="ctPromiseLead" value="' + esc((ab.promise||{}).lead || DEF.promiseLead) + '" style="flex:1"><button type="button" class="btn sm ghost" style="flex-shrink:0" onclick="aiGenerateCopy(\'ctPromiseLead\', this)" title="Generate with AI">AI</button></div></div>' +
         '</div></details>' +
     '</div></div>' +
     '<div class="save-bar"><span class="sb-note">Edit any field above and click Save. Empty fields are not saved (keeps current content).</span><button class="btn" onclick="saveContentForm()">Save Content</button></div>';
@@ -1495,9 +1875,8 @@ function saveContentForm(){
     }
   };
   cleanContentObj(c);
-  saveContent(c);
+  saveContent(c).then(r => { if(r && r.ok) showToast("Site content saved"); });
   applyFooterContent();
-  showToast("Site content saved");
 }
 function cleanContentObj(obj){
   Object.keys(obj).forEach(k => {
@@ -1511,8 +1890,8 @@ function cleanContentObj(obj){
   });
 }
 
-
-function handleBannerUpload(input){
+/* Compress an image file to a data URL and write it into a hero slide field */
+function handleHeroUpload(input, idx){
   const file = input.files[0];
   if(!file) return;
   if(!file.type.startsWith("image/")){ showToast("Please select an image file"); return; }
@@ -1527,16 +1906,17 @@ function handleBannerUpload(input){
       canvas.width = w; canvas.height = h;
       canvas.getContext("2d").drawImage(img, 0, 0, w, h);
       const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-      const inp = document.getElementById("thBanner");
-      if(inp) inp.value = dataUrl;
-      const prev = document.getElementById("thBannerPreview");
+      const inp = document.getElementById("thSlide" + idx);
+      if(inp){ inp.value = dataUrl; }
+      const prev = document.getElementById("thSlidePrev" + idx);
       if(prev) prev.innerHTML = '<img src="' + dataUrl + '" style="max-width:100%;max-height:140px;border-radius:8px;border:1px solid var(--line)">';
-      showToast("Banner image uploaded — click Save to apply");
+      showToast("Slide " + idx + " image ready: click Save to apply");
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
+
 function handlePopupImgUpload(input){
   const file = input.files[0];
   if(!file) return;
@@ -1556,7 +1936,7 @@ function handlePopupImgUpload(input){
       if(inp) inp.value = dataUrl;
       const prev = document.getElementById("thPopupImgPreview");
       if(prev) prev.innerHTML = '<img src="' + dataUrl + '" style="max-width:100%;max-height:140px;border-radius:8px;border:1px solid var(--line)">';
-      showToast("Popup image uploaded — click Save to apply");
+      showToast("Popup image uploaded: click Save to apply");
     };
     img.src = e.target.result;
   };
@@ -1569,7 +1949,7 @@ function applyPreset(i){
 }
 async function sendTestOrderEmail(){
   const cfg = await fetch("/api/email-config").then(r => r.json()).catch(() => ({}));
-  if(!cfg.enabled){ showToast("Email not enabled — set MAIL_ENABLED=true and RESEND env vars in Vercel"); return; }
+  if(!cfg.enabled){ showToast("Email not enabled: set MAIL_ENABLED=true and RESEND env vars in Vercel"); return; }
   const n = Math.floor(1000000 + Math.random() * 9000000);
   const test = {
     id: "TEST-" + n,
@@ -1582,7 +1962,7 @@ async function sendTestOrderEmail(){
   showToast("Sending test email…");
   const r = await sendOrderEmail(test);
   if(r.ok){
-    showToast("Test email sent — check inbox");
+    showToast("Test email sent: check inbox");
   }else{
     showToast("Failed: " + (r.detail || r.reason || "unknown error"));
   }
@@ -1596,16 +1976,16 @@ function saveThemeForm(){
   th.heroKicker = $("#thKicker").value.trim();
   th.heroTitle = $("#thTitle").value.trim();
   th.heroSub = $("#thSub").value.trim();
-  th.banner = $("#thBanner").value.trim() || BANNER;
+  th.heroSlides = [1,2,3].map(n => ($("#thSlide" + n) ? $("#thSlide" + n).value.trim() : "")).filter(Boolean);
+  th.banner = th.heroSlides[0] || BANNER;
   th.popupEnabled = $("#thPopupEnabled").value === "1";
   th.popupTitle = $("#thPopupTitle").value.trim();
   th.popupBody = $("#thPopupBody").value.trim();
   th.popupImage = $("#thPopupImg").value.trim();
   th.popupBtnText = $("#thPopupBtnText").value.trim();
   th.popupBtnLink = $("#thPopupBtnLink").value.trim();
-  saveTheme(th);
+  saveTheme(th).then(r => { if(r && r.ok) showToast("Theme saved"); });
   applyTheme();
-  showToast("Theme saved");
 }
 function resetTheme(){
   if(!confirm("Reset theme to defaults?")) return;
@@ -1624,7 +2004,7 @@ function applyTheme(){
   r.setProperty("--accent", th.accentColor);
   r.setProperty("--accent-soft", shade(th.accentColor, 90, true));
   $("#brandName").innerHTML = esc(th.storeName) + "<small>" + esc(th.tagline) + "</small>";
-  document.title = th.storeName + " — Wholesale Supplier & OEM/ODM Manufacturer";
+  document.title = th.storeName + ": Wholesale Supplier & OEM/ODM Manufacturer";
 }
 
 /* simple color shade util */
@@ -1644,19 +2024,16 @@ async function viewAdminLogin(msg){
   const admins = getAdmins();
   let hasAdmins = admins && admins.length > 0;
   
-  /* Also check profiles table for admin accounts (Supabase Auth) */
+  /* Also check the server-side admin count via privileged RPC (RLS-safe —
+     the raw admins row is admin-only, so getAdmins() is empty pre-login) */
   if(!hasAdmins && typeof supabase !== 'undefined'){
     try{
-      const { data: profileData, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .in('role', ['admin', 'superadmin'])
-        .limit(1);
-      if(!error && profileData && profileData.length > 0){
+      const { data, error } = await supabase.rpc('admin_count');
+      if(!error && data > 0){
         hasAdmins = true;
       }
     }catch(e){
-      console.log("Failed to check profiles for admins:", e.message);
+      console.warn("Failed to check admin count:", e.message);
     }
   }
   
@@ -1684,8 +2061,8 @@ async function viewAdminLogin(msg){
   '<div class="admin-login">' +
     '<div class="login-card">' +
       '<img class="l-logo" src="images/Neubla_logo_black_1729172124.png" alt="Nebula Secret">' +
-      '<h1>Admin Login</h1>' +
-      '<p class="l-sub">Nebula Secret management console</p>' +
+      '<h1>Sign In</h1>' +
+      '<p class="l-sub">Welcome back: sign in with your account</p>' +
       '<div class="login-err' + (msg ? " show" : "") + '" id="loginErr">' + (msg ? esc(msg) : "") + '</div>' +
       '<div class="field"><label>Email</label><input id="loginEmail" name="ns-login-id" type="email" placeholder="Enter your email" autocomplete="off" readonly onfocus="this.removeAttribute(\'readonly\')"></div>' +
       '<div class="field"><label>Password</label><input id="loginPass" name="ns-login-key" type="password" placeholder="••••••••" autocomplete="new-password" readonly onfocus="this.removeAttribute(\'readonly\')" onkeydown="if(event.key===\'Enter\')doLogin()"></div>' +
@@ -1736,7 +2113,16 @@ async function doInitAdmin(){
       created: new Date().toISOString()
     };
     
-    saveAdmins([newAdmin]);
+    /* Create admin via privileged bootstrap RPC (only works while the admins
+       list is empty; the raw row is admin-only) */
+    const rpcRes = await supabase.rpc('bootstrap_admin', { u: email, pass_hash: hashedPass, n: name });
+    if(rpcRes.error || !rpcRes.data){
+      if(err) err.textContent = "An admin account already exists: please sign in.";
+      if(err && err.classList) err.classList.add("show");
+      if(btn){ btn.disabled = false; btn.textContent = "Create Admin Account"; }
+      return;
+    }
+    showToast("Admin account created successfully");
     
     /* Also try to create Supabase Auth user */
     try{
@@ -1748,10 +2134,9 @@ async function doInitAdmin(){
         }
       });
     }catch(e){
-      console.log("Supabase Auth signup failed, using legacy admin only:", e.message);
+      console.warn("Supabase Auth signup failed, using legacy admin only:", e.message);
     }
     
-    showToast("Admin account created successfully");
     viewAdminLogin("Account created. Please sign in.");
   }catch(e){
     err.textContent = "Failed to create admin account: " + e.message;
@@ -1778,6 +2163,9 @@ async function doLogin(){
   /* Method 1: Try Supabase Auth first (only if Supabase is available) */
   if(supabase && supabaseAvailable){
     try {
+      /* Clear any stale session first — a leftover/expired token from a
+         previous tab can interfere with the fresh login below. */
+      try{ await supabase.auth.signOut(); }catch(e){}
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
         password: p
@@ -1787,35 +2175,35 @@ async function doLogin(){
         supabaseErrorMsg = error.message || "Unknown error";
         console.warn("Supabase Auth login failed:", supabaseErrorMsg);
       } else if(!error && data && data.user){
-        /* Check if user has admin role in profiles table */
-        try {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('role, name, email')
-            .eq('email', data.user.email)
-            .single();
-          
-          if(!profileError && profileData && (profileData.role === 'admin' || profileData.role === 'superadmin')){
-            /* User is an admin, keep Supabase Auth session active */
-            showToast("Welcome, " + (profileData.name || data.user.email) + " — loading admin data...");
-            /* Reload all data with admin permissions (orders, accounts, quotes, etc.) */
-            try {
-              _cache.loaded = false;
-              await sbLoadAll();
-            } catch(e) {
-              console.warn("Failed to reload admin data:", e);
-            }
-            location.hash = "#/admin/dashboard";
-            return;
-          }else{
-            /* Not an admin, sign out and try legacy method */
-            await supabase.auth.signOut();
-            supabaseLoginFailed = true;
-            supabaseErrorMsg = "User does not have admin role";
+        /* Check if user has admin role: JWT user_metadata first (authoritative),
+           then the site's own admin list (getAdmins). A successful Supabase
+           Auth already proved the password. */
+        let roleOK = false;
+        try{
+          const meta = data.user.user_metadata || {};
+          if(meta.role === 'admin' || meta.role === 'superadmin') roleOK = true;
+        }catch(metaErr){}
+        const siteAdmins = getAdmins();
+        const matchesSiteAdmin = siteAdmins.some(a =>
+          String(a.user || a.email || "").toLowerCase() === String(data.user.email || "").toLowerCase()
+        );
+        if(roleOK || matchesSiteAdmin){
+          /* User is an admin, keep Supabase Auth session active */
+          showToast("Welcome, " + (data.user.email) + ": loading admin data...");
+          /* Reload all data with admin permissions (orders, accounts, quotes, etc.) */
+          try {
+            _cache.loaded = false;
+            await sbLoadAll();
+          } catch(e) {
+            console.warn("Failed to reload admin data:", e);
           }
-        } catch(profileErr) {
-          console.warn("Failed to check admin role:", profileErr.message);
-          /* Continue to legacy method */
+          location.hash = "#/admin/dashboard";
+          return;
+        }else{
+          /* Regular customer: keep the session and open the customer area */
+          showToast("Signed in successfully");
+          location.hash = "#/account";
+          return;
         }
       }
     } catch(e) {
@@ -1827,22 +2215,16 @@ async function doLogin(){
     console.warn("Supabase not available, skipping Supabase Auth login");
   }
 
-  /* Method 2: Try legacy admin system (stored in site_settings) */
+  /* Method 2: Legacy admin system via privileged RPC (the admins row is not
+     publicly readable; verified server-side) */
   try {
-    const admins = getAdmins();
-    /* Match by login name or email */
-    const admin = admins.find(a =>
-      a.user.toLowerCase() === email.toLowerCase() ||
-      (a.email && a.email.toLowerCase() === email.toLowerCase())
-    );
-
-    if(admin){
-      /* Verify password */
-      const isValid = await verifyPass(p, admin.pass);
-      if(isValid){
+    if(supabase){
+      const hashed = await hashPass(p);
+      const { data, error } = await supabase.rpc('admin_login', { e: email, h: hashed });
+      if(!error && data && data.ok){
         /* Set legacy admin session */
-        setAdminSession(admin.user, admin.name || admin.user);
-        showToast("Welcome, " + (admin.name || admin.user) + " — loading admin data...");
+        setAdminSession(data.user, data.name || data.user);
+        showToast("Welcome, " + (data.name || data.user) + ": loading admin data...");
         /* Reload all data with admin permissions */
         try {
           _cache.loaded = false;
@@ -1902,13 +2284,59 @@ async function logout(){
   location.hash = "#/";
 }
 
+/* System Architecture — embedded into Admin Panel (no more separate page) */
+async function adminArchitecture(){
+  $("#adminTitle").textContent = "System Architecture";
+  renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><path d="M2 20h20"/><path d="M4 20V8l6-4v16M10 20V4l6 4v12M16 20v-8h4v8"/></svg></div><h3>Loading architecture...</h3></div></div>');
+  try{
+    if(!document.getElementById("archAdmCss")){
+      const link = document.createElement("link");
+      link.id = "archAdmCss"; link.rel = "stylesheet"; link.href = "architecture-admin.css";
+      document.head.appendChild(link);
+    }
+    const res = await fetch("architecture-admin.html", { cache: "no-store" });
+    const frag = await res.text();
+    renderAdminShell(
+      '<div class="admin-panel"><div class="panel-head"><div><h3>System Architecture</h3><div class="ph-sub">完整系統架構圖：系統層級、用戶角色、頁面與外部服務的關係</div></div></div>' +
+      '<div class="panel-body" style="padding:6px 14px 20px"><div class="arch-adm">' + frag + '</div></div></div>'
+    );
+  }catch(e){
+    renderAdminShell('<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px;color:var(--danger)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;margin:0 auto"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg></div><h3>Failed to load architecture</h3><p style="color:var(--ink-soft)">' + esc(e.message) + '</p><button class="btn" onclick="adminArchitecture()" style="margin-top:16px">Try Again</button></div></div>');
+  }
+}
+
+
+/* A11Y helpers: associate orphan labels with inputs, name icon-only buttons, expose truncated emails */
+function fixA11y(){
+  try{
+    document.querySelectorAll('label:not([for])').forEach(l => {
+      let inp = l.querySelector('input,select,textarea');
+      if(!inp || !inp.matches('input,select,textarea')){ inp = l.nextElementSibling; }
+      if(!inp || !inp.matches('input,select,textarea')){ inp = l.closest('.field,.form-grid') ? l.closest('.field,.form-grid').querySelector('input,select,textarea') : null; }
+      if(inp && !inp.id){ inp.id = 'f_' + Math.random().toString(36).slice(2,8); }
+      if(inp && inp.id){ l.setAttribute('for', inp.id); }
+    });
+    document.querySelectorAll('button[title]:not([aria-label])').forEach(b => {
+      const t = b.getAttribute('title');
+      if(t) b.setAttribute('aria-label', t);
+    });
+    document.querySelectorAll('.td-email a[href^="mailto:"]').forEach(a => {
+      if(!a.getAttribute('aria-label')) a.setAttribute('aria-label', 'Email ' + (a.textContent || '').trim());
+    });
+  }catch(e){}
+}
+
 function adminRoute(){
   const h = location.hash || "#/";
 
   /* Helper function to render admin page */
   const renderAdminPage = () => {
+    /* Ensure admin shell (with #adminTitle) exists before page functions run,
+       so direct loads of admin subpages (e.g. #/admin/analytics) don't crash */
+    if(!document.querySelector(".admin-shell")) renderAdminShell("");
     const page = h.split("/")[2] || "dashboard";
     if(page === "dashboard") adminDashboard();
+    else if(page === "analytics") adminAnalytics();
     else if(page === "products") adminProducts();
     else if(page === "orders") adminOrders();
     else if(page === "quotes") adminQuotes();
@@ -1919,19 +2347,20 @@ function adminRoute(){
     else if(page === "theme") adminTheme();
     else if(page === "emails") adminEmails();
     else if(page === "content") adminContent();
+    else if(page === "architecture") adminArchitecture();
 
     else {
       /* Unknown page - show friendly 404 with quick links and auto-redirect */
       const content = '<div class="admin-panel"><div class="panel-body" style="text-align:center;padding:60px 20px">' +
-        '<div style="font-size:72px;margin-bottom:20px">🔍</div>' +
+        '<div style="font-size:72px;margin-bottom:20px;color:var(--brand)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:64px;height:64px;margin:0 auto"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>' +
         '<h2 style="margin-bottom:12px;font-size:28px">Page Not Found</h2>' +
         '<p style="color:var(--ink-soft);margin-bottom:8px;font-size:15px">The page <strong style="color:var(--accent)">"' + esc(page) + '"</strong> does not exist.</p>' +
         '<p style="color:var(--ink-soft);margin-bottom:32px;font-size:13px">You will be automatically redirected to Dashboard in <span id="redirectCountdown" style="font-weight:600;color:var(--accent)">5</span> seconds.</p>' +
         '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:40px">' +
-          '<a href="#/admin/dashboard" class="btn" onclick="stopRedirect()">🏠 Dashboard</a>' +
-          '<a href="#/admin/products" class="btn ghost" onclick="stopRedirect()">📦 Products</a>' +
-          '<a href="#/admin/orders" class="btn ghost" onclick="stopRedirect()">📋 Orders</a>' +
-          '<a href="#/admin/customers" class="btn ghost" onclick="stopRedirect()">👥 Customers</a>' +
+          '<a href="#/admin/dashboard" class="btn" onclick="stopRedirect()">Dashboard</a>' +
+          '<a href="#/admin/products" class="btn ghost" onclick="stopRedirect()">Products</a>' +
+          '<a href="#/admin/orders" class="btn ghost" onclick="stopRedirect()">Orders</a>' +
+          '<a href="#/admin/customers" class="btn ghost" onclick="stopRedirect()">Customers</a>' +
         '</div>' +
         '<div style="border-top:1px solid var(--line);padding-top:24px;margin-top:24px">' +
           '<p style="font-size:12px;color:var(--ink-soft)">Quick Links:</p>' +
@@ -1968,6 +2397,7 @@ function adminRoute(){
       renderAdminShell(content);
       $("#adminTitle").textContent = "Page Not Found";
     }
+    fixA11y();
   };
 
   /* Method 1: Check Supabase Auth session */
@@ -1985,11 +2415,14 @@ function adminRoute(){
   checkSupabaseSession().then(({ data: { session } }) => {
     if(session){
       /* Check if user has admin role */
-      const role = session.user.app_metadata?.role || session.user.user_metadata?.role;
+      const role = session.user.app_metadata?.role;
       if(role === 'admin' || role === 'superadmin'){
         renderAdminPage();
         return;
       }
+      /* Logged in as a regular customer: send them to the customer area */
+      location.hash = "#/account";
+      return;
     }
 
     /* Method 2: Check legacy admin session */
@@ -2032,3 +2465,269 @@ function filterDashboardActivity(type){
   }
 }
 
+
+/* ============ AI content assistant: Gemini drafts copy, admin reviews before saving ============ */
+const AI_COPY_PROMPTS = {
+  thTitle: "a short, powerful B2B hero headline (maximum 8 words) for a skincare wholesale & OEM/ODM manufacturer. Professional, confident, international. Output only the headline.",
+  thSub: "a 1-2 sentence hero subtitle for a B2B skincare wholesale & OEM/ODM manufacturer website, mentioning wholesale supply, private label / OEM-ODM and global sourcing. Output only the subtitle.",
+  ctFooterDesc: "a 2-3 sentence brand description for the footer of a B2B skincare wholesale & OEM/ODM manufacturer website. Output only the description.",
+  ctStoryT: "a short section title (maximum 6 words) about the brand story of a skincare wholesale manufacturer. Output only the title.",
+  ctStoryB: "a 4-5 sentence brand story for a B2B skincare wholesale & OEM/ODM manufacturer with UK headquarters, offices in Hong Kong and mainland China, and Asia-Pacific sourcing. Do not invent years, certifications, client names or numbers. Output plain text without HTML.",
+  ctMissionT: "a short section title (maximum 6 words) about the company mission of a skincare wholesale manufacturer. Output only the title.",
+  ctMissionLead: "a single-sentence lead line about the company mission (self-care, quality, accessibility). Output only the sentence.",
+  ctMissionB: "a 3-4 sentence mission statement for a B2B skincare wholesale & OEM/ODM manufacturer, covering sourcing, formulation, packaging, quality control and trust. Do not invent facts. Output plain text without HTML.",
+  ctPromiseT: "a short section title (maximum 6 words) about the brand promise of a skincare wholesale manufacturer. Output only the title.",
+  ctPromiseLead: "a single-sentence brand promise about quality, integrity and partnership. Output only the sentence."
+};
+async function aiGenerateCopy(target, btn){
+  const prompt = AI_COPY_PROMPTS[target];
+  if(!prompt){ showToast("Unknown field"); return; }
+  const el = document.getElementById(target);
+  if(!el){ showToast("Field not found"); return; }
+  const oldLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "…";
+  try{
+    const res = await fetch("/api/ai-chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "You are a professional B2B e-commerce copywriter. Write " + prompt, history: [] })
+    });
+    const data = await res.json();
+    if(data.reply){
+      let txt = data.reply.replace(/^["'\s]+|["'\s]+$/g, "").replace(/\s*\n\s*/g, " ").trim();
+      if(target === "ctStoryB" || target === "ctMissionB"){ txt = "<p>" + txt + "</p>"; }
+      el.value = txt;
+      showToast("AI draft ready: review before saving");
+    } else {
+      showToast("AI service busy: try again later");
+    }
+  }catch(e){
+    console.error("AI copy error:", e);
+    showToast("AI service error");
+  }finally{
+    btn.disabled = false; btn.textContent = oldLabel;
+  }
+}
+
+/* ============ AI advanced assistant: ops summary / reply drafts / product & category copy ============ */
+
+/* Unified AI endpoint call, returns plain text (null when no reply) */
+async function aiGenerate(prompt){
+  const res = await fetch("/api/ai-chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: prompt, history: [] })
+  });
+  const data = await res.json();
+  if(data.reply) return String(data.reply).replace(/^["'\s]+|["'\s]+$/g, "").trim();
+  return null;
+}
+/* 包裝按鈕狀態：執行期間禁用並顯示 … */
+async function _aiBtnRun(btn, fn){
+  const old = btn ? btn.textContent : "";
+  if(btn){ btn.disabled = true; btn.textContent = "…"; }
+  try{ await fn(); }
+  catch(e){ console.error("AI error:", e); showToast("AI service error"); }
+  finally{ if(btn){ btn.disabled = false; btn.textContent = old; } }
+}
+/* 複製文字（剪貼簿，失敗時回退選取提示） */
+function copyText(txt){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(() => showToast("Copied")).catch(() => showToast("Please copy manually"));
+  } else {
+    showToast("Please copy manually");
+  }
+}
+
+/* ---- 1. Dashboard：AI 每日營運摘要（英文） ---- */
+async function aiDashboardSummary(btn){
+  _aiBtnRun(btn, async () => {
+    const orders = getOrders();
+    const quotes = getQuotes ? getQuotes() : [];
+    const accounts = getAccounts ? getAccounts() : [];
+    const products = getProducts();
+    const now = new Date();
+    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const todayOrders = orders.filter(o => { const t = new Date(o.date).getTime(); return !isNaN(t) && t >= startToday; });
+    const todayRevenue = todayOrders.filter(o => o.status !== "Cancelled").reduce((s,o) => s + Number(o.total || 0), 0);
+    const totalRevenue = orders.filter(o => o.status !== "Cancelled").reduce((s,o) => s + Number(o.total || 0), 0);
+    const qtyMap = {};
+    orders.forEach(o => (o.items || []).forEach(it => { qtyMap[it.name] = (qtyMap[it.name] || 0) + (Number(it.qty) || 0); }));
+    const topProducts = Object.entries(qtyMap).sort((a,b) => b[1] - a[1]).slice(0, 5).map(([n,q]) => n + " (" + q + " pcs)");
+    const statusCount = {};
+    orders.forEach(o => { statusCount[o.status] = (statusCount[o.status] || 0) + 1; });
+    const pendingQuotes = quotes.filter(q => (q.status || "Pending") === "Pending").length;
+    const newCustToday = accounts.filter(a => {
+      const t = new Date(a.createdAt || a.ts || a.created || a.created_at || a.registeredAt).getTime();
+      return !isNaN(t) && t >= startToday;
+    }).length;
+    const context = {
+      date: now.toISOString().slice(0,10),
+      totalProducts: products.length,
+      totalOrders: orders.length,
+      todayOrders: todayOrders.length,
+      todayRevenue: todayRevenue.toFixed(2),
+      totalRevenue: totalRevenue.toFixed(2),
+      topProducts: topProducts,
+      orderStatusCounts: statusCount,
+      pendingQuotes: pendingQuotes,
+      newCustomersToday: newCustToday,
+      totalCustomers: accounts.length
+    };
+    const prompt = "You are an e-commerce operations analyst. Based on the following operational data for today, output a concise operations summary in English (4-6 paragraphs): first summarize today's orders and revenue, then list top-selling products, pending quotes and new customers, and finally give 2-3 concrete actionable suggestions. Do not invent data, do not restate raw data item by item. Data: " + JSON.stringify(context);
+    const txt = await aiGenerate(prompt);
+    const box = document.getElementById("aiSummaryBox");
+    if(!box) return;
+    if(txt){
+      box.textContent = txt;
+      box.style.display = "block";
+      const copyBtn = document.getElementById("aiCopyBtn");
+      if(copyBtn) copyBtn.style.display = "";
+      showToast("AI summary generated");
+    } else {
+      box.textContent = "AI service is busy, please try again later.";
+      box.style.display = "block";
+    }
+  });
+}
+function copyAiSummary(){
+  const el = document.getElementById("aiSummaryBox");
+  if(!el || !el.textContent) return;
+  copyText(el.textContent);
+}
+
+/* ---- 2a. 訂單：AI 回覆客戶草稿（英文） ---- */
+async function aiOrderReplyDraft(id){
+  const o = findOrderById(id); if(!o) return;
+  const btn = event && event.target;
+  _aiBtnRun(btn, async () => {
+    const cur = o.cur || "EUR";
+    const itemsTxt = (o.items || []).map(it => it.name + " x" + it.qty + " （" + Number(it.price).toFixed(2) + " " + cur + "/件）").join("；");
+    const context = {
+      orderId: o.id,
+      date: o.date,
+      status: o.status,
+      customer: {
+        name: custName(o),
+        email: custEmail(o),
+        phone: custPhone(o) || "",
+        address: custAddr(o) || "",
+        preferredContact: custContact(o) || ""
+      },
+      items: itemsTxt,
+      total: Number(o.total || 0).toFixed(2) + " " + cur,
+      notes: (o.notes || []).map(n => n.text).join(" | ")
+    };
+    const prompt = "你是 Nebula Secret（B2B 護膚品批發與 OEM/ODM 製造商）的專業客戶服務代表。請根據以下訂單資料，用禮貌、專業的英文寫一封回覆客戶的郵件草稿：確認訂單內容、說明目前處理狀態，並回覆客戶可能的詢問。不要編造折扣、運費、交期或資料中沒有的資訊；若無交期資訊，請寫明會盡快與客戶確認。開頭以客戶名字稱呼（若有），結尾署名 Nebula Secret Customer Service Team。訂單資料：" + JSON.stringify(context);
+    const txt = await aiGenerate(prompt);
+    const box = document.getElementById("aiDraftBox");
+    const ta = document.getElementById("aiDraftText");
+    if(txt && box && ta){
+      ta.value = txt;
+      box.style.display = "block";
+      showToast("AI reply draft generated: review before sending");
+    } else if(box){
+      box.style.display = "block";
+      ta.value = "AI service is busy, please try again later.";
+    }
+  });
+}
+function copyAiDraft(){
+  const el = document.getElementById("aiDraftText");
+  if(!el || !el.value) return;
+  copyText(el.value);
+}
+
+/* ---- 2b. 報價：AI 回覆詢盤草稿（英文） ---- */
+async function aiQuoteReplyDraft(id){
+  const q = findQuoteById(id); if(!q) return;
+  const btn = event && event.target;
+  _aiBtnRun(btn, async () => {
+    const itemsTxt = (q.items || []).map(it => it.name + " x" + it.qty + " （" + Number(it.price).toFixed(2) + " EUR/件）").join("；");
+    const context = {
+      quoteId: q.id,
+      date: q.date,
+      status: q.status,
+      customer: {
+        name: qCustName(q),
+        email: qCustEmail(q),
+        phone: qCustPhone(q) || "",
+        company: qCustCompany(q) || "",
+        address: qCustAddr(q) || ""
+      },
+      items: itemsTxt,
+      subtotal: Number(q.subtotal || 0).toFixed(2),
+      customerTargetPrice: q.customerTargetPrice ? Number(q.customerTargetPrice).toFixed(2) : null,
+      quotedPrice: q.quotedPrice ? Number(q.quotedPrice).toFixed(2) : null,
+      notes: q.notes || ""
+    };
+    const pricePart = q.customerTargetPrice
+      ? "（客戶提出了目標價格，請禮貌回應議價：可接受、提出還價並簡短說明理由，或婉拒並建議替代方案）"
+      : "（提供報價並說明條款，引導客戶確認下一步）";
+    const prompt = "你是 Nebula Secret（B2B 護膚品批發與 OEM/ODM 製造商）的銷售代表。請根據以下詢盤資料，用禮貌、專業的英文寫一封回覆客戶的郵件草稿" + pricePart + "。數量與價格以資料為準，不要編造折扣、運費或交期；結尾署名 Nebula Secret Sales Team。報價資料：" + JSON.stringify(context);
+    const txt = await aiGenerate(prompt);
+    const box = document.getElementById("aiDraftBox");
+    const ta = document.getElementById("aiDraftText");
+    if(txt && box && ta){
+      ta.value = txt;
+      box.style.display = "block";
+      showToast("AI reply draft generated: review before sending");
+    } else if(box){
+      box.style.display = "block";
+      ta.value = "AI service is busy, please try again later.";
+    }
+  });
+}
+
+/* ---- 3a. Product: AI name ---- */
+async function aiGenProductName(btn){
+  _aiBtnRun(btn, async () => {
+    const catEl = document.getElementById("pfCat");
+    const catStr = catEl && catEl.value ? catName(catEl.value) : "";
+    const descEl = document.getElementById("pfDesc");
+    const desc = descEl ? descEl.value.trim() : "";
+    const prompt = "你是 B2B 護膚品批發選品專家。請為分類「" + catStr + "」" + (desc ? "、屬性「" + desc.replace(/\n/g, ", ") + "」" : "") + "提出一個適合國際 B2B 批發市場的英文產品名稱（不超過 6 個單字，清晰具體，符合專業品牌調性）。只輸出產品名稱。";
+    const txt = await aiGenerate(prompt);
+    const el = document.getElementById("pfName");
+    if(txt && el){ el.value = txt; showToast("AI name draft filled: review before saving"); }
+  });
+}
+/* ---- 3b. Product: AI attribute list (one "attribute: value" per line) ---- */
+async function aiGenProductDesc(btn){
+  _aiBtnRun(btn, async () => {
+    const nameEl = document.getElementById("pfName");
+    const name = nameEl ? nameEl.value.trim() : "";
+    const catEl = document.getElementById("pfCat");
+    const catStr = catEl && catEl.value ? catName(catEl.value) : "";
+    const prompt = "你是產品資料專員。請為產品「" + name + "」（分類：" + catStr + "）撰寫 4-6 行屬性清單，每行格式「屬性: 值」（例如 Country of Origin: China、Scent: Rose、Volume: 100ml）。只輸出屬性行，不要編造品牌認證、具體成分濃度或數值，不確定的項目不要寫。";
+    const txt = await aiGenerate(prompt);
+    const el = document.getElementById("pfDesc");
+    if(txt && el){ el.value = txt; showToast("AI description draft filled: review before saving"); }
+  });
+}
+/* ---- 3c. Product: AI SEO meta description ---- */
+async function aiGenProductMeta(btn){
+  _aiBtnRun(btn, async () => {
+    const nameEl = document.getElementById("pfName");
+    const name = nameEl ? nameEl.value.trim() : "";
+    const catEl = document.getElementById("pfCat");
+    const catStr = catEl && catEl.value ? catName(catEl.value) : "";
+    const descEl = document.getElementById("pfDesc");
+    const desc = descEl ? descEl.value.trim().slice(0, 300) : "";
+    const prompt = "請為 B2B 批發網站上的產品「" + name + "」（分類 " + catStr + (desc ? "，屬性 " + desc.replace(/\n/g, ", ") : "") + "）寫一句英文 SEO meta description（40-150 字元，自然包含 wholesale supplier、OEM/ODM 等關鍵字，吸引專業買家）。只輸出描述本身。";
+    const txt = await aiGenerate(prompt);
+    const el = document.getElementById("pfMeta");
+    if(txt && el){ el.value = txt; showToast("AI SEO meta draft filled: review before saving"); }
+  });
+}
+/* ---- 3d. 分類：AI 描述 ---- */
+async function aiGenCatDesc(btn){
+  _aiBtnRun(btn, async () => {
+    const nameEl = document.getElementById("cfName");
+    const name = nameEl ? nameEl.value.trim() : "";
+    const prompt = "用英文為 B2B 護膚品批發網站的分類「" + name + "」寫 1-2 句描述（含 wholesale 與 OEM/ODM 相關字眼，適合採購商閱讀）。只輸出描述本身。";
+    const txt = await aiGenerate(prompt);
+    const el = document.getElementById("cfDesc");
+    if(txt && el){ el.value = txt; showToast("AI category description draft filled: review before saving"); }
+  });
+}
