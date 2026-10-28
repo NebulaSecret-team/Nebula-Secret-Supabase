@@ -255,6 +255,20 @@ h1,h2,h3,.display{font-family:var(--font-display)}
 .catnav a{color:var(--nav-link);font-size:13.5px;font-weight:500;padding:11px 14px;white-space:nowrap;display:flex;align-items:center;gap:6px;border-bottom:2px solid transparent;transition:color .15s,border-color .15s,background .15s}
 .catnav a:hover{color:#fff;border-bottom-color:var(--brand)}
 .catnav a.active{color:#fff;border-bottom-color:var(--brand)}
+/* Heroicons solid ✓ — active / selected state marker */
+.catnav a.active::after,
+.mobile-cats button.active::after,
+.acct-tabs button.active::after{
+  content:"";
+  display:inline-block;
+  width:12px;height:12px;
+  margin-left:5px;
+  flex-shrink:0;
+  vertical-align:-1px;
+  background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M2.25%2012c0-5.385%204.365-9.75%209.75-9.75s9.75%204.365%209.75%209.75-4.365%209.75-9.75%209.75S2.25%2017.385%202.25%2012Zm13.36-1.814a.75.75%200%201%200-1.22-.872l-3.236%204.53L9.53%2012.22a.75.75%200%200%200-1.06%201.06l2.25%202.25a.75.75%200%200%200%201.14-.094l3.75-5.25Z%27%2F%3E%3C%2Fsvg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M2.25%2012c0-5.385%204.365-9.75%209.75-9.75s9.75%204.365%209.75%209.75-4.365%209.75-9.75%209.75S2.25%2017.385%202.25%2012Zm13.36-1.814a.75.75%200%201%200-1.22-.872l-3.236%204.53L9.53%2012.22a.75.75%200%200%200-1.06%201.06l2.25%202.25a.75.75%200%200%200%201.14-.094l3.75-5.25Z%27%2F%3E%3C%2Fsvg%3E") center/contain no-repeat;
+}
 .catnav a svg{width:14px;height:14px;stroke:currentColor}
 .catnav .all-cats{position:relative}
 .catnav .all-cats>a{background:var(--brand);color:#fff;border-radius:8px 6px 0 0;padding:11px 16px;font-weight:600}
@@ -1464,8 +1478,13 @@ try {
 /* HTML sanitizer - prevents XSS by only allowing safe tags and attributes */
 function sanitizeHTML(html) {
   if(!html) return "";
-  const allowedTags = ['B','I','EM','STRONG','A','P','BR','UL','OL','LI','H1','H2','H3','H4','H5','H6','SPAN','DIV','HR','BLOCKQUOTE','CODE','PRE'];
-  const allowedAttrs = ['href','title','class','target','rel'];
+  const allowedTags = ['B','I','EM','STRONG','A','P','BR','UL','OL','LI','H1','H2','H3','H4','H5','H6','SPAN','DIV','HR','BLOCKQUOTE','CODE','PRE',
+    /* Inline SVG icons: safe subset only (no script/foreignObject/use/image/external refs) */
+    'SVG','PATH','CIRCLE','RECT','LINE','POLYLINE','POLYGON','G'];
+  const allowedAttrs = ['href','title','class','target','rel','style',
+    'viewbox','fill','stroke','stroke-width','stroke-linecap','stroke-linejoin',
+    'd','cx','cy','r','x','y','width','height','rx','ry','points','x1','y1','x2','y2',
+    'transform','opacity','fill-rule','clip-rule','aria-hidden','focusable','xmlns','preserveaspectratio'];
   const allowedProtocols = ['http:','https:','mailto:','tel:'];
   try {
     const parser = new DOMParser();
@@ -1475,7 +1494,7 @@ function sanitizeHTML(html) {
       for(let i = node.childNodes.length - 1; i >= 0; i--) {
         const child = node.childNodes[i];
         if(child.nodeType === 1) {
-          const tag = child.tagName;
+          const tag = child.tagName.toUpperCase();
           if(allowedTags.indexOf(tag) === -1) {
             /* Replace with text content or remove */
             const text = doc.createTextNode(child.textContent);
@@ -1488,6 +1507,8 @@ function sanitizeHTML(html) {
             if(allowedAttrs.indexOf(attr.name.toLowerCase()) === -1) {
               child.removeAttribute(attr.name);
             } else if(attr.name.toLowerCase() === 'href') {
+              /* Only real links may carry href; SVG <use>/<image> external refs are always stripped */
+              if(tag !== 'A') { child.removeAttribute(attr.name); continue; }
               /* Validate URL protocol */
               const val = attr.value.trim().toLowerCase();
               let valid = false;
@@ -1498,6 +1519,9 @@ function sanitizeHTML(html) {
               }
               if(!valid) child.removeAttribute('href');
               else { child.setAttribute('rel', 'noopener noreferrer'); if(tag === 'A') child.setAttribute('target', '_blank'); }
+            } else if(attr.name.toLowerCase() === 'style') {
+              /* Block CSS-based script/SSRF vectors inside inline styles */
+              if(/url\s*\(|expression\s*\(|javascript:|@import|behavior\s*:/i.test(attr.value)) child.removeAttribute(attr.name);
             }
           }
           /* Remove event handler attributes (onclick, onload, etc.) */
@@ -3329,14 +3353,19 @@ const IC = {
 function renderCatNav(){
   const cats = getCats();
   const inner = $("#catnavInner");
+  /* Selected-category marker: highlight the current shop category */
+  const hash = location.hash || "";
+  const m = hash.match(/#\/shop\?cat=([^&]+)/);
+  const curCat = m ? decodeURIComponent(m[1]) : (/^#\/shop\/?$/.test(hash) ? "all" : null);
+  const act = (cs) => (curCat === cs ? " active" : "");
   inner.innerHTML =
     '<div class="all-cats" id="allCats">' +
-      '<a href="#/shop" onclick="return toggleAllCats(event)">' + IC.box + ' All Categories</a>' +
+      '<a href="#/shop" class="all-link' + act("all") + '" onclick="return toggleAllCats(event)">' + IC.box + ' All Categories</a>' +
       '<div class="mega-menu">' +
         cats.map(c => '<a href="#/shop?cat=' + c.cs + '" onclick="closeMegaMenu()"><span>' + esc(c.c) + '</span><span class="n">' + getProducts().filter(p => p.cs === c.cs).length + '</span></a>').join("") +
       '</div>' +
     '</div>' +
-    cats.map(c => '<a href="#/shop?cat=' + c.cs + '" onclick="closeMegaMenu()">' + esc(c.c) + '</a>').join("");
+    cats.map(c => '<a href="#/shop?cat=' + c.cs + '"' + (curCat === c.cs ? ' class="active"' : '') + ' onclick="closeMegaMenu()">' + esc(c.c) + '</a>').join("");
 }
 function toggleAllCats(e){
   if(window.innerWidth <= 960){
@@ -3394,7 +3423,7 @@ function viewAbout(){
     {t:"Pet Care", icon:rIcon('<circle cx="6" cy="9" r="2"/><circle cx="18" cy="9" r="2"/><circle cx="9" cy="5" r="2"/><circle cx="15" cy="5" r="2"/><path d="M12 12c-3 0-6 2.5-6 5.5 0 1.5 1 2.5 2.5 2.5 1 0 2-.5 3.5-.5s2.5.5 3.5.5c1.5 0 2.5-1 2.5-2.5 0-3-3-5.5-6-5.5z"/>')},
     {t:"Baby Care", icon:rIcon('<path d="M9 3h6v3a3 3 0 0 1-6 0V3z"/><path d="M5 11a7 7 0 0 1 14 0v3a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5v-3z"/><path d="M9 14h.01M15 14h.01"/>')},
     {t:"Stationery", icon:rIcon('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>')},
-    {t:"Seasonal Gifts", icon:rIcon('<path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>')}
+    {t:"Seasonal Gifts", icon:rIcon('<path d="M12 22V12" /> <path d="M20.27 18.27 22 20" /> <path d="M21 10.498V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l.98-.559" /> <path d="M3.29 7 12 12l8.71-5" /> <path d="m7.5 4.27 8.997 5.148" /> <circle cx="18.5" cy="16.5" r="2.5" />')}
   ];
   const brands = ["Emporio Armani","Giorgio Armani","Moschino","Calvin Klein","Under Armour","Stella McCartney","Philipp Plein","Marni","Hogan","Sergio Rossi","Pal Zileri","Neil Barrett"];
   /* Editable content (Admin → Site Content → About) */
@@ -3743,7 +3772,7 @@ function viewInfo(page){
       '<p style="color:var(--ink-soft)">As a wholesale supplier, our products have different production and lead times. Some items are ready to ship from stock, while others are manufactured to order after deposit confirmation. Exact delivery timelines are confirmed in your order quotation.</p></div>' +
     '</div>' +
     '<div class="info-grid">' +
-      '<div class="info-card"><h4>' + ic('<rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>') + 'Production & Lead Time</h4><p>Each product has its own lead time. <strong>In-stock items</strong> typically ship within <strong>3-7 business days</strong> of payment confirmation. <strong>Made-to-order items</strong> require a deposit and have longer lead times: confirmed in your quotation.</p></div>' +
+      '<div class="info-card"><h4>' + ic('<path d="M5 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M15 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M5 17h-2v-4m-1 -8h11v12m-4 0h6m4 0h2v-6h-8m0 -5h5l3 5" /> <path d="M3 9l4 0" />') + 'Production & Lead Time</h4><p>Each product has its own lead time. <strong>In-stock items</strong> typically ship within <strong>3-7 business days</strong> of payment confirmation. <strong>Made-to-order items</strong> require a deposit and have longer lead times: confirmed in your quotation.</p></div>' +
       '<div class="info-card"><h4>' + ic('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>') + 'Transit Time</h4><p>International transit depends on your destination and chosen shipping method. <strong>Express courier</strong> (DHL/FedEx/UPS): 3-7 business days. <strong>Air freight</strong>: 7-14 business days. <strong>Sea freight</strong> (for large wholesale orders): 20-45 days depending on destination.</p></div>' +
       '<div class="info-card"><h4>' + ic('<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>') + 'Shipping Methods</h4><p>We offer flexible shipping for wholesale orders: express courier for samples and small orders, air freight for medium orders, and sea freight for large bulk shipments. We can also ship <strong>EXW, FOB, CIF, or DDP</strong>: see our Payment Methods page for Incoterms details.</p></div>' +
       '<div class="info-card"><h4>' + ic('<path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>') + 'Order Tracking</h4><p>Once your order ships, we will provide a <strong>tracking number</strong> by email. You can track your order anytime on our <a href="#/info/track" style="color:var(--brand-dark)">Track Order</a> page. For sea freight, we provide bill of lading and vessel tracking details.</p></div>' +
@@ -3768,7 +3797,7 @@ function viewInfo(page){
       '<p>As a wholesale supplier, many of our products are <strong>manufactured to order</strong> after a deposit is received. For this reason, orders cannot be returned or cancelled once production has begun. Please read our policy below carefully before placing an order.</p></div>' +
     '</div>' +
     '<div class="info-grid">' +
-      '<div class="info-card"><h4>' + ic('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>') + 'Deposit & Production</h4><p>Certain products require a <strong>deposit (typically 30-50%)</strong> before production begins. Once the deposit is received and production has started, the order <strong>cannot be cancelled</strong> and the deposit is non-refundable. The balance is due before shipment.</p></div>' +
+      '<div class="info-card"><h4>' + ic('<path d="M3 8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -8" /> <path d="M3 10l18 0" /> <path d="M7 15l.01 0" /> <path d="M11 15l2 0" />') + 'Deposit & Production</h4><p>Certain products require a <strong>deposit (typically 30-50%)</strong> before production begins. Once the deposit is received and production has started, the order <strong>cannot be cancelled</strong> and the deposit is non-refundable. The balance is due before shipment.</p></div>' +
       '<div class="info-card"><h4>' + ic('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>') + 'No Returns Policy</h4><p>As a wholesale supplier, we <strong>do not accept returns</strong> for change-of-mind or unsold stock. All sales are final once the order is confirmed and shipped. We recommend ordering samples before placing large bulk orders.</p></div>' +
       '<div class="info-card"><h4>' + ic('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>') + 'Quality Issues</h4><p>If you receive <strong>damaged or defective goods</strong>, please contact us within <strong>7 days</strong> of delivery with photos. We will arrange a replacement or credit for verified quality issues. This does not apply to normal wear, misuse, or cosmetic variations inherent to handmade/natural products.</p></div>' +
       '<div class="info-card"><h4>' + ic('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>') + 'Sample Orders</h4><p>We strongly recommend ordering <strong>samples</strong> before committing to a large wholesale order. Samples allow you to evaluate product quality, scent, texture, and packaging. Contact us at <a href="mailto:sales@nebulasecret.com" style="color:var(--brand-dark)">sales@nebulasecret.com</a> to request samples.</p></div>' +
@@ -3800,6 +3829,7 @@ function viewInfo(page){
       '<div class="info-card"><h4>' + ic('<path d="M3 10h18M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/>') + 'Letter of Credit (L/C)</h4><p>For large wholesale orders, we accept irrevocable Letters of Credit issued by a reputable bank. L/C terms are negotiated on a per-order basis to ensure security for both parties.</p></div>' +
       '<div class="info-card"><h4>' + ic('<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>') + 'Western Union / MoneyGram</h4><p>Available for smaller sample orders and certain regions. Fast transfer with cash pickup available in many countries. Our team will provide the recipient details upon order confirmation.</p></div>' +
     '</div>' +
+    '<div class="info-card" style="margin-top:16px"><h4>' + ic('<path d="M9 15l6 -6" /> <path d="M9 9.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" fill="currentColor" /> <path d="M14 14.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" fill="currentColor" /> <path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />') + 'Discounts &amp; Promotions</h4><p>Wholesale pricing scales with your account tier: <strong>Regular customers</strong> receive <strong>5% off</strong> standard wholesale prices, and <strong>VIP customers</strong> receive <strong>10% off</strong>. Tier status is reviewed periodically based on annual order volume. Seasonal promotions and volume discounts are also available: contact <a href="mailto:sales@nebulasecret.com" style="color:var(--brand-dark)">sales@nebulasecret.com</a> for current offers.</p></div>' +
     '<h2 style="font-size:18px;font-weight:800;margin:28px 0 12px;display:flex;align-items:center;gap:10px"><span class="bar" style="width:5px;height:18px;background:var(--brand);border-radius:4px"></span>Incoterms 2020: Shipping Terms Explained</h2>' +
     '<div class="info-prose"><p>Different products and order sizes may be quoted under different <strong>Incoterms</strong>: the internationally recognised rules published by the International Chamber of Commerce (ICC) that define who is responsible for shipping, insurance, customs clearance, and risk at each stage of delivery. Our sales team will confirm the applicable terms for your order. Below is a plain-language guide to all 11 Incoterms 2020 rules.</p></div>' +
     '<h3 style="font-size:15px;font-weight:700;margin:20px 0 10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em">Any Mode of Transport</h3>' +
@@ -4523,11 +4553,11 @@ function accountSignIn(){
     '<p class="sub">Sign in to track orders, manage your details and check out faster.</p>' +
     '<div class="acct-tabs">' +
       '<button class="active" id="tabLogin" onclick="acctTab(\'login\')">' +
-        '<span class="tab-icon">🔐</span>' +
+        '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /> <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></span>' +
         '<span class="tab-text"><span class="tab-title">Sign in</span><span class="tab-desc">Existing customer</span></span>' +
       '</button>' +
       '<button id="tabReg" onclick="acctTab(\'register\')">' +
-        '' +
+        '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /> <circle cx="9" cy="7" r="4" /> <line x1="19" x2="19" y1="8" y2="14" /> <line x1="22" x2="16" y1="11" y2="11" /></svg></span>' +
         '<span class="tab-text"><span class="tab-title">Create account</span><span class="tab-desc">New customer</span></span>' +
       '</button>' +
     '</div>' +
@@ -4535,7 +4565,7 @@ function accountSignIn(){
       '<div class="field"><label>Email</label><input id="acEmail" type="email" placeholder="you@example.com"></div>' +
       '<div class="field"><label>Password</label><input id="acPass" type="password" placeholder="Your password"></div>' +
       '<p id="acctErr" style="color:var(--danger);font-size:13px;min-height:18px;margin-bottom:6px"></p>' +
-      '<button class="btn full" onclick="acctLogin()">🔐 Sign in</button>' +
+      '<button class="btn full" onclick="acctLogin()">Sign in</button>' +
       '<p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">' +
         'Forgot your password? <a href="#/account?reset=1" style="color:var(--brand);font-weight:600">Reset here</a><br>' +
         '<span style="font-size:11px;opacity:0.8">Admin accounts sign in here too and are taken straight to the admin panel.</span>' +
@@ -4546,7 +4576,7 @@ function accountSignIn(){
       '<div class="field"><label>Email</label><input id="regEmail" type="email" placeholder="you@example.com"></div>' +
       '<div class="field"><label>Password (min 8 characters)</label><input id="regPass" type="password" placeholder="Create a secure password"></div>' +
       '<div style="background:var(--bg-soft);padding:12px;border-radius:8px;margin-bottom:16px;font-size:12px;color:var(--ink-soft)">' +
-        '✅ Create an account to:<br>' +
+        'Create an account to:<br>' +
         '• Track your orders and shipping status<br>' +
         '• Save your shipping details for faster checkout<br>' +
         '• Access exclusive wholesale pricing and quotes<br>' +
@@ -4648,18 +4678,18 @@ function accountResetNewPassword(){
       '<div class="field"><label>Confirm Password</label><input id="confirmPass" type="password" placeholder="Confirm new password"></div>' +
       '<div id="passStrength" style="font-size:12px;margin-bottom:12px"></div>' +
       '<p id="newPassErr" style="color:var(--danger);font-size:13px;min-height:18px;margin-bottom:6px"></p>' +
-      '<button class="btn full" onclick="updatePassword()">🔐 Update Password</button>' +
+      '<button class="btn full" onclick="updatePassword()">Update Password</button>' +
     '</div>' +
   '</div>';
 }
 
 function accountResetSuccess(){
   return '<div class="acct-card" style="text-align:center">' +
-    '<div style="font-size:48px;margin-bottom:16px">✅</div>' +
+    '<div style="margin-bottom:16px;color:var(--brand)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></div>' +
     '<h2>Password Updated!</h2>' +
     '<p class="sub">Your password has been successfully updated. You can now sign in with your new password.</p>' +
     '<div style="margin:24px 0">' +
-      '<button class="btn full" onclick="goToSignIn()">🔐 Sign In Now</button>' +
+      '<button class="btn full" onclick="goToSignIn()">Sign In Now</button>' +
     '</div>' +
     '<p style="font-size:12px;color:var(--ink-soft)">If you have any issues signing in, please contact customer support.</p>' +
   '</div>';
@@ -4832,7 +4862,7 @@ async function updatePassword(){
         } else {
           err.textContent = "Failed to update password: " + error.message;
         }
-        if(btn){ btn.disabled = false; btn.textContent = "🔐 Update Password"; }
+        if(btn){ btn.disabled = false; btn.textContent = "Update Password"; }
         return;
       }
       /* Sign out after password reset */
@@ -4847,7 +4877,7 @@ async function updatePassword(){
   }
   
   err.textContent = "Failed to update password. Please try again.";
-  if(btn){ btn.disabled = false; btn.textContent = "🔐 Update Password"; }
+  if(btn){ btn.disabled = false; btn.textContent = "Update Password"; }
 }
 
 async function acctRegister(){
