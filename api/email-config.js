@@ -6,13 +6,21 @@ export const config = {
 
 function getCorsHeaders(req) {
   const origin = req.headers.get('origin');
-  return {
-    'Access-Control-Allow-Origin': origin || '*',
+  // Strict allowlist: only Nebula Secret sites may read email config status.
+  // Unknown origins get no ACAO grant.
+  const allowed = (process.env.ALLOWED_ORIGINS ||
+    'https://uat.nebulasecret.com,https://nebulasecret.com,https://www.nebulasecret.com,http://localhost:4173')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const headers = {
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin',
   };
+  if (origin && allowed.includes(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+  return headers;
 }
 
 export default async function handler(req) {

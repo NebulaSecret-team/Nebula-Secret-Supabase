@@ -30,10 +30,23 @@ export default async function handler(req) {
   }
 
   try {
-    // Supabase credentials — use environment variables if available,
-    // otherwise fall back to the public credentials from the website
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://xwhhsoppcpkijxxychjm.supabase.co';
-    const supabaseKey = process.env.SUPABASE_ANON_KEY || 'sb_publishable_2GnjItYkv_TRex8Z9YKTag_oUdiyHEk';
+    // Supabase credentials must come from environment variables.
+    // No hard-coded fallback keys in source (the public anon key already ships
+    // in the front-end bundle, but keeping it out of this file avoids stale
+    // copies and keeps the repo clean of duplicated credentials).
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      return new Response(JSON.stringify({
+        ok: false,
+        error: 'Keep-alive check failed',
+        timestamp: new Date().toISOString()
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     // Make a lightweight query to Supabase REST API
     const response = await fetch(`${supabaseUrl}/rest/v1/site_settings?select=id&limit=1`, {

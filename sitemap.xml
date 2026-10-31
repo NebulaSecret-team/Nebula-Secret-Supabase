@@ -31,37 +31,37 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://nebulasecret.com/#/contact</loc>
+    <loc>https://nebulasecret.com/#/info/contact</loc>
     <lastmod>2026-09-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://nebulasecret.com/#/track-order</loc>
+    <loc>https://nebulasecret.com/#/info/track</loc>
     <lastmod>2026-09-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://nebulasecret.com/#/shipping</loc>
+    <loc>https://nebulasecret.com/#/info/shipping</loc>
     <lastmod>2026-09-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://nebulasecret.com/#/returns</loc>
+    <loc>https://nebulasecret.com/#/info/returns</loc>
     <lastmod>2026-09-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://nebulasecret.com/#/payment</loc>
+    <loc>https://nebulasecret.com/#/info/payment</loc>
     <lastmod>2026-09-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://nebulasecret.com/#/faq</loc>
+    <loc>https://nebulasecret.com/#/info/faq</loc>
     <lastmod>2026-09-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

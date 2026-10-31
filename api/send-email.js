@@ -343,12 +343,11 @@ export default async function handler(req) {
     if (type === 'order') {
       subject = `Order Confirmation - ${filteredParams.order_no || 'N/A'} - ${filteredParams.store_name || 'Nebula Secret'}`;
       html = buildOrderEmailHtml(filteredParams);
-      // For orders, send to customer email AND admin recipients
-      const customerEmail = filteredParams.email;
+      // Security: send order notifications to the admin allowlist ONLY.
+      // The customer email is rendered inside the HTML body; it must never be
+      // added as a delivery recipient, otherwise this endpoint becomes an
+      // open mail relay that lets anyone email arbitrary addresses.
       to = mailRecipients ? mailRecipients.split(',').map(e => e.trim()) : [];
-      if (customerEmail && !to.includes(customerEmail)) {
-        to.push(customerEmail);
-      }
     } else {
       subject = filteredParams.subject || `New ${filteredParams.inquiry_type || 'Inquiry'} from ${filteredParams.from_name || 'Customer'}`;
       html = buildContactEmailHtml(filteredParams);

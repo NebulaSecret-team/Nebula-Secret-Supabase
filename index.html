@@ -6178,11 +6178,20 @@ function toggleChatbot(){
   }
 }
 
-function addChatbotMessage(type, text){
+function addChatbotMessage(type, text, isUntrusted){
   const container = document.getElementById('chatbotMessages');
   const msg = document.createElement('div');
   msg.className = 'chatbot-msg ' + type;
-  msg.innerHTML = text;
+  /* Security: never trust raw HTML from AI output (prompt-injection -> XSS vector).
+     Only AI responses (isUntrusted) are sanitized with an allow-list;
+     local helper messages already call esc() on dynamic values, so they stay as-is. */
+  if(isUntrusted && /<[a-z!\/]/.test(String(text))){
+    msg.innerHTML = sanitizeHTML(String(text));
+  } else if(type === 'user'){
+    msg.textContent = String(text);
+  } else {
+    msg.innerHTML = text;
+  }
   container.appendChild(msg);
   container.scrollTop = container.scrollHeight;
 }
@@ -6284,7 +6293,7 @@ function sendChatbotMessage(){
     .then(data => {
       hideTyping();
       if(data.reply){
-        addChatbotMessage('bot', data.reply);
+        addChatbotMessage('bot', data.reply, true);
         _chatbotHistory.push({role: 'assistant', content: data.reply});
         // 限制歷史記錄長度
         if(_chatbotHistory.length > 20){
