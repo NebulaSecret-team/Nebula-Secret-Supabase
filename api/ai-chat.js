@@ -8,12 +8,20 @@ export const config = {
 
 /* Strict CORS origin allowlist (browser callers only; server-to-server is
    still covered by the per-instance rate limit + payload limits below). */
-function isOriginAllowed(origin) {
+function isOriginAllowed(origin, requestHost) {
   if (!origin) return false;
   const allowed = (process.env.ALLOWED_ORIGINS ||
     'https://uat.nebulasecret.com,https://nebulasecret.com,https://www.nebulasecret.com,http://localhost:4173')
     .split(',').map(s => s.trim()).filter(Boolean);
-  return allowed.includes(origin);
+  if (allowed.includes(origin)) return true;
+  /* Same-origin auto-allow: each deployment (prod / UAT / preview) can call
+     its own function even if ALLOWED_ORIGINS lists only some domains.
+     A foreign site cannot pass this check: its Origin host differs from ours. */
+  try {
+    return new URL(origin).host === requestHost;
+  } catch {
+    return false;
+  }
 }
 
 /* Payload limits: cap message size and sanitize/trim history so attackers
@@ -106,7 +114,8 @@ export default async function handler(req) {
   // Browser callers must come from an allowlisted origin (server-side callers
   // are still constrained by rate limit + payload limits).
   const origin = req.headers.get('origin');
-  if (origin && !isOriginAllowed(origin)) {
+  const requestHost = req.headers.get('host') || '';
+  if (origin && !isOriginAllowed(origin, requestHost)) {
     return new Response(JSON.stringify({ error: 'Origin not allowed' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json', 'Vary': 'Origin' },
